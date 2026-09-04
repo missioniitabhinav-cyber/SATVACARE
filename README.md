@@ -31,3 +31,4 @@ A comprehensive smart healthcare and medication management application built wit
 
 ---
 © 2026 VSAV GYANTAPA. All Rights Reserved.
+"# SATVACARE" 
