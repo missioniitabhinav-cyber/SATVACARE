@@ -910,7 +910,11 @@ async function loadPatientPortal() {
 async function fetchPatientStats() {
     try {
         const selDate = state.selectedDate || getTodayDateStr();
-        let stats = await safeFetchJson(`/api/patient/stats?date=${encodeURIComponent(selDate)}&t=${Date.now()}`, { headers: getUserHeaders() });
+        const isNetlify = window.location.hostname.includes('netlify.app') || window.location.hostname.includes('pages.dev');
+        let stats = null;
+        if (!isNetlify) {
+            stats = await safeFetchJson(`/api/patient/stats?date=${encodeURIComponent(selDate)}&t=${Date.now()}`, { headers: getUserHeaders() });
+        }
 
         if (!stats && state.supabaseClient) {
             const sbRxs = await getSupabasePrescriptions();
@@ -1102,7 +1106,11 @@ async function fetchSchedule() {
     renderSevenDayBar();
     try {
         const selDate = state.selectedDate || getTodayDateStr();
-        let data = await safeFetchJson(`/api/patient/today-schedule?date=${encodeURIComponent(selDate)}&t=${Date.now()}`, { headers: getUserHeaders() });
+        const isNetlify = window.location.hostname.includes('netlify.app') || window.location.hostname.includes('pages.dev');
+        let data = null;
+        if (!isNetlify) {
+            data = await safeFetchJson(`/api/patient/today-schedule?date=${encodeURIComponent(selDate)}&t=${Date.now()}`, { headers: getUserHeaders() });
+        }
 
         if (!data && state.supabaseClient) {
             const sbRxs = await getSupabasePrescriptions();
@@ -1394,42 +1402,57 @@ function toggleDoseSlotClient(prescriptionId, slotName, targetDate) {
 async function toggleDoseSlot(prescriptionId, slotName) {
     try {
         const selDate = state.selectedDate || getTodayDateStr();
-        let data = await safeFetchJson('/api/patient/toggle-slot', {
-            method: 'POST',
-            headers: getUserHeaders(),
-            body: JSON.stringify({
-                prescription_id: prescriptionId,
-                slot_name: slotName,
-                target_date: selDate
-            })
-        });
+        const isNetlify = window.location.hostname.includes('netlify.app') || window.location.hostname.includes('pages.dev');
+        let data = null;
+
+        if (!isNetlify) {
+            data = await safeFetchJson('/api/patient/toggle-slot', {
+                method: 'POST',
+                headers: getUserHeaders(),
+                body: JSON.stringify({
+                    prescription_id: prescriptionId,
+                    slot_name: slotName,
+                    target_date: selDate
+                })
+            });
+        }
 
         if (!data && state.supabaseClient) {
-            const userEmail = (state.currentUser && state.currentUser.email) ? state.currentUser.email : 'patient-1';
+            const rx = state.prescriptions.find(r => r.id === prescriptionId);
+            const medName = rx ? rx.medicine_name : '';
+            const doseQty = rx ? (parseFloat(rx.tablets_per_dose) || 1) : 1;
+            const remainingAfter = rx ? Math.max(0, parseFloat((parseFloat(rx.total_tablets_remaining || 0) - doseQty).toFixed(2))) : 0;
+
             const { data: existingLogs } = await state.supabaseClient
                 .from('medication_logs')
                 .select('*')
                 .eq('scheduled_time', slotName);
             
-            const existingLog = existingLogs ? existingLogs.find(l => (l.prescription_id === prescriptionId || l.user_id === userEmail) && l.taken_at && l.taken_at.startsWith(selDate)) : null;
+            const existingLog = existingLogs ? existingLogs.find(l => (l.prescription_id === prescriptionId || l.medicine_name === medName) && l.taken_at && l.taken_at.startsWith(selDate)) : null;
 
             if (existingLog) {
                 await state.supabaseClient.from('medication_logs').delete().eq('id', existingLog.id);
-                data = { is_taken: false, tablets_consumed: 1 };
+                data = { is_taken: false, tablets_consumed: doseQty };
             } else {
-                const rx = state.prescriptions.find(r => r.id === prescriptionId);
-                const doseQty = rx ? (rx.tablets_per_dose || 1) : 1;
                 const newLog = {
                     id: 'log-' + Date.now(),
-                    user_id: userEmail,
                     prescription_id: prescriptionId,
-                    medicine_name: rx ? rx.medicine_name : '',
+                    medicine_name: medName || 'Medicine',
                     scheduled_time: slotName,
                     status: 'TAKEN',
                     tablets_consumed: doseQty,
+                    tablets_remaining_after: remainingAfter,
                     taken_at: `${selDate}T${new Date().toISOString().split('T')[1]}`
                 };
                 await state.supabaseClient.from('medication_logs').insert([newLog]);
+
+                if (rx && rx.id) {
+                    await state.supabaseClient.from('patient_prescriptions').update({
+                        total_tablets_remaining: remainingAfter,
+                        updated_at: new Date().toISOString()
+                    }).eq('id', rx.id);
+                }
+
                 data = { is_taken: true, tablets_consumed: doseQty };
             }
         }
@@ -1454,7 +1477,11 @@ async function toggleDoseSlot(prescriptionId, slotName) {
 // Medicine Cabinet (Direct Supabase DB Integration)
 async function fetchCabinet() {
     try {
-        let data = await safeFetchJson(`/api/patient/prescriptions?t=${Date.now()}`, { headers: getUserHeaders() });
+        const isNetlify = window.location.hostname.includes('netlify.app') || window.location.hostname.includes('pages.dev');
+        let data = null;
+        if (!isNetlify) {
+            data = await safeFetchJson(`/api/patient/prescriptions?t=${Date.now()}`, { headers: getUserHeaders() });
+        }
         if (!data && state.supabaseClient) {
             data = await getSupabasePrescriptions();
         }
@@ -1558,7 +1585,11 @@ function renderCabinetGrid() {
 // Pharmacy Orders Management (Direct Supabase DB Integration)
 async function fetchOrders() {
     try {
-        let data = await safeFetchJson(`/api/patient/orders?t=${Date.now()}`, { headers: getUserHeaders() });
+        const isNetlify = window.location.hostname.includes('netlify.app') || window.location.hostname.includes('pages.dev');
+        let data = null;
+        if (!isNetlify) {
+            data = await safeFetchJson(`/api/patient/orders?t=${Date.now()}`, { headers: getUserHeaders() });
+        }
         if (!data && state.supabaseClient) {
             data = await getSupabaseOrders();
         }
