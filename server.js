@@ -60,28 +60,29 @@ app.get('/api/patient/stats', async (req, res) => {
     }
 });
 
-// Today's Dose Schedule (Single Clean Card Per Medicine)
+// Today's & 7-Day Dose Schedule (Single Clean Card Per Medicine)
 app.get('/api/patient/today-schedule', async (req, res) => {
     try {
         const email = getUserEmail(req);
         if (!email) return res.status(401).json({ error: 'Unauthorized. Login required.' });
-        const schedule = await DB.getTodaySchedule(email);
+        const targetDate = req.query.date || null;
+        const schedule = await DB.getTodaySchedule(email, targetDate);
         res.json(schedule);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
-// Toggle Specific Dose Slot (MORNING, AFTERNOON, EVENING, NIGHT)
+// Toggle Specific Dose Slot (Supports Target Date for past 7 days)
 app.post('/api/patient/toggle-slot', async (req, res) => {
     try {
         const email = getUserEmail(req);
         if (!email) return res.status(401).json({ error: 'Unauthorized. Login required.' });
-        const { prescription_id, slot_name } = req.body;
+        const { prescription_id, slot_name, target_date } = req.body;
         if (!prescription_id || !slot_name) {
             return res.status(400).json({ error: 'prescription_id and slot_name are required.' });
         }
-        const result = await DB.toggleDoseSlot({ prescription_id, slot_name, user_email: email });
+        const result = await DB.toggleDoseSlot({ prescription_id, slot_name, user_email: email, target_date });
         res.json(result);
     } catch (err) {
         res.status(400).json({ error: err.message });

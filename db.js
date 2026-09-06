@@ -554,37 +554,68 @@ const DB = {
         return await this.updatePrescription(id, { total_tablets_remaining: newTotal }, userEmail);
     },
 
-    // Single Unified Card Schedule Data
-    async getTodaySchedule(userEmail = 'patient@medibuddy.com') {
+    // Single Unified Card Schedule Data for Any Date
+    async getTodaySchedule(userEmail = 'patient@medibuddy.com', targetDate = null) {
         const rxs = await this.getPrescriptions(userEmail);
         const logs = readLocalLogs().filter(l => matchesUser(l, userEmail));
 
-        const todayStr = new Date().toISOString().split('T')[0];
+        const dateStr = (targetDate && /^\d{4}-\d{2}-\d{2}$/.test(targetDate)) 
+            ? targetDate 
+            : new Date().toISOString().split('T')[0];
+
+        const todayObj = new Date();
 
         return rxs.map(rx => {
-            const morningLog = logs.find(l => l.prescription_id === rx.id && l.scheduled_time === 'MORNING' && l.taken_at.startsWith(todayStr));
-            const afternoonLog = logs.find(l => l.prescription_id === rx.id && l.scheduled_time === 'AFTERNOON' && l.taken_at.startsWith(todayStr));
-            const eveningLog = logs.find(l => l.prescription_id === rx.id && l.scheduled_time === 'EVENING' && l.taken_at.startsWith(todayStr));
-            const nightLog = logs.find(l => l.prescription_id === rx.id && l.scheduled_time === 'NIGHT' && l.taken_at.startsWith(todayStr));
+            const morningLog = logs.find(l => l.prescription_id === rx.id && l.scheduled_time === 'MORNING' && l.taken_at.startsWith(dateStr));
+            const afternoonLog = logs.find(l => l.prescription_id === rx.id && l.scheduled_time === 'AFTERNOON' && l.taken_at.startsWith(dateStr));
+            const eveningLog = logs.find(l => l.prescription_id === rx.id && l.scheduled_time === 'EVENING' && l.taken_at.startsWith(dateStr));
+            const nightLog = logs.find(l => l.prescription_id === rx.id && l.scheduled_time === 'NIGHT' && l.taken_at.startsWith(dateStr));
+
+            // Generate 7-day intake summary array (last 7 days up to today)
+            const history7Days = [];
+            for (let i = 6; i >= 0; i--) {
+                const d = new Date(todayObj);
+                d.setDate(todayObj.getDate() - i);
+                const dStr = d.toISOString().split('T')[0];
+                const dayLogs = logs.filter(l => l.prescription_id === rx.id && l.taken_at.startsWith(dStr) && l.status === 'TAKEN');
+                
+                history7Days.push({
+                    date: dStr,
+                    dayLabel: i === 0 ? 'Today' : (i === 1 ? 'Yest' : d.toLocaleDateString('en-US', { weekday: 'short' })),
+                    dayNum: d.getDate(),
+                    monthShort: d.toLocaleDateString('en-US', { month: 'short' }),
+                    isToday: i === 0,
+                    isSelected: dStr === dateStr,
+                    takenCount: dayLogs.length
+                });
+            }
 
             return {
                 ...rx,
+                target_date: dateStr,
                 morning_taken: Boolean(morningLog && morningLog.status === 'TAKEN'),
                 afternoon_taken: Boolean(afternoonLog && afternoonLog.status === 'TAKEN'),
                 evening_taken: Boolean(eveningLog && eveningLog.status === 'TAKEN'),
-                night_taken: Boolean(nightLog && nightLog.status === 'TAKEN')
+                night_taken: Boolean(nightLog && nightLog.status === 'TAKEN'),
+                history_7days: history7Days
             };
         });
     },
 
-    // Toggle Specific Dose Slot
-    async toggleDoseSlot({ prescription_id, slot_name, user_email = 'patient@medibuddy.com' }) {
+    // Toggle Specific Dose Slot (Supports Target Date for past 7 days)
+    async toggleDoseSlot({ prescription_id, slot_name, user_email = 'patient@medibuddy.com', target_date = null }) {
         const rx = await this.getPrescriptionById(prescription_id, user_email);
         if (!rx) throw new Error('Prescription record not found');
 
         const logs = readLocalLogs();
-        const todayStr = new Date().toISOString().split('T')[0];
-        const existingLogIndex = logs.findIndex(l => l.prescription_id === prescription_id && l.scheduled_time === slot_name && l.taken_at.startsWith(todayStr) && matchesUser(l, user_email));
+        const dateStr = (target_date && /^\d{4}-\d{2}-\d{2}$/.test(target_date)) 
+            ? target_date 
+            : new Date().toISOString().split('T')[0];
+
+        const currentTimePart = new Date().toISOString().split('T')[1];
+        const takenAtTimestamp = `${dateStr}T${currentTimePart}`;
+
+        const existingLogIndex = logs.findIndex(l => l.prescription_id === prescription_id && l.scheduled_time === slot_name && l.taken_at.startsWith(dateStr) && matchesUser(l, user_email));
 
         const doseQuantity = rx.tablets_per_dose || inferTabletsPerDose(rx);
         let newRemaining = rx.total_tablets_remaining;
@@ -612,7 +643,7 @@ const DB = {
                 status: 'TAKEN',
                 tablets_consumed: doseQuantity,
                 tablets_remaining_after: newRemaining,
-                taken_at: new Date().toISOString()
+                taken_at: takenAtTimestamp
             };
 
             logs.unshift(newLog);
@@ -631,6 +662,7 @@ const DB = {
         return {
             prescription_id,
             slot_name,
+            target_date: dateStr,
             is_taken: isNowTaken,
             tablets_consumed: doseQuantity,
             total_tablets_remaining: newRemaining

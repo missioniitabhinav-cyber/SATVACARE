@@ -10,8 +10,13 @@ let state = {
     supabaseClient: null,
     activeTab: 'schedule',
     searchQuery: '',
-    categoryFilter: 'ALL'
+    categoryFilter: 'ALL',
+    selectedDate: new Date().toISOString().split('T')[0]
 };
+
+function getTodayDateStr() {
+    return new Date().toISOString().split('T')[0];
+}
 
 function getUserHeaders() {
     const headers = { 'Content-Type': 'application/json' };
@@ -340,17 +345,66 @@ function getRxCategoryBadgeHTML(rxType) {
     return `<span class="badge-rx px-2.5 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wider inline-flex items-center"><i class="fa-solid fa-prescription mr-1"></i> Rx Prescribed</span>`;
 }
 
-// Today's Schedule Render
+// Date Schedule & 7-Day Tracker Functions
+function selectScheduleDate(dateStr) {
+    state.selectedDate = dateStr;
+    fetchSchedule();
+}
+
 async function fetchSchedule() {
     try {
-        const res = await fetch(`/api/patient/today-schedule?t=${Date.now()}`, { headers: getUserHeaders() });
+        const selDate = state.selectedDate || getTodayDateStr();
+        const res = await fetch(`/api/patient/today-schedule?date=${encodeURIComponent(selDate)}&t=${Date.now()}`, { headers: getUserHeaders() });
         if (!res.ok) return;
         const data = await res.json();
         state.schedule = data;
 
+        renderSevenDayBar();
         renderScheduleCards();
         updateNextDoseTimer(data);
     } catch (e) {}
+}
+
+function renderSevenDayBar() {
+    const barEl = document.getElementById('seven-day-bar');
+    const badgeEl = document.getElementById('selected-date-badge');
+    if (!barEl) return;
+
+    const todayObj = new Date();
+    const activeDateStr = state.selectedDate || getTodayDateStr();
+
+    let buttonsHTML = '';
+    for (let i = 6; i >= 0; i--) {
+        const d = new Date(todayObj);
+        d.setDate(todayObj.getDate() - i);
+        const dStr = d.toISOString().split('T')[0];
+        const isSelected = dStr === activeDateStr;
+        const isToday = i === 0;
+        const isYesterday = i === 1;
+
+        const dayLabel = isToday ? 'Today' : (isYesterday ? 'Yest' : d.toLocaleDateString('en-US', { weekday: 'short' }));
+        const dateNum = d.getDate();
+        const monthShort = d.toLocaleDateString('en-US', { month: 'short' });
+
+        const activeClass = isSelected 
+            ? 'bg-teal-600 text-white shadow-lg font-black ring-2 ring-teal-400 scale-[1.03]' 
+            : 'bg-white/80 hover:bg-slate-100 text-slate-700 font-bold border border-slate-200 shadow-xs';
+
+        buttonsHTML += `
+            <button onclick="selectScheduleDate('${dStr}')" class="flex flex-col items-center justify-center p-2 rounded-xl text-center transition-all duration-200 ${activeClass}">
+                <span class="text-[10px] uppercase tracking-wider ${isSelected ? 'text-teal-100' : 'text-slate-500'} font-extrabold">${dayLabel}</span>
+                <span class="text-sm font-black mt-0.5">${dateNum}</span>
+                <span class="text-[9px] ${isSelected ? 'text-teal-100 font-bold' : 'text-slate-600'}">${monthShort}</span>
+            </button>
+        `;
+    }
+    barEl.innerHTML = buttonsHTML;
+
+    if (badgeEl) {
+        const activeDateObj = new Date(activeDateStr + 'T00:00:00');
+        const formattedDate = activeDateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+        badgeEl.innerText = activeDateStr === getTodayDateStr() ? `Today (${formattedDate})` : formattedDate;
+    }
 }
 
 function renderScheduleCards() {
@@ -372,6 +426,10 @@ function renderScheduleCards() {
         `;
         return;
     }
+
+    const activeDateStr = state.selectedDate || getTodayDateStr();
+    const isToday = activeDateStr === getTodayDateStr();
+    const dateTitleLabel = isToday ? "Log Today's Intake:" : `Log Intake (${activeDateStr}):`;
 
     container.innerHTML = filtered.map(s => {
         const freqType = s.dosage_frequency_type || 'TWICE_DAILY';
@@ -398,6 +456,20 @@ function renderScheduleCards() {
         const barColor = s.is_runout_alert_5days ? 'bg-gradient-to-r from-rose-500 to-amber-500' : 'bg-gradient-to-r from-teal-500 to-emerald-500';
 
         const cardAlertClass = s.is_runout_alert_5days ? 'card-runout-alert' : '';
+
+        // Generate mini 7-day pill strip for card
+        const historyList = s.history_7days || [];
+        const miniStripHTML = historyList.map(h => {
+            const isSel = h.date === activeDateStr;
+            const hasTaken = h.takenCount > 0;
+            const badgeBg = hasTaken ? 'bg-emerald-500 text-white font-black' : (isSel ? 'bg-teal-600 text-white' : 'bg-slate-100 text-slate-600 border border-slate-200');
+            return `
+                <button onclick="selectScheduleDate('${h.date}')" title="${h.dayLabel} (${h.date}): ${hasTaken ? 'Taken ✓' : 'Not Logged'}" class="flex-1 py-1 rounded-lg text-[9px] font-bold transition text-center ${badgeBg} ${isSel ? 'ring-2 ring-teal-400 font-black' : ''}">
+                    <span>${h.dayLabel}</span>
+                    <span class="block font-black">${hasTaken ? '✓' : h.dayNum}</span>
+                </button>
+            `;
+        }).join('');
 
         return `
             <div class="glass-card glass-card-hover ${cardAlertClass} animate-fade-in-up p-6 shadow-xl space-y-4 flex flex-col justify-between relative overflow-hidden">
@@ -458,9 +530,20 @@ function renderScheduleCards() {
                     ${runoutWarning}
                 </div>
 
-                <!-- Intake Toggle Buttons -->
-                <div class="pt-3 border-t border-slate-200 space-y-2">
-                    <span class="text-[10px] font-black text-slate-600 uppercase tracking-widest block">Log Today's Intake:</span>
+                <!-- Mini 7-Day Quick Strip & Intake Toggle Buttons -->
+                <div class="pt-3 border-t border-slate-200 space-y-2.5">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[10px] font-black text-slate-600 uppercase tracking-widest block">${dateTitleLabel}</span>
+                        <span class="text-[10px] font-bold text-teal-700 flex items-center gap-1">
+                            <i class="fa-solid fa-history"></i> 7-Day History
+                        </span>
+                    </div>
+
+                    <!-- Mini 7-Day Strip -->
+                    <div class="flex items-center gap-1 p-1 bg-slate-50 border border-slate-200/80 rounded-xl">
+                        ${miniStripHTML}
+                    </div>
+
                     <div class="grid grid-cols-2 gap-2">
                         ${showMorning ? `
                             <button onclick="toggleDoseSlot('${s.id}', 'MORNING')" class="dose-btn-check py-2.5 px-3 rounded-xl border text-xs font-black flex items-center justify-center gap-1.5 ${s.morning_taken ? 'dose-btn-taken text-white' : 'btn-glass text-slate-700'}">
@@ -507,22 +590,24 @@ function updateNextDoseTimer(schedule) {
         nameEl.innerText = pendingMed.frequency_label;
     } else if (schedule.length > 0) {
         timeEl.innerText = 'All Done!';
-        nameEl.innerText = "All today's doses logged";
+        nameEl.innerText = "All doses logged for selected date";
     } else {
         timeEl.innerText = 'No Doses';
         nameEl.innerText = 'Add a medicine to start';
     }
 }
 
-// Toggle Dose Slot
+// Toggle Dose Slot (With Target Date Support)
 async function toggleDoseSlot(prescriptionId, slotName) {
     try {
+        const selDate = state.selectedDate || getTodayDateStr();
         const res = await fetch('/api/patient/toggle-slot', {
             method: 'POST',
             headers: getUserHeaders(),
             body: JSON.stringify({
                 prescription_id: prescriptionId,
-                slot_name: slotName
+                slot_name: slotName,
+                target_date: selDate
             })
         });
 
@@ -535,9 +620,9 @@ async function toggleDoseSlot(prescriptionId, slotName) {
 
         if (data.is_taken) {
             const consumedText = data.tablets_consumed === 0.5 ? '1/2 pill' : (data.tablets_consumed === 0.25 ? '1/4 pill' : `${data.tablets_consumed} pill(s)`);
-            showToast(`✓ ${slotName.charAt(0) + slotName.slice(1).toLowerCase()} dose taken! ${consumedText} deducted.`, 'success');
+            showToast(`✓ ${slotName.charAt(0) + slotName.slice(1).toLowerCase()} dose taken (${selDate})! ${consumedText} deducted.`, 'success');
         } else {
-            showToast(`${slotName.charAt(0) + slotName.slice(1).toLowerCase()} dose reset.`, 'info');
+            showToast(`${slotName.charAt(0) + slotName.slice(1).toLowerCase()} dose reset (${selDate}).`, 'info');
         }
 
         loadPatientPortal();

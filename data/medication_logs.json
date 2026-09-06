@@ -1,5 +1,31 @@
 [
   {
+    "id": "log-1788694152972",
+    "user_id": "admin@sattvacare.com",
+    "user_email": "admin@sattvacare.com",
+    "prescription_id": "rx-1788522989084",
+    "medicine_name": "MG-OR",
+    "brand_name": "NUTRILIFE",
+    "scheduled_time": "NIGHT",
+    "status": "TAKEN",
+    "tablets_consumed": 1,
+    "tablets_remaining_after": 24,
+    "taken_at": "2026-09-04T11:29:12.972Z"
+  },
+  {
+    "id": "log-1788694150535",
+    "user_id": "admin@sattvacare.com",
+    "user_email": "admin@sattvacare.com",
+    "prescription_id": "rx-1788522916922",
+    "medicine_name": "CLOBANIL 10",
+    "brand_name": "LINUX LABS",
+    "scheduled_time": "NIGHT",
+    "status": "TAKEN",
+    "tablets_consumed": 1,
+    "tablets_remaining_after": 12.5,
+    "taken_at": "2026-09-04T11:29:10.535Z"
+  },
+  {
     "id": "log-1788523557684",
     "user_id": "admin@sattvacare.com",
     "user_email": "admin@sattvacare.com",
