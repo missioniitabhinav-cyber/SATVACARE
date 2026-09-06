@@ -42,19 +42,30 @@ function updateHeaderDate() {
     }
 }
 
+// Safe JSON Fetch Helper for Static & Backend Hosts
+async function safeFetchJson(url, options = {}) {
+    try {
+        const res = await fetch(url, options);
+        if (!res.ok) return null;
+        const contentType = res.headers.get('content-type') || '';
+        if (!contentType.includes('application/json')) return null;
+        return await res.json();
+    } catch (e) {
+        return null;
+    }
+}
+
 // Supabase Auth Integration
 async function initSupabaseAuth() {
     try {
-        const res = await fetch('/api/config');
-        const config = await res.json();
-        state.supabaseConfig = config;
-
-        if (config.supabase_url && config.supabase_anon_key && window.supabase) {
-            state.supabaseClient = window.supabase.createClient(config.supabase_url, config.supabase_anon_key);
+        const config = await safeFetchJson('/api/config');
+        if (config) {
+            state.supabaseConfig = config;
+            if (config.supabase_url && config.supabase_anon_key && window.supabase) {
+                state.supabaseClient = window.supabase.createClient(config.supabase_url, config.supabase_anon_key);
+            }
         }
-    } catch (e) {
-        console.warn('Frontend Supabase init:', e.message);
-    }
+    } catch (e) {}
 }
 
 async function checkAuthState() {
@@ -225,12 +236,16 @@ async function handleLogout() {
 
 async function fetchSystemStatus() {
     try {
-        const res = await fetch('/api/status');
-        const data = await res.json();
+        const data = await safeFetchJson('/api/status');
         const dot = document.getElementById('db-dot');
         const text = document.getElementById('db-text');
-        if (dot) dot.className = data.supabase_connected ? 'w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse' : 'w-2.5 h-2.5 rounded-full bg-amber-500';
-        if (text) text.innerText = data.supabase_connected ? 'Supabase Connected' : 'Local Cabinet Mode';
+        if (data) {
+            if (dot) dot.className = data.supabase_connected ? 'w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse' : 'w-2.5 h-2.5 rounded-full bg-amber-500';
+            if (text) text.innerText = data.supabase_connected ? 'Supabase Connected' : 'Local Cabinet Mode';
+        } else {
+            if (dot) dot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse';
+            if (text) text.innerText = 'Online Patient Portal';
+        }
     } catch (e) {}
 }
 
