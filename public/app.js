@@ -638,6 +638,132 @@ function generateDefaultClientLogs() {
     return logs;
 }
 
+// Direct Supabase Database Integration Engine
+async function getSupabasePrescriptions() {
+    if (!state.supabaseClient) return null;
+    try {
+        const { data, error } = await state.supabaseClient
+            .from('patient_prescriptions')
+            .select('*')
+            .order('created_at', { ascending: false });
+        if (error || !data || !Array.isArray(data) || data.length === 0) return null;
+        return data.map(enhancePrescriptionClient);
+    } catch (e) {
+        return null;
+    }
+}
+
+async function getSupabaseOrders() {
+    if (!state.supabaseClient) return null;
+    try {
+        const { data, error } = await state.supabaseClient
+            .from('pharmacy_orders')
+            .select('*')
+            .order('created_at', { ascending: false });
+        if (error || !data || !Array.isArray(data) || data.length === 0) return null;
+        return data;
+    } catch (e) {
+        return null;
+    }
+}
+
+async function getSupabaseLogs() {
+    if (!state.supabaseClient) return null;
+    try {
+        const { data, error } = await state.supabaseClient
+            .from('medication_logs')
+            .select('*');
+        if (error || !data || !Array.isArray(data)) return null;
+        return data;
+    } catch (e) {
+        return null;
+    }
+}
+
+function enhancePrescriptionClient(rx) {
+    const freqType = rx.dosage_frequency_type || 'TWICE_DAILY';
+    const rxType = rx.prescription_type || 'RX';
+    const tabletsPerDose = parseFloat(rx.tablets_per_dose) || 1.0;
+    const dailyFreq = parseFloat(rx.daily_frequency) || (freqType === 'ONCE_MORNING' || freqType === 'ONCE_NIGHT' ? 1 : 2);
+    const totalPills = parseFloat(rx.total_tablets_remaining) || 0;
+    const daysLeft = dailyFreq > 0 ? Math.floor(totalPills / dailyFreq) : 999;
+
+    const isRunoutAlert5Days = daysLeft <= 5 && totalPills > 0;
+    const isOutOfStock = totalPills === 0;
+
+    let freqLabel = 'Twice a Day (08:00 AM - 08:00 PM)';
+    if (freqType === 'ONCE_MORNING') freqLabel = 'Morning Only (08:00 AM)';
+    else if (freqType === 'ONCE_NIGHT') freqLabel = 'Night Only (09:00 PM)';
+    else if (freqType === 'THRICE_DAILY') freqLabel = 'Thrice a Day';
+
+    let rxLabel = 'Rx (Standard Prescription)';
+    if (rxType === 'NRX') rxLabel = 'NRx (Controlled Substance)';
+    else if (rxType === 'TRX') rxLabel = 'TRx (Chronic Care Refill)';
+    else if (rxType === 'OTC') rxLabel = 'OTC (Wellness / Antacid)';
+
+    let mealText = 'Take after meal / food';
+    if (rx.meal_relation === 'BEFORE_MEAL') mealText = 'Take on empty stomach (Before Meal)';
+
+    return {
+        ...rx,
+        daily_frequency: dailyFreq,
+        tablets_per_dose: tabletsPerDose,
+        days_supply_remaining: daysLeft,
+        is_runout_alert_5days: isRunoutAlert5Days,
+        is_out_of_stock: isOutOfStock,
+        frequency_label: freqLabel,
+        prescription_type_label: rxLabel,
+        meal_relation_text: mealText,
+        dose_quantity_label: tabletsPerDose === 0.5 ? '1/2 Tablet (Half Dose)' : (tabletsPerDose === 0.25 ? '1/4 Tablet' : `${tabletsPerDose} Tablet(s)`)
+    };
+}
+
+function buildScheduleFromData(rxs, logs, targetDate) {
+    const dateStr = targetDate || getTodayDateStr();
+    const todayObj = new Date();
+
+    return rxs.map(rx => {
+        const morningLog = logs.find(l => (l.prescription_id === rx.id || l.medicine_name === rx.medicine_name) && l.scheduled_time === 'MORNING' && l.taken_at && l.taken_at.startsWith(dateStr));
+        const afternoonLog = logs.find(l => (l.prescription_id === rx.id || l.medicine_name === rx.medicine_name) && l.scheduled_time === 'AFTERNOON' && l.taken_at && l.taken_at.startsWith(dateStr));
+        const eveningLog = logs.find(l => (l.prescription_id === rx.id || l.medicine_name === rx.medicine_name) && l.scheduled_time === 'EVENING' && l.taken_at && l.taken_at.startsWith(dateStr));
+        const nightLog = logs.find(l => (l.prescription_id === rx.id || l.medicine_name === rx.medicine_name) && l.scheduled_time === 'NIGHT' && l.taken_at && l.taken_at.startsWith(dateStr));
+
+        const history7Days = [];
+        for (let i = 6; i >= 0; i--) {
+            const d = new Date(todayObj);
+            d.setDate(todayObj.getDate() - i);
+            const dStr = d.toISOString().split('T')[0];
+            const dayLogs = logs.filter(l => (l.prescription_id === rx.id || l.medicine_name === rx.medicine_name) && l.taken_at && l.taken_at.startsWith(dStr) && l.status === 'TAKEN');
+            history7Days.push({
+                date: dStr,
+                dayLabel: i === 0 ? 'Today' : (i === 1 ? 'Yest' : d.toLocaleDateString('en-US', { weekday: 'short' })),
+                dayNum: d.getDate(),
+                monthShort: d.toLocaleDateString('en-US', { month: 'short' }),
+                isToday: i === 0,
+                isSelected: dStr === dateStr,
+                takenCount: dayLogs.length
+            });
+        }
+
+        const dailyFreq = rx.daily_frequency || 1;
+        const totalPills = rx.total_tablets_remaining || 0;
+        const daysRemaining = dailyFreq > 0 ? Math.floor(totalPills / dailyFreq) : 999;
+        const isRunout = daysRemaining <= 5;
+
+        return {
+            ...rx,
+            target_date: dateStr,
+            days_supply_remaining: daysRemaining,
+            is_runout_alert_5days: isRunout,
+            morning_taken: Boolean(morningLog && morningLog.status === 'TAKEN'),
+            afternoon_taken: Boolean(afternoonLog && afternoonLog.status === 'TAKEN'),
+            evening_taken: Boolean(eveningLog && eveningLog.status === 'TAKEN'),
+            night_taken: Boolean(nightLog && nightLog.status === 'TAKEN'),
+            history_7days: history7Days
+        };
+    });
+}
+
 function getClientStorageKey(suffix) {
     const userEmail = (state.currentUser && state.currentUser.email) ? state.currentUser.email : 'guest';
     return `sattva_${suffix}_${userEmail}`;
@@ -769,10 +895,51 @@ async function loadPatientPortal() {
 async function fetchPatientStats() {
     try {
         const selDate = state.selectedDate || getTodayDateStr();
-        const stats = await safeFetchJson(`/api/patient/stats?date=${encodeURIComponent(selDate)}&t=${Date.now()}`, { headers: getUserHeaders() });
-        if (stats) {
-            state.stats = stats;
-        } else {
+        let stats = await safeFetchJson(`/api/patient/stats?date=${encodeURIComponent(selDate)}&t=${Date.now()}`, { headers: getUserHeaders() });
+
+        if (!stats && state.supabaseClient) {
+            const sbRxs = await getSupabasePrescriptions();
+            const sbLogs = await getSupabaseLogs();
+            if (sbRxs) {
+                const schedule = buildScheduleFromData(sbRxs, sbLogs || [], selDate);
+                let totalPills = 0;
+                let runoutCount = 0;
+                const alertList = [];
+                sbRxs.forEach(r => {
+                    totalPills += parseFloat(r.total_tablets_remaining || 0);
+                    const days = r.daily_frequency > 0 ? Math.floor(r.total_tablets_remaining / r.daily_frequency) : 999;
+                    if (days <= 5) {
+                        runoutCount++;
+                        alertList.push({
+                            id: r.id,
+                            medicine_name: r.medicine_name,
+                            brand_name: r.brand_name,
+                            total_tablets_remaining: r.total_tablets_remaining,
+                            days_left: days
+                        });
+                    }
+                });
+                let req = 0, taken = 0;
+                schedule.forEach(s => {
+                    req += (s.daily_frequency || 1);
+                    if (s.morning_taken) taken++;
+                    if (s.afternoon_taken) taken++;
+                    if (s.evening_taken) taken++;
+                    if (s.night_taken) taken++;
+                });
+                stats = {
+                    adherence_percentage: req > 0 ? Math.round((taken / req) * 100) : 0,
+                    today_taken_count: taken,
+                    today_scheduled_count: req,
+                    total_pills_remaining: totalPills,
+                    total_prescriptions: sbRxs.length,
+                    runout_5days_count: runoutCount,
+                    critical_runout_alerts: alertList
+                };
+            }
+        }
+
+        if (!stats) {
             const schedule = getClientSideSchedule(selDate);
             const rxs = getClientPrescriptions();
             let totalPills = 0;
@@ -800,7 +967,7 @@ async function fetchPatientStats() {
                 if (s.evening_taken) taken++;
                 if (s.night_taken) taken++;
             });
-            state.stats = {
+            stats = {
                 adherence_percentage: req > 0 ? Math.round((taken / req) * 100) : 0,
                 today_taken_count: taken,
                 today_scheduled_count: req,
@@ -810,6 +977,8 @@ async function fetchPatientStats() {
                 critical_runout_alerts: alertList
             };
         }
+
+        state.stats = stats;
 
         const isToday = selDate === getTodayDateStr();
         const dateLabel = isToday ? 'today' : `on ${selDate}`;
@@ -918,7 +1087,16 @@ async function fetchSchedule() {
     renderSevenDayBar();
     try {
         const selDate = state.selectedDate || getTodayDateStr();
-        const data = await safeFetchJson(`/api/patient/today-schedule?date=${encodeURIComponent(selDate)}&t=${Date.now()}`, { headers: getUserHeaders() });
+        let data = await safeFetchJson(`/api/patient/today-schedule?date=${encodeURIComponent(selDate)}&t=${Date.now()}`, { headers: getUserHeaders() });
+
+        if (!data && state.supabaseClient) {
+            const sbRxs = await getSupabasePrescriptions();
+            const sbLogs = await getSupabaseLogs();
+            if (sbRxs && sbRxs.length > 0) {
+                data = buildScheduleFromData(sbRxs, sbLogs || [], selDate);
+            }
+        }
+
         state.schedule = data ? data : getClientSideSchedule(selDate);
         renderScheduleCards();
         updateNextDoseTimer(state.schedule);
@@ -1197,7 +1375,7 @@ function toggleDoseSlotClient(prescriptionId, slotName, targetDate) {
     return { is_taken: isNowTaken, tablets_consumed: doseQty };
 }
 
-// Toggle Dose Slot (With Target Date Support & Static Fallback)
+// Toggle Dose Slot (With Target Date Support, Direct Supabase DB & Static Fallback)
 async function toggleDoseSlot(prescriptionId, slotName) {
     try {
         const selDate = state.selectedDate || getTodayDateStr();
@@ -1210,6 +1388,36 @@ async function toggleDoseSlot(prescriptionId, slotName) {
                 target_date: selDate
             })
         });
+
+        if (!data && state.supabaseClient) {
+            const userEmail = (state.currentUser && state.currentUser.email) ? state.currentUser.email : 'patient-1';
+            const { data: existingLogs } = await state.supabaseClient
+                .from('medication_logs')
+                .select('*')
+                .eq('scheduled_time', slotName);
+            
+            const existingLog = existingLogs ? existingLogs.find(l => (l.prescription_id === prescriptionId || l.user_id === userEmail) && l.taken_at && l.taken_at.startsWith(selDate)) : null;
+
+            if (existingLog) {
+                await state.supabaseClient.from('medication_logs').delete().eq('id', existingLog.id);
+                data = { is_taken: false, tablets_consumed: 1 };
+            } else {
+                const rx = state.prescriptions.find(r => r.id === prescriptionId);
+                const doseQty = rx ? (rx.tablets_per_dose || 1) : 1;
+                const newLog = {
+                    id: 'log-' + Date.now(),
+                    user_id: userEmail,
+                    prescription_id: prescriptionId,
+                    medicine_name: rx ? rx.medicine_name : '',
+                    scheduled_time: slotName,
+                    status: 'TAKEN',
+                    tablets_consumed: doseQty,
+                    taken_at: `${selDate}T${new Date().toISOString().split('T')[1]}`
+                };
+                await state.supabaseClient.from('medication_logs').insert([newLog]);
+                data = { is_taken: true, tablets_consumed: doseQty };
+            }
+        }
 
         if (!data) {
             data = toggleDoseSlotClient(prescriptionId, slotName, selDate);
@@ -1228,14 +1436,18 @@ async function toggleDoseSlot(prescriptionId, slotName) {
     }
 }
 
-// Medicine Cabinet
+// Medicine Cabinet (Direct Supabase DB Integration)
 async function fetchCabinet() {
     try {
-        const data = await safeFetchJson(`/api/patient/prescriptions?t=${Date.now()}`, { headers: getUserHeaders() });
+        let data = await safeFetchJson(`/api/patient/prescriptions?t=${Date.now()}`, { headers: getUserHeaders() });
+        if (!data && state.supabaseClient) {
+            data = await getSupabasePrescriptions();
+        }
         state.prescriptions = (data && Array.isArray(data) && data.length > 0) ? data : getClientPrescriptions();
         renderCabinetGrid();
     } catch (e) {
-        state.prescriptions = getClientPrescriptions();
+        let sbData = await getSupabasePrescriptions();
+        state.prescriptions = (sbData && Array.isArray(sbData) && sbData.length > 0) ? sbData : getClientPrescriptions();
         renderCabinetGrid();
     }
 }
@@ -1328,16 +1540,20 @@ function renderCabinetGrid() {
     }).join('');
 }
 
-// Pharmacy Orders Management
+// Pharmacy Orders Management (Direct Supabase DB Integration)
 async function fetchOrders() {
     try {
-        const data = await safeFetchJson(`/api/patient/orders?t=${Date.now()}`, { headers: getUserHeaders() });
-        state.orders = data ? data : getClientOrders();
+        let data = await safeFetchJson(`/api/patient/orders?t=${Date.now()}`, { headers: getUserHeaders() });
+        if (!data && state.supabaseClient) {
+            data = await getSupabaseOrders();
+        }
+        state.orders = (data && Array.isArray(data)) ? data : getClientOrders();
         const badgeCount = document.getElementById('orders-badge-count');
         if (badgeCount) badgeCount.innerText = state.orders.filter(o => o.status !== 'DELIVERED' && o.status !== 'CANCELLED').length;
         renderOrdersList();
     } catch (e) {
-        state.orders = getClientOrders();
+        let sbOrders = await getSupabaseOrders();
+        state.orders = (sbOrders && Array.isArray(sbOrders)) ? sbOrders : getClientOrders();
         renderOrdersList();
     }
 }
@@ -1558,13 +1774,30 @@ async function handleRxSubmit(e) {
         const method = id ? 'PUT' : 'POST';
         const url = id ? `/api/patient/prescriptions/${id}` : '/api/patient/prescriptions';
 
-        const res = await fetch(url, {
+        const res = await safeFetchJson(url, {
             method: method,
             headers: getUserHeaders(),
             body: JSON.stringify(payload)
         });
 
-        if (!res.ok) throw new Error('Failed to save medicine record');
+        if (!res && state.supabaseClient) {
+            const userEmail = (state.currentUser && state.currentUser.email) ? state.currentUser.email : 'patient-1';
+            if (id) {
+                await state.supabaseClient.from('patient_prescriptions').update({
+                    ...payload,
+                    updated_at: new Date().toISOString()
+                }).eq('id', id);
+            } else {
+                const newId = 'rx-' + Date.now();
+                await state.supabaseClient.from('patient_prescriptions').insert([{
+                    id: newId,
+                    user_id: userEmail,
+                    ...payload,
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                }]);
+            }
+        }
 
         closeRxModal();
         showToast(id ? 'Medicine record updated successfully!' : 'Medicine added to cabinet and schedule!', 'success');
@@ -1577,7 +1810,10 @@ async function handleRxSubmit(e) {
 async function deletePrescription(id, name) {
     if (!confirm(`Delete ${name} from your cabinet?`)) return;
     try {
-        await fetch(`/api/patient/prescriptions/${id}`, { method: 'DELETE', headers: getUserHeaders() });
+        const res = await safeFetchJson(`/api/patient/prescriptions/${id}`, { method: 'DELETE', headers: getUserHeaders() });
+        if (!res && state.supabaseClient) {
+            await state.supabaseClient.from('patient_prescriptions').delete().eq('id', id);
+        }
         showToast(`Removed ${name}`, 'info');
         loadPatientPortal();
     } catch (e) {}
@@ -1605,13 +1841,20 @@ async function handleRefillSubmit(e) {
     const qty = parseFloat(document.getElementById('refill-qty').value) || 30;
 
     try {
-        const res = await fetch(`/api/patient/prescriptions/${id}/refill`, {
+        const res = await safeFetchJson(`/api/patient/prescriptions/${id}/refill`, {
             method: 'POST',
             headers: getUserHeaders(),
             body: JSON.stringify({ add_count: qty })
         });
 
-        if (!res.ok) throw new Error('Refill failed');
+        if (!res && state.supabaseClient) {
+            const { data: existing } = await state.supabaseClient.from('patient_prescriptions').select('total_tablets_remaining').eq('id', id).single();
+            const current = existing ? parseFloat(existing.total_tablets_remaining || 0) : 0;
+            await state.supabaseClient.from('patient_prescriptions').update({
+                total_tablets_remaining: current + qty,
+                updated_at: new Date().toISOString()
+            }).eq('id', id);
+        }
 
         closeRefillModal();
         showToast(`Refilled cabinet with +${qty} pills!`, 'success');
@@ -1665,13 +1908,18 @@ async function updateOrderStatusInline(orderId, newStatus) {
     }
 
     try {
-        const res = await fetch(`/api/patient/orders/${orderId}`, {
+        const res = await safeFetchJson(`/api/patient/orders/${orderId}`, {
             method: 'PUT',
             headers: getUserHeaders(),
             body: JSON.stringify({ status: newStatus })
         });
 
-        if (!res.ok) throw new Error('Failed to update order status');
+        if (!res && state.supabaseClient) {
+            await state.supabaseClient.from('pharmacy_orders').update({
+                status: newStatus,
+                updated_at: new Date().toISOString()
+            }).eq('id', orderId);
+        }
 
         const statusLabel = newStatus.charAt(0) + newStatus.slice(1).toLowerCase().replace(/_/g, ' ');
         showToast(`Order status updated to: ${statusLabel}`, 'success');
@@ -1705,21 +1953,36 @@ async function handleOrderSubmit(e) {
         const method = id ? 'PUT' : 'POST';
         const url = id ? `/api/patient/orders/${id}` : '/api/patient/orders';
 
-        const res = await fetch(url, {
+        const res = await safeFetchJson(url, {
             method: method,
             headers: getUserHeaders(),
             body: JSON.stringify(payload)
         });
 
-        if (!res.ok) throw new Error('Failed to save pharmacy order');
+        if (!res && state.supabaseClient) {
+            const userEmail = (state.currentUser && state.currentUser.email) ? state.currentUser.email : 'admin@sattvacare.com';
+            if (id) {
+                await state.supabaseClient.from('pharmacy_orders').update({
+                    ...payload,
+                    updated_at: new Date().toISOString()
+                }).eq('id', id);
+            } else {
+                const newId = 'ord-' + Date.now();
+                await state.supabaseClient.from('pharmacy_orders').insert([{
+                    id: newId,
+                    user_id: userEmail,
+                    ...payload,
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                }]);
+            }
+        }
 
         closeOrderModal();
         showToast('Pharmacy order logged! Tracking delivery status.', 'success');
         
-        // If order status is DELIVERED, trigger delivery auto-stock
-        const data = await res.json();
-        if (data.status === 'DELIVERED') {
-            await markOrderDelivered(data.id);
+        if (payload.status === 'DELIVERED') {
+            await markOrderDelivered(id);
         } else {
             loadPatientPortal();
         }
@@ -1730,9 +1993,16 @@ async function handleOrderSubmit(e) {
 
 async function markOrderDelivered(id) {
     try {
-        const res = await fetch(`/api/patient/orders/${id}/deliver`, { method: 'POST', headers: getUserHeaders() });
-        if (!res.ok) throw new Error('Delivery status update failed');
-        const data = await res.json();
+        const res = await safeFetchJson(`/api/patient/orders/${id}/deliver`, { method: 'POST', headers: getUserHeaders() });
+
+        if (!res && state.supabaseClient) {
+            await state.supabaseClient.from('pharmacy_orders').update({
+                status: 'DELIVERED',
+                delivered_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+            }).eq('id', id);
+        }
+
         showToast('Order delivered! Pills automatically stocked into cabinet.', 'success');
         loadPatientPortal();
     } catch (e) {
@@ -1743,7 +2013,12 @@ async function markOrderDelivered(id) {
 async function deleteOrder(id) {
     if (!confirm('Delete this pharmacy order record?')) return;
     try {
-        await fetch(`/api/patient/orders/${id}`, { method: 'DELETE', headers: getUserHeaders() });
+        const res = await safeFetchJson(`/api/patient/orders/${id}`, { method: 'DELETE', headers: getUserHeaders() });
+
+        if (!res && state.supabaseClient) {
+            await state.supabaseClient.from('pharmacy_orders').delete().eq('id', id);
+        }
+
         showToast('Order record removed.', 'info');
         loadPatientPortal();
     } catch (e) {}
