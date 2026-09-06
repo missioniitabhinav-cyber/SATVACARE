@@ -774,7 +774,9 @@ function renderOrdersList() {
 
     container.innerHTML = filtered.map(o => {
         let statusBadge = `<span class="px-2.5 py-0.5 bg-amber-100 text-amber-800 border border-amber-300 rounded-lg text-[10px] font-black uppercase inline-flex items-center gap-1 shadow-xs"><i class="fa-solid fa-box text-amber-600"></i> Ordered</span>`;
-        if (o.status === 'SHIPPED') {
+        if (o.status === 'PROCESSING') {
+            statusBadge = `<span class="px-2.5 py-0.5 bg-purple-100 text-purple-800 border border-purple-300 rounded-lg text-[10px] font-black uppercase inline-flex items-center gap-1 shadow-xs"><i class="fa-solid fa-gear text-purple-600"></i> Processing</span>`;
+        } else if (o.status === 'SHIPPED') {
             statusBadge = `<span class="px-2.5 py-0.5 bg-sky-100 text-sky-800 border border-sky-300 rounded-lg text-[10px] font-black uppercase inline-flex items-center gap-1 shadow-xs"><i class="fa-solid fa-truck-fast text-sky-600"></i> Shipped</span>`;
         } else if (o.status === 'OUT_FOR_DELIVERY') {
             statusBadge = `<span class="px-2.5 py-0.5 bg-indigo-100 text-indigo-800 border border-indigo-300 rounded-lg text-[10px] font-black uppercase inline-flex items-center gap-1 shadow-xs"><i class="fa-solid fa-motorcycle text-indigo-600"></i> Out for Delivery</span>`;
@@ -791,24 +793,40 @@ function renderOrdersList() {
                 <div>
                     <div class="flex items-start justify-between gap-2">
                         <div>
-                            <div class="flex items-center gap-2">
+                            <div class="flex flex-wrap items-center gap-2">
                                 ${statusBadge}
                                 <span class="text-xs text-slate-500 font-mono font-bold">${escapeHtml(o.order_number)}</span>
                             </div>
                             <h3 class="text-base font-black text-slate-900 mt-2.5 tracking-tight">${escapeHtml(o.medicine_name)}</h3>
                             <span class="text-xs text-amber-700 font-bold block mt-0.5"><i class="fa-solid fa-store mr-1"></i> ${escapeHtml(o.pharmacy_name || 'Pharmacy')}</span>
                         </div>
-                        <button onclick="deleteOrder('${o.id}')" title="Delete Order Record" class="btn-glass p-2 text-slate-400 hover:text-rose-600 text-xs rounded-xl hover:bg-rose-50 transition">
-                            <i class="fa-solid fa-trash-can"></i>
-                        </button>
+                        <div class="flex items-center gap-1">
+                            <button onclick="openEditOrderModal('${o.id}')" title="Edit Order Details" class="btn-glass p-2 text-amber-700 hover:text-amber-900 text-xs rounded-xl hover:bg-amber-50 transition flex items-center gap-1 font-extrabold shadow-xs">
+                                <i class="fa-solid fa-pen-to-square"></i> Edit
+                            </button>
+                            <button onclick="deleteOrder('${o.id}')" title="Delete Order Record" class="btn-glass p-2 text-slate-400 hover:text-rose-600 text-xs rounded-xl hover:bg-rose-50 transition">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </div>
                     </div>
 
                     <div class="mt-3.5 card-inner-box p-3.5 text-xs space-y-2 shadow-inner">
                         <div class="flex items-center justify-between">
+                            <span class="text-slate-500 font-medium">Order Status Stage:</span>
+                            <select onchange="updateOrderStatusInline('${o.id}', this.value)" class="text-xs font-bold rounded-xl px-2.5 py-1 bg-white border border-slate-300 text-slate-900 shadow-xs focus:border-amber-500 outline-none">
+                                <option value="ORDERED" ${o.status === 'ORDERED' ? 'selected' : ''}>📦 Ordered</option>
+                                <option value="PROCESSING" ${o.status === 'PROCESSING' ? 'selected' : ''}>⚙️ Processing</option>
+                                <option value="SHIPPED" ${o.status === 'SHIPPED' ? 'selected' : ''}>🚚 Shipped</option>
+                                <option value="OUT_FOR_DELIVERY" ${o.status === 'OUT_FOR_DELIVERY' ? 'selected' : ''}>🛵 Out for Delivery</option>
+                                <option value="DELIVERED" ${o.status === 'DELIVERED' ? 'selected' : ''}>✅ Delivered & Stocked</option>
+                                <option value="CANCELLED" ${o.status === 'CANCELLED' ? 'selected' : ''}>❌ Cancelled</option>
+                            </select>
+                        </div>
+                        <div class="flex items-center justify-between pt-1 border-t border-slate-200">
                             <span class="text-slate-500 font-medium">Pill Quantity Ordered:</span>
                             <strong class="text-amber-800 text-sm font-black">${o.quantity_ordered} pills</strong>
                         </div>
-                        ${o.total_price ? `<div class="flex items-center justify-between"><span class="text-slate-500">Total Price:</span><strong class="text-emerald-700 font-black">₹${o.total_price}</strong></div>` : ''}
+                        ${o.total_price ? `<div class="flex items-center justify-between"><span class="text-slate-500 font-medium">Total Price:</span><strong class="text-emerald-700 font-black">₹${o.total_price}</strong></div>` : ''}
                         ${o.expected_delivery ? `<p class="text-slate-600"><i class="fa-solid fa-calendar-day text-slate-500 mr-1"></i> Expected Delivery: <strong class="text-slate-900">${escapeHtml(o.expected_delivery)}</strong></p>` : ''}
                         ${o.notes ? `<p class="text-slate-600 pt-1.5 border-t border-slate-200"><i class="fa-solid fa-circle-info text-slate-500 mr-1"></i> ${escapeHtml(o.notes)}</p>` : ''}
                     </div>
@@ -1024,6 +1042,51 @@ function openOrderModal(rxId = '', medName = '') {
         if (titleEl) titleEl.innerHTML = `<i class="fa-solid fa-cart-shopping text-amber-600"></i> Order Medicine & Track Delivery`;
     }
     showModal('order-modal');
+}
+
+function openEditOrderModal(orderId) {
+    const order = state.orders.find(o => o.id === orderId);
+    if (!order) return;
+
+    document.getElementById('order-form').reset();
+    document.getElementById('order-id').value = order.id;
+    document.getElementById('order-prescription-id').value = order.prescription_id || '';
+    document.getElementById('order-medicine-name').value = order.medicine_name || '';
+    document.getElementById('order-pharmacy-name').value = order.pharmacy_name || '';
+    document.getElementById('order-number').value = order.order_number || '';
+    document.getElementById('order-quantity').value = order.quantity_ordered || 30;
+    document.getElementById('order-status').value = order.status || 'ORDERED';
+    document.getElementById('order-expected-delivery').value = order.expected_delivery || '';
+    document.getElementById('order-price').value = order.total_price || '';
+    document.getElementById('order-notes').value = order.notes || '';
+
+    const titleEl = document.getElementById('order-modal-title');
+    if (titleEl) titleEl.innerHTML = `<i class="fa-solid fa-pen-to-square text-amber-600"></i> Edit Pharmacy Order Details`;
+
+    showModal('order-modal');
+}
+
+async function updateOrderStatusInline(orderId, newStatus) {
+    if (newStatus === 'DELIVERED') {
+        await markOrderDelivered(orderId);
+        return;
+    }
+
+    try {
+        const res = await fetch(`/api/patient/orders/${orderId}`, {
+            method: 'PUT',
+            headers: getUserHeaders(),
+            body: JSON.stringify({ status: newStatus })
+        });
+
+        if (!res.ok) throw new Error('Failed to update order status');
+
+        const statusLabel = newStatus.charAt(0) + newStatus.slice(1).toLowerCase().replace(/_/g, ' ');
+        showToast(`Order status updated to: ${statusLabel}`, 'success');
+        loadPatientPortal();
+    } catch (e) {
+        showToast(e.message, 'error');
+    }
 }
 
 function closeOrderModal() {
