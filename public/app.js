@@ -55,15 +55,20 @@ async function safeFetchJson(url, options = {}) {
     }
 }
 
+const DEFAULT_SUPABASE_URL = "https://rksrrkkqqivvcdeiljax.supabase.co";
+const DEFAULT_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJrc3Jya2txcWl2dmNkZWlsamF4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg1MDQxNDksImV4cCI6MjEwNDA4MDE0OX0.1l_b9kWadN8o7pkqAK6Ri83YsWhWTPF8DFhFk1SStpk";
+
 // Supabase Auth Integration
 async function initSupabaseAuth() {
     try {
         const config = await safeFetchJson('/api/config');
-        if (config) {
-            state.supabaseConfig = config;
-            if (config.supabase_url && config.supabase_anon_key && window.supabase) {
-                state.supabaseClient = window.supabase.createClient(config.supabase_url, config.supabase_anon_key);
-            }
+        const url = (config && config.supabase_url) ? config.supabase_url : DEFAULT_SUPABASE_URL;
+        const key = (config && config.supabase_anon_key) ? config.supabase_anon_key : DEFAULT_SUPABASE_ANON_KEY;
+
+        state.supabaseConfig = { supabase_url: url, supabase_anon_key: key };
+
+        if (url && key && window.supabase) {
+            state.supabaseClient = window.supabase.createClient(url, key);
         }
     } catch (e) {}
 }
@@ -249,6 +254,161 @@ async function fetchSystemStatus() {
     } catch (e) {}
 }
 
+// Local Storage & Client Fallback Engine for Static Web Deployments (Netlify/Cloudflare)
+const DEFAULT_CLIENT_RXS = [
+    {
+        id: 'rx-cardivas',
+        medicine_name: 'CARDIVAS 3.125mg',
+        brand_name: 'Sun Pharma',
+        dosage_strength: '3.125mg',
+        medicine_type: 'Tablet',
+        prescription_type: 'RX',
+        prescription_type_label: 'Rx (Standard Prescription)',
+        dosage_frequency_type: 'ONCE_NIGHT',
+        frequency_label: 'Night Only (09:00 PM)',
+        dose_quantity_label: '1 Tablet (Full Dose)',
+        meal_relation_text: 'Take after meal / food',
+        instructions: 'AFTER FOOD IN NIGHT ONLY',
+        doctor_name: 'DR. VIKRANT SOOD',
+        total_tablets_remaining: 58,
+        daily_frequency: 1,
+        tablets_per_dose: 1,
+        units_per_pack: 10
+    },
+    {
+        id: 'rx-zonegran',
+        medicine_name: 'ZONEGRAN 100mg',
+        brand_name: 'Eisai Pharma',
+        dosage_strength: '100mg',
+        medicine_type: 'Capsule',
+        prescription_type: 'NRX',
+        prescription_type_label: 'NRx (Controlled Substance)',
+        dosage_frequency_type: 'TWICE_DAILY',
+        frequency_label: 'Twice a Day (08:00 AM - 08:00 PM)',
+        dose_quantity_label: '1 Capsule (Full Dose)',
+        meal_relation_text: 'Take after meal / food',
+        instructions: 'CONTROLLED MEDICATION - TAKE REGULARLY',
+        doctor_name: 'DR. VIKRANT SOOD',
+        total_tablets_remaining: 59,
+        daily_frequency: 2,
+        tablets_per_dose: 1,
+        units_per_pack: 10
+    },
+    {
+        id: 'rx-pan40',
+        medicine_name: 'PAN 40mg',
+        brand_name: 'Alkem Labs',
+        dosage_strength: '40mg',
+        medicine_type: 'Tablet',
+        prescription_type: 'OTC',
+        prescription_type_label: 'OTC (Wellness / Antacid)',
+        dosage_frequency_type: 'ONCE_MORNING',
+        frequency_label: 'Morning Only (08:00 AM)',
+        dose_quantity_label: '1 Tablet (Full Dose)',
+        meal_relation_text: 'Take before meal / empty stomach',
+        instructions: 'Take 30 mins before breakfast',
+        doctor_name: 'DR. S. K. GUPTA',
+        total_tablets_remaining: 45,
+        daily_frequency: 1,
+        tablets_per_dose: 1,
+        units_per_pack: 15
+    }
+];
+
+function getClientStorageKey(suffix) {
+    const userEmail = (state.currentUser && state.currentUser.email) ? state.currentUser.email : 'guest';
+    return `sattva_${suffix}_${userEmail}`;
+}
+
+function getClientPrescriptions() {
+    const key = getClientStorageKey('rxs');
+    let rxs = localStorage.getItem(key);
+    if (!rxs) {
+        localStorage.setItem(key, JSON.stringify(DEFAULT_CLIENT_RXS));
+        return DEFAULT_CLIENT_RXS;
+    }
+    try {
+        const parsed = JSON.parse(rxs);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        localStorage.setItem(key, JSON.stringify(DEFAULT_CLIENT_RXS));
+        return DEFAULT_CLIENT_RXS;
+    } catch (e) {
+        return DEFAULT_CLIENT_RXS;
+    }
+}
+
+function saveClientPrescriptions(rxs) {
+    localStorage.setItem(getClientStorageKey('rxs'), JSON.stringify(rxs));
+}
+
+function getClientLogs() {
+    let logs = localStorage.getItem(getClientStorageKey('logs'));
+    if (!logs) return [];
+    try { return JSON.parse(logs); } catch (e) { return []; }
+}
+
+function saveClientLogs(logs) {
+    localStorage.setItem(getClientStorageKey('logs'), JSON.stringify(logs));
+}
+
+function getClientOrders() {
+    let orders = localStorage.getItem(getClientStorageKey('orders'));
+    if (!orders) return [];
+    try { return JSON.parse(orders); } catch (e) { return []; }
+}
+
+function saveClientOrders(orders) {
+    localStorage.setItem(getClientStorageKey('orders'), JSON.stringify(orders));
+}
+
+function getClientSideSchedule(targetDate) {
+    const rxs = getClientPrescriptions();
+    const logs = getClientLogs();
+    const dateStr = targetDate || getTodayDateStr();
+    const todayObj = new Date();
+
+    return rxs.map(rx => {
+        const morningLog = logs.find(l => l.prescription_id === rx.id && l.scheduled_time === 'MORNING' && l.taken_at.startsWith(dateStr));
+        const afternoonLog = logs.find(l => l.prescription_id === rx.id && l.scheduled_time === 'AFTERNOON' && l.taken_at.startsWith(dateStr));
+        const eveningLog = logs.find(l => l.prescription_id === rx.id && l.scheduled_time === 'EVENING' && l.taken_at.startsWith(dateStr));
+        const nightLog = logs.find(l => l.prescription_id === rx.id && l.scheduled_time === 'NIGHT' && l.taken_at.startsWith(dateStr));
+
+        const history7Days = [];
+        for (let i = 6; i >= 0; i--) {
+            const d = new Date(todayObj);
+            d.setDate(todayObj.getDate() - i);
+            const dStr = d.toISOString().split('T')[0];
+            const dayLogs = logs.filter(l => l.prescription_id === rx.id && l.taken_at.startsWith(dStr) && l.status === 'TAKEN');
+            history7Days.push({
+                date: dStr,
+                dayLabel: i === 0 ? 'Today' : (i === 1 ? 'Yest' : d.toLocaleDateString('en-US', { weekday: 'short' })),
+                dayNum: d.getDate(),
+                monthShort: d.toLocaleDateString('en-US', { month: 'short' }),
+                isToday: i === 0,
+                isSelected: dStr === dateStr,
+                takenCount: dayLogs.length
+            });
+        }
+
+        const dailyFreq = rx.daily_frequency || 1;
+        const totalPills = rx.total_tablets_remaining || 0;
+        const daysRemaining = dailyFreq > 0 ? Math.floor(totalPills / dailyFreq) : 999;
+        const isRunout = daysRemaining <= 5;
+
+        return {
+            ...rx,
+            target_date: dateStr,
+            days_supply_remaining: daysRemaining,
+            is_runout_alert_5days: isRunout,
+            morning_taken: Boolean(morningLog && morningLog.status === 'TAKEN'),
+            afternoon_taken: Boolean(afternoonLog && afternoonLog.status === 'TAKEN'),
+            evening_taken: Boolean(eveningLog && eveningLog.status === 'TAKEN'),
+            night_taken: Boolean(nightLog && nightLog.status === 'TAKEN'),
+            history_7days: history7Days
+        };
+    });
+}
+
 // Load Patient Portal
 async function loadPatientPortal() {
     await Promise.all([
@@ -262,21 +422,58 @@ async function loadPatientPortal() {
 async function fetchPatientStats() {
     try {
         const selDate = state.selectedDate || getTodayDateStr();
-        const res = await fetch(`/api/patient/stats?date=${encodeURIComponent(selDate)}&t=${Date.now()}`, { headers: getUserHeaders() });
-        if (!res.ok) return;
-        const stats = await res.json();
-        state.stats = stats;
+        const stats = await safeFetchJson(`/api/patient/stats?date=${encodeURIComponent(selDate)}&t=${Date.now()}`, { headers: getUserHeaders() });
+        if (stats) {
+            state.stats = stats;
+        } else {
+            const schedule = getClientSideSchedule(selDate);
+            const rxs = getClientPrescriptions();
+            let totalPills = 0;
+            let runoutCount = 0;
+            const alertList = [];
+            rxs.forEach(r => {
+                totalPills += parseFloat(r.total_tablets_remaining || 0);
+                const days = r.daily_frequency > 0 ? Math.floor(r.total_tablets_remaining / r.daily_frequency) : 999;
+                if (days <= 5) {
+                    runoutCount++;
+                    alertList.push({
+                        id: r.id,
+                        medicine_name: r.medicine_name,
+                        brand_name: r.brand_name,
+                        total_tablets_remaining: r.total_tablets_remaining,
+                        days_left: days
+                    });
+                }
+            });
+            let req = 0, taken = 0;
+            schedule.forEach(s => {
+                req += (s.daily_frequency || 1);
+                if (s.morning_taken) taken++;
+                if (s.afternoon_taken) taken++;
+                if (s.evening_taken) taken++;
+                if (s.night_taken) taken++;
+            });
+            state.stats = {
+                adherence_percentage: req > 0 ? Math.round((taken / req) * 100) : 0,
+                today_taken_count: taken,
+                today_scheduled_count: req,
+                total_pills_remaining: totalPills,
+                total_prescriptions: rxs.length,
+                runout_5days_count: runoutCount,
+                critical_runout_alerts: alertList
+            };
+        }
 
         const isToday = selDate === getTodayDateStr();
         const dateLabel = isToday ? 'today' : `on ${selDate}`;
 
-        document.getElementById('stat-adherence').innerText = `${stats.adherence_percentage || 0}%`;
-        document.getElementById('stat-doses-taken-text').innerText = `${stats.today_taken_count || 0} of ${stats.today_scheduled_count || 0} doses taken ${dateLabel}`;
-        document.getElementById('stat-total-pills').innerText = (stats.total_pills_remaining || 0).toLocaleString();
-        document.getElementById('stat-rxs-count').innerText = `Across ${stats.total_prescriptions || 0} prescriptions`;
-        document.getElementById('stat-runout-count').innerText = stats.runout_5days_count || 0;
+        document.getElementById('stat-adherence').innerText = `${state.stats.adherence_percentage || 0}%`;
+        document.getElementById('stat-doses-taken-text').innerText = `${state.stats.today_taken_count || 0} of ${state.stats.today_scheduled_count || 0} doses taken ${dateLabel}`;
+        document.getElementById('stat-total-pills').innerText = (state.stats.total_pills_remaining || 0).toLocaleString();
+        document.getElementById('stat-rxs-count').innerText = `Across ${state.stats.total_prescriptions || 0} prescriptions`;
+        document.getElementById('stat-runout-count').innerText = state.stats.runout_5days_count || 0;
 
-        renderStockoutBanner(stats.critical_runout_alerts || []);
+        renderStockoutBanner(state.stats.critical_runout_alerts || []);
     } catch (e) {}
 }
 
@@ -371,17 +568,18 @@ function selectScheduleDate(dateStr) {
 }
 
 async function fetchSchedule() {
+    renderSevenDayBar();
     try {
         const selDate = state.selectedDate || getTodayDateStr();
-        const res = await fetch(`/api/patient/today-schedule?date=${encodeURIComponent(selDate)}&t=${Date.now()}`, { headers: getUserHeaders() });
-        if (!res.ok) return;
-        const data = await res.json();
-        state.schedule = data;
-
-        renderSevenDayBar();
+        const data = await safeFetchJson(`/api/patient/today-schedule?date=${encodeURIComponent(selDate)}&t=${Date.now()}`, { headers: getUserHeaders() });
+        state.schedule = data ? data : getClientSideSchedule(selDate);
         renderScheduleCards();
-        updateNextDoseTimer(data);
-    } catch (e) {}
+        updateNextDoseTimer(state.schedule);
+    } catch (e) {
+        state.schedule = getClientSideSchedule(state.selectedDate || getTodayDateStr());
+        renderScheduleCards();
+        updateNextDoseTimer(state.schedule);
+    }
 }
 
 function renderSevenDayBar() {
@@ -616,11 +814,47 @@ function updateNextDoseTimer(schedule) {
     }
 }
 
-// Toggle Dose Slot (With Target Date Support)
+function toggleDoseSlotClient(prescriptionId, slotName, targetDate) {
+    const dateStr = targetDate || getTodayDateStr();
+    const rxs = getClientPrescriptions();
+    const logs = getClientLogs();
+
+    const rx = rxs.find(r => r.id === prescriptionId);
+    if (!rx) return { is_taken: false, tablets_consumed: 1 };
+
+    const existingLogIdx = logs.findIndex(l => l.prescription_id === prescriptionId && l.scheduled_time === slotName && l.taken_at.startsWith(dateStr));
+    const doseQty = rx.tablets_per_dose || 1;
+    let isNowTaken = false;
+
+    if (existingLogIdx !== -1) {
+        logs.splice(existingLogIdx, 1);
+        rx.total_tablets_remaining = parseFloat((rx.total_tablets_remaining + doseQty).toFixed(2));
+        isNowTaken = false;
+    } else {
+        rx.total_tablets_remaining = Math.max(0, parseFloat((rx.total_tablets_remaining - doseQty).toFixed(2)));
+        logs.unshift({
+            id: 'log-' + Date.now(),
+            prescription_id: prescriptionId,
+            medicine_name: rx.medicine_name,
+            scheduled_time: slotName,
+            status: 'TAKEN',
+            tablets_consumed: doseQty,
+            taken_at: `${dateStr}T${new Date().toISOString().split('T')[1]}`
+        });
+        isNowTaken = true;
+    }
+
+    saveClientPrescriptions(rxs);
+    saveClientLogs(logs);
+
+    return { is_taken: isNowTaken, tablets_consumed: doseQty };
+}
+
+// Toggle Dose Slot (With Target Date Support & Static Fallback)
 async function toggleDoseSlot(prescriptionId, slotName) {
     try {
         const selDate = state.selectedDate || getTodayDateStr();
-        const res = await fetch('/api/patient/toggle-slot', {
+        let data = await safeFetchJson('/api/patient/toggle-slot', {
             method: 'POST',
             headers: getUserHeaders(),
             body: JSON.stringify({
@@ -630,14 +864,11 @@ async function toggleDoseSlot(prescriptionId, slotName) {
             })
         });
 
-        if (!res.ok) {
-            const err = await res.json();
-            throw new Error(err.error || 'Failed to update dose status');
+        if (!data) {
+            data = toggleDoseSlotClient(prescriptionId, slotName, selDate);
         }
 
-        const data = await res.json();
-
-        if (data.is_taken) {
+        if (data && data.is_taken) {
             const consumedText = data.tablets_consumed === 0.5 ? '1/2 pill' : (data.tablets_consumed === 0.25 ? '1/4 pill' : `${data.tablets_consumed} pill(s)`);
             showToast(`✓ ${slotName.charAt(0) + slotName.slice(1).toLowerCase()} dose taken (${selDate})! ${consumedText} deducted.`, 'success');
         } else {
@@ -653,13 +884,13 @@ async function toggleDoseSlot(prescriptionId, slotName) {
 // Medicine Cabinet
 async function fetchCabinet() {
     try {
-        const res = await fetch(`/api/patient/prescriptions?t=${Date.now()}`, { headers: getUserHeaders() });
-        if (!res.ok) return;
-        const data = await res.json();
-        state.prescriptions = data;
-
+        const data = await safeFetchJson(`/api/patient/prescriptions?t=${Date.now()}`, { headers: getUserHeaders() });
+        state.prescriptions = (data && Array.isArray(data) && data.length > 0) ? data : getClientPrescriptions();
         renderCabinetGrid();
-    } catch (e) {}
+    } catch (e) {
+        state.prescriptions = getClientPrescriptions();
+        renderCabinetGrid();
+    }
 }
 
 function renderCabinetGrid() {
@@ -753,16 +984,15 @@ function renderCabinetGrid() {
 // Pharmacy Orders Management
 async function fetchOrders() {
     try {
-        const res = await fetch(`/api/patient/orders?t=${Date.now()}`, { headers: getUserHeaders() });
-        if (!res.ok) return;
-        const data = await res.json();
-        state.orders = data;
-
+        const data = await safeFetchJson(`/api/patient/orders?t=${Date.now()}`, { headers: getUserHeaders() });
+        state.orders = data ? data : getClientOrders();
         const badgeCount = document.getElementById('orders-badge-count');
-        if (badgeCount) badgeCount.innerText = data.filter(o => o.status !== 'DELIVERED' && o.status !== 'CANCELLED').length;
-
+        if (badgeCount) badgeCount.innerText = state.orders.filter(o => o.status !== 'DELIVERED' && o.status !== 'CANCELLED').length;
         renderOrdersList();
-    } catch (e) {}
+    } catch (e) {
+        state.orders = getClientOrders();
+        renderOrdersList();
+    }
 }
 
 function renderOrdersList() {
