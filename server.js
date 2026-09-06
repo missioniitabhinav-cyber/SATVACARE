@@ -53,7 +53,8 @@ app.get('/api/patient/stats', async (req, res) => {
     try {
         const email = getUserEmail(req);
         if (!email) return res.status(401).json({ error: 'Unauthorized. Login required.' });
-        const stats = await DB.getPatientStats(email);
+        const targetDate = req.query.date || null;
+        const stats = await DB.getPatientStats(email, targetDate);
         res.json(stats);
     } catch (err) {
         res.status(500).json({ error: err.message });

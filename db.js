@@ -669,10 +669,10 @@ const DB = {
         };
     },
 
-    // Patient Dashboard Stats
-    async getPatientStats(userEmail = 'patient@medibuddy.com') {
+    // Patient Dashboard Stats (Supports target date for 7-day adherence tracking)
+    async getPatientStats(userEmail = 'patient@medibuddy.com', targetDate = null) {
         const rxs = await this.getPrescriptions(userEmail);
-        const schedule = await this.getTodaySchedule(userEmail);
+        const schedule = await this.getTodaySchedule(userEmail, targetDate);
 
         const totalPrescriptions = rxs.length;
         let totalPillsRemaining = 0;

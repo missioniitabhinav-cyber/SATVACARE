@@ -246,13 +246,17 @@ async function loadPatientPortal() {
 
 async function fetchPatientStats() {
     try {
-        const res = await fetch(`/api/patient/stats?t=${Date.now()}`, { headers: getUserHeaders() });
+        const selDate = state.selectedDate || getTodayDateStr();
+        const res = await fetch(`/api/patient/stats?date=${encodeURIComponent(selDate)}&t=${Date.now()}`, { headers: getUserHeaders() });
         if (!res.ok) return;
         const stats = await res.json();
         state.stats = stats;
 
+        const isToday = selDate === getTodayDateStr();
+        const dateLabel = isToday ? 'today' : `on ${selDate}`;
+
         document.getElementById('stat-adherence').innerText = `${stats.adherence_percentage || 0}%`;
-        document.getElementById('stat-doses-taken-text').innerText = `${stats.today_taken_count || 0} of ${stats.today_scheduled_count || 0} doses taken today`;
+        document.getElementById('stat-doses-taken-text').innerText = `${stats.today_taken_count || 0} of ${stats.today_scheduled_count || 0} doses taken ${dateLabel}`;
         document.getElementById('stat-total-pills').innerText = (stats.total_pills_remaining || 0).toLocaleString();
         document.getElementById('stat-rxs-count').innerText = `Across ${stats.total_prescriptions || 0} prescriptions`;
         document.getElementById('stat-runout-count').innerText = stats.runout_5days_count || 0;
