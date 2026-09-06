@@ -638,16 +638,29 @@ function generateDefaultClientLogs() {
     return logs;
 }
 
-// Direct Supabase Database Integration Engine
+function isUserMatch(item, userEmail) {
+    if (!userEmail) return true;
+    const target = String(userEmail).trim().toLowerCase();
+    const itemUser = String(item.user_id || item.user_email || '').trim().toLowerCase();
+    if (!itemUser) return true;
+    if (target === 'patient@medibuddy.com' || target === 'patient-1') {
+        return !itemUser || itemUser === 'patient@medibuddy.com' || itemUser === 'patient-1';
+    }
+    return itemUser === target;
+}
+
+// Direct Supabase Database Integration Engine (Strictly User-Scoped)
 async function getSupabasePrescriptions() {
     if (!state.supabaseClient) return null;
     try {
+        const userEmail = (state.currentUser && state.currentUser.email) ? state.currentUser.email : '';
         const { data, error } = await state.supabaseClient
             .from('patient_prescriptions')
             .select('*')
             .order('created_at', { ascending: false });
         if (error || !data || !Array.isArray(data) || data.length === 0) return null;
-        return data.map(enhancePrescriptionClient);
+        const userScoped = data.filter(item => isUserMatch(item, userEmail));
+        return userScoped.map(enhancePrescriptionClient);
     } catch (e) {
         return null;
     }
@@ -656,12 +669,13 @@ async function getSupabasePrescriptions() {
 async function getSupabaseOrders() {
     if (!state.supabaseClient) return null;
     try {
+        const userEmail = (state.currentUser && state.currentUser.email) ? state.currentUser.email : '';
         const { data, error } = await state.supabaseClient
             .from('pharmacy_orders')
             .select('*')
             .order('created_at', { ascending: false });
         if (error || !data || !Array.isArray(data) || data.length === 0) return null;
-        return data;
+        return data.filter(item => isUserMatch(item, userEmail));
     } catch (e) {
         return null;
     }
@@ -670,11 +684,12 @@ async function getSupabaseOrders() {
 async function getSupabaseLogs() {
     if (!state.supabaseClient) return null;
     try {
+        const userEmail = (state.currentUser && state.currentUser.email) ? state.currentUser.email : '';
         const { data, error } = await state.supabaseClient
             .from('medication_logs')
             .select('*');
         if (error || !data || !Array.isArray(data)) return null;
-        return data;
+        return data.filter(item => isUserMatch(item, userEmail));
     } catch (e) {
         return null;
     }
