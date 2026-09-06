@@ -257,9 +257,10 @@ async function fetchSystemStatus() {
 // Local Storage & Client Fallback Engine for Static Web Deployments (Netlify/Cloudflare)
 const DEFAULT_CLIENT_RXS = [
     {
-        id: 'rx-cardivas',
+        id: 'rx-cardivas-3',
         medicine_name: 'CARDIVAS 3.125mg',
         brand_name: 'Sun Pharma',
+        generic_name: 'CARVEDILOL',
         dosage_strength: '3.125mg',
         medicine_type: 'Tablet',
         prescription_type: 'RX',
@@ -268,17 +269,44 @@ const DEFAULT_CLIENT_RXS = [
         frequency_label: 'Night Only (09:00 PM)',
         dose_quantity_label: '1 Tablet (Full Dose)',
         meal_relation_text: 'Take after meal / food',
-        instructions: 'AFTER FOOD IN NIGHT ONLY',
+        instructions: 'AFTER FOOD IN NIGHT ONLY [RX MEDICINE]',
         doctor_name: 'DR. VIKRANT SOOD',
-        total_tablets_remaining: 58,
+        clinic_hospital: 'ILBS',
+        total_tablets_remaining: 56,
         daily_frequency: 1,
         tablets_per_dose: 1,
-        units_per_pack: 10
+        units_per_pack: 10,
+        days_supply_remaining: 56,
+        is_runout_alert_5days: false
+    },
+    {
+        id: 'rx-cardivas-6',
+        medicine_name: 'CARDIVAS 6.25mg',
+        brand_name: 'Sun Pharma',
+        generic_name: 'CARVEDILOL',
+        dosage_strength: '6.25mg',
+        medicine_type: 'Tablet',
+        prescription_type: 'RX',
+        prescription_type_label: 'Rx (Standard Prescription)',
+        dosage_frequency_type: 'ONCE_MORNING',
+        frequency_label: 'Morning Only (08:00 AM)',
+        dose_quantity_label: '1 Tablet (Full Dose)',
+        meal_relation_text: 'Take after meal / food',
+        instructions: 'Take in morning after food [RX MEDICINE]',
+        doctor_name: 'DR. VIKRANT SOOD',
+        clinic_hospital: 'ILBS',
+        total_tablets_remaining: 53,
+        daily_frequency: 1,
+        tablets_per_dose: 1,
+        units_per_pack: 10,
+        days_supply_remaining: 53,
+        is_runout_alert_5days: false
     },
     {
         id: 'rx-zonegran',
         medicine_name: 'ZONEGRAN 100mg',
         brand_name: 'Eisai Pharma',
+        generic_name: 'ZONISAMIDE',
         dosage_strength: '100mg',
         medicine_type: 'Capsule',
         prescription_type: 'NRX',
@@ -287,17 +315,205 @@ const DEFAULT_CLIENT_RXS = [
         frequency_label: 'Twice a Day (08:00 AM - 08:00 PM)',
         dose_quantity_label: '1 Capsule (Full Dose)',
         meal_relation_text: 'Take after meal / food',
-        instructions: 'CONTROLLED MEDICATION - TAKE REGULARLY',
-        doctor_name: 'DR. VIKRANT SOOD',
-        total_tablets_remaining: 59,
+        instructions: 'CONTROLLED MEDICATION - TAKE REGULARLY [NRX MEDICINE]',
+        doctor_name: 'DR. SOMASUNDARAM',
+        clinic_hospital: 'APOLLO HOSPITALS',
+        total_tablets_remaining: 45,
         daily_frequency: 2,
         tablets_per_dose: 1,
-        units_per_pack: 10
+        units_per_pack: 10,
+        days_supply_remaining: 22,
+        is_runout_alert_5days: false
+    },
+    {
+        id: 'rx-brivaster',
+        medicine_name: 'BRIVASTER 50mg',
+        brand_name: 'RB Pharma',
+        generic_name: 'BRIVARACETAM',
+        dosage_strength: '50mg',
+        medicine_type: 'Tablet',
+        prescription_type: 'NRX',
+        prescription_type_label: 'NRx (Controlled Substance)',
+        dosage_frequency_type: 'TWICE_DAILY',
+        frequency_label: 'Twice a Day (08:00 AM - 08:00 PM)',
+        dose_quantity_label: '1 Tablet (Full Dose)',
+        meal_relation_text: 'Take after meal / food',
+        instructions: 'NEUROLOGY PRESCRIPTION - REGULAR DOSE [NRX MEDICINE]',
+        doctor_name: 'DR. SOMASUNDARAM',
+        clinic_hospital: 'APOLLO HOSPITALS',
+        total_tablets_remaining: 45,
+        daily_frequency: 2,
+        tablets_per_dose: 1,
+        units_per_pack: 10,
+        days_supply_remaining: 22,
+        is_runout_alert_5days: false
+    },
+    {
+        id: 'rx-pangraf-05',
+        medicine_name: 'PANGRAF 0.5mg',
+        brand_name: 'Mankind',
+        generic_name: 'TACROLIMUS',
+        dosage_strength: '0.5mg',
+        medicine_type: 'Capsule',
+        prescription_type: 'TRX',
+        prescription_type_label: 'TRx (Chronic Care Refill)',
+        dosage_frequency_type: 'TWICE_DAILY',
+        frequency_label: 'Twice a Day (08:00 AM - 08:00 PM)',
+        dose_quantity_label: '1 Capsule (Full Dose)',
+        meal_relation_text: 'Take on empty stomach (Before Meal)',
+        instructions: 'IMMUNOSUPPRESSANT - STRICT TIMING [TRX MEDICINE]',
+        doctor_name: 'DR. VIKRANT SOOD',
+        clinic_hospital: 'ILBS',
+        total_tablets_remaining: 49,
+        daily_frequency: 2,
+        tablets_per_dose: 1,
+        units_per_pack: 10,
+        days_supply_remaining: 24,
+        is_runout_alert_5days: false
+    },
+    {
+        id: 'rx-pangraf-025',
+        medicine_name: 'PANGRAF 0.25mg',
+        brand_name: 'Mankind',
+        generic_name: 'TACROLIMUS',
+        dosage_strength: '0.25mg',
+        medicine_type: 'Capsule',
+        prescription_type: 'TRX',
+        prescription_type_label: 'TRx (Chronic Care Refill)',
+        dosage_frequency_type: 'TWICE_DAILY',
+        frequency_label: 'Twice a Day (08:00 AM - 08:00 PM)',
+        dose_quantity_label: '1 Capsule (Full Dose)',
+        meal_relation_text: 'Take on empty stomach (Before Meal)',
+        instructions: 'TAKE 12 HOURS APART ON EMPTY STOMACH [TRX MEDICINE]',
+        doctor_name: 'DR. VIKRANT SOOD',
+        clinic_hospital: 'ILBS',
+        total_tablets_remaining: 49,
+        daily_frequency: 2,
+        tablets_per_dose: 1,
+        units_per_pack: 10,
+        days_supply_remaining: 24,
+        is_runout_alert_5days: false
+    },
+    {
+        id: 'rx-udiliv-450',
+        medicine_name: 'UDILIV 450mg',
+        brand_name: 'Abbott',
+        generic_name: 'URSODEOXYCHOLIC ACID',
+        dosage_strength: '450mg',
+        medicine_type: 'Tablet',
+        prescription_type: 'RX',
+        prescription_type_label: 'Rx (Standard Prescription)',
+        dosage_frequency_type: 'TWICE_DAILY',
+        frequency_label: 'Twice a Day (08:00 AM - 08:00 PM)',
+        dose_quantity_label: '1 Tablet (Full Dose)',
+        meal_relation_text: 'Take after meal / food',
+        instructions: 'TAKE AFTER MEAL WITH WATER',
+        doctor_name: 'DR. VIKRANT SOOD',
+        clinic_hospital: 'ILBS',
+        total_tablets_remaining: 68,
+        daily_frequency: 2,
+        tablets_per_dose: 1,
+        units_per_pack: 10,
+        days_supply_remaining: 34,
+        is_runout_alert_5days: false
+    },
+    {
+        id: 'rx-azaron-25',
+        medicine_name: 'AZARON 25mg',
+        brand_name: 'RPG Life Sciences',
+        generic_name: 'AZATHIOPRINE',
+        dosage_strength: '12.5mg',
+        medicine_type: 'Tablet',
+        prescription_type: 'TRX',
+        prescription_type_label: 'TRx (Chronic Care Refill)',
+        dosage_frequency_type: 'ONCE_MORNING',
+        frequency_label: 'Morning Only (08:00 AM)',
+        dose_quantity_label: '1/2 Tablet (Half Dose)',
+        meal_relation_text: 'Take after meal / food',
+        instructions: '[MORNING ONLY] [1/2 TABLET] [TRX MEDICINE]',
+        doctor_name: 'DR. VIKRANT SOOD',
+        clinic_hospital: 'ILBS',
+        total_tablets_remaining: 43,
+        daily_frequency: 0.5,
+        tablets_per_dose: 0.5,
+        units_per_pack: 10,
+        days_supply_remaining: 86,
+        is_runout_alert_5days: false
+    },
+    {
+        id: 'rx-wysolone-5',
+        medicine_name: 'WYSOLONE 5mg',
+        brand_name: 'Pfizer',
+        generic_name: 'PREDNISOLONE',
+        dosage_strength: '5mg',
+        medicine_type: 'Tablet',
+        prescription_type: 'TRX',
+        prescription_type_label: 'TRx (Chronic Care Refill)',
+        dosage_frequency_type: 'ONCE_MORNING',
+        frequency_label: 'Morning Only (08:00 AM)',
+        dose_quantity_label: '1 Tablet (Full Dose)',
+        meal_relation_text: 'Take after meal / food',
+        instructions: 'TAKE MORNING AFTER BREAKFAST [TRX MEDICINE]',
+        doctor_name: 'DR. VIKRANT SOOD',
+        clinic_hospital: 'ILBS',
+        total_tablets_remaining: 46,
+        daily_frequency: 1,
+        tablets_per_dose: 1,
+        units_per_pack: 10,
+        days_supply_remaining: 46,
+        is_runout_alert_5days: false
+    },
+    {
+        id: 'rx-azaron-50',
+        medicine_name: 'AZARON 50mg',
+        brand_name: 'RPG Life Sciences',
+        generic_name: 'AZATHIOPRINE',
+        dosage_strength: '50mg',
+        medicine_type: 'Tablet',
+        prescription_type: 'TRX',
+        prescription_type_label: 'TRx (Chronic Care Refill)',
+        dosage_frequency_type: 'ONCE_MORNING',
+        frequency_label: 'Morning Only (08:00 AM)',
+        dose_quantity_label: '1 Tablet (Full Dose)',
+        meal_relation_text: 'Take after meal / food',
+        instructions: '[MORNING ONLY] [TRX MEDICINE]',
+        doctor_name: 'DR. VIKRANT SOOD',
+        clinic_hospital: 'ILBS',
+        total_tablets_remaining: 55,
+        daily_frequency: 1,
+        tablets_per_dose: 1,
+        units_per_pack: 10,
+        days_supply_remaining: 55,
+        is_runout_alert_5days: false
+    },
+    {
+        id: 'rx-clobanil-10',
+        medicine_name: 'CLOBANIL 10mg',
+        brand_name: 'Linux Labs',
+        generic_name: 'CLOBAZAM',
+        dosage_strength: '5mg',
+        medicine_type: 'Tablet',
+        prescription_type: 'NRX',
+        prescription_type_label: 'NRx (Controlled Substance)',
+        dosage_frequency_type: 'ONCE_NIGHT',
+        frequency_label: 'Night Only (09:00 PM)',
+        dose_quantity_label: '1/2 Tablet (Half Dose)',
+        meal_relation_text: 'Take after meal / food',
+        instructions: '[NIGHT ONLY] [1/2 TABLET] [NRX MEDICINE]',
+        doctor_name: 'DR. SOMASUNDARAM',
+        clinic_hospital: 'APOLLO HOSPITALS',
+        total_tablets_remaining: 13.5,
+        daily_frequency: 0.5,
+        tablets_per_dose: 0.5,
+        units_per_pack: 10,
+        days_supply_remaining: 27,
+        is_runout_alert_5days: false
     },
     {
         id: 'rx-pan40',
         medicine_name: 'PAN 40mg',
         brand_name: 'Alkem Labs',
+        generic_name: 'PANTOPRAZOLE',
         dosage_strength: '40mg',
         medicine_type: 'Tablet',
         prescription_type: 'OTC',
@@ -308,12 +524,119 @@ const DEFAULT_CLIENT_RXS = [
         meal_relation_text: 'Take before meal / empty stomach',
         instructions: 'Take 30 mins before breakfast',
         doctor_name: 'DR. S. K. GUPTA',
+        clinic_hospital: 'MAX HEALTHCARE',
         total_tablets_remaining: 45,
         daily_frequency: 1,
         tablets_per_dose: 1,
-        units_per_pack: 15
+        units_per_pack: 15,
+        days_supply_remaining: 45,
+        is_runout_alert_5days: false
     }
 ];
+
+const DEFAULT_CLIENT_ORDERS = [
+    {
+        id: 'ord-1788694790644',
+        prescription_id: 'rx-pangraf-025',
+        medicine_name: 'PANGRAF 0.25mg',
+        brand_name: 'Mankind',
+        pharmacy_name: 'APOLLO PHARMACY',
+        order_number: '358351812',
+        quantity_ordered: 40,
+        unit_price: 22.06,
+        total_price: 882.4,
+        status: 'SHIPPED',
+        order_date: new Date().toISOString().split('T')[0],
+        expected_delivery: '2026-09-12',
+        notes: 'DELHIVERY: 14289887631024'
+    },
+    {
+        id: 'ord-1788694567440',
+        prescription_id: 'rx-udiliv-450',
+        medicine_name: 'UDILIV 450mg',
+        brand_name: 'Abbott',
+        pharmacy_name: 'APOLLO PHARMACY',
+        order_number: '358351811',
+        quantity_ordered: 20,
+        unit_price: 72.06,
+        total_price: 1441.2,
+        status: 'OUT_FOR_DELIVERY',
+        order_date: new Date().toISOString().split('T')[0],
+        expected_delivery: new Date().toISOString().split('T')[0],
+        notes: 'Out for delivery today by Apollo Express'
+    },
+    {
+        id: 'ord-1788520355494',
+        prescription_id: 'rx-pangraf-05',
+        medicine_name: 'PANGRAF 0.5mg',
+        brand_name: 'Mankind',
+        pharmacy_name: 'APOLLO PHARMACY',
+        order_number: '357995032',
+        quantity_ordered: 50,
+        unit_price: 28.96,
+        total_price: 1448.0,
+        status: 'SHIPPED',
+        order_date: '2026-09-04',
+        expected_delivery: '2026-09-08',
+        notes: 'Tracking: DELHIVERY 14289887499682'
+    },
+    {
+        id: 'ord-1788516151339',
+        prescription_id: 'rx-cardivas-3',
+        medicine_name: 'CARDIVAS 3.125mg',
+        brand_name: 'Sun Pharma',
+        pharmacy_name: 'LOCAL PHARMACY',
+        order_number: 'ORD-73156',
+        quantity_ordered: 30,
+        unit_price: 10.66,
+        total_price: 320.0,
+        status: 'DELIVERED',
+        order_date: '2026-09-01',
+        expected_delivery: '2026-09-03',
+        notes: 'Delivered and added to cabinet stock'
+    }
+];
+
+function generateDefaultClientLogs() {
+    const logs = [];
+    const todayObj = new Date();
+    const rxList = DEFAULT_CLIENT_RXS;
+
+    for (let i = 0; i < 7; i++) {
+        const d = new Date(todayObj);
+        d.setDate(todayObj.getDate() - i);
+        const dStr = d.toISOString().split('T')[0];
+
+        rxList.forEach(rx => {
+            const freq = rx.dosage_frequency_type || 'TWICE_DAILY';
+            if (freq === 'ONCE_MORNING' || freq === 'TWICE_DAILY') {
+                logs.push({
+                    id: `log-m-${rx.id}-${dStr}`,
+                    prescription_id: rx.id,
+                    medicine_name: rx.medicine_name,
+                    scheduled_time: 'MORNING',
+                    status: 'TAKEN',
+                    tablets_consumed: rx.tablets_per_dose || 1,
+                    taken_at: `${dStr}T08:15:00.000Z`
+                });
+            }
+            if (freq === 'ONCE_NIGHT' || freq === 'TWICE_DAILY') {
+                if (!(i === 1 && rx.id === 'rx-zonegran')) {
+                    logs.push({
+                        id: `log-n-${rx.id}-${dStr}`,
+                        prescription_id: rx.id,
+                        medicine_name: rx.medicine_name,
+                        scheduled_time: 'NIGHT',
+                        status: 'TAKEN',
+                        tablets_consumed: rx.tablets_per_dose || 1,
+                        taken_at: `${dStr}T21:00:00.000Z`
+                    });
+                }
+            }
+        });
+    }
+    return logs;
+}
 
 function getClientStorageKey(suffix) {
     const userEmail = (state.currentUser && state.currentUser.email) ? state.currentUser.email : 'guest';
@@ -342,9 +665,22 @@ function saveClientPrescriptions(rxs) {
 }
 
 function getClientLogs() {
-    let logs = localStorage.getItem(getClientStorageKey('logs'));
-    if (!logs) return [];
-    try { return JSON.parse(logs); } catch (e) { return []; }
+    const key = getClientStorageKey('logs');
+    let logs = localStorage.getItem(key);
+    if (!logs) {
+        const defaultLogs = generateDefaultClientLogs();
+        localStorage.setItem(key, JSON.stringify(defaultLogs));
+        return defaultLogs;
+    }
+    try { 
+        const parsed = JSON.parse(logs);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        const defaultLogs = generateDefaultClientLogs();
+        localStorage.setItem(key, JSON.stringify(defaultLogs));
+        return defaultLogs;
+    } catch (e) {
+        return generateDefaultClientLogs();
+    }
 }
 
 function saveClientLogs(logs) {
@@ -352,9 +688,20 @@ function saveClientLogs(logs) {
 }
 
 function getClientOrders() {
-    let orders = localStorage.getItem(getClientStorageKey('orders'));
-    if (!orders) return [];
-    try { return JSON.parse(orders); } catch (e) { return []; }
+    const key = getClientStorageKey('orders');
+    let orders = localStorage.getItem(key);
+    if (!orders) {
+        localStorage.setItem(key, JSON.stringify(DEFAULT_CLIENT_ORDERS));
+        return DEFAULT_CLIENT_ORDERS;
+    }
+    try {
+        const parsed = JSON.parse(orders);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        localStorage.setItem(key, JSON.stringify(DEFAULT_CLIENT_ORDERS));
+        return DEFAULT_CLIENT_ORDERS;
+    } catch (e) {
+        return DEFAULT_CLIENT_ORDERS;
+    }
 }
 
 function saveClientOrders(orders) {
