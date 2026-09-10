@@ -712,7 +712,16 @@ async function getSupabaseLogs() {
             .from('medication_logs')
             .select('*');
         if (error || !data || !Array.isArray(data)) return null;
-        return data.filter(item => isUserMatch(item, userEmail));
+
+        const userRxIds = new Set((state.prescriptions || []).map(r => r.id));
+        const userMedNames = new Set((state.prescriptions || []).map(r => (r.medicine_name || '').toLowerCase()));
+
+        return data.filter(item => {
+            if (isUserMatch(item, userEmail)) return true;
+            if (item.prescription_id && userRxIds.has(item.prescription_id)) return true;
+            if (item.medicine_name && userMedNames.has((item.medicine_name || '').toLowerCase())) return true;
+            return false;
+        });
     } catch (e) {
         return null;
     }
