@@ -8,14 +8,34 @@ let state = {
     currentUser: null,
     supabaseConfig: null,
     supabaseClient: null,
+    hasBackendApi: null,
     activeTab: 'schedule',
     searchQuery: '',
     categoryFilter: 'ALL',
-    selectedDate: new Date().toISOString().split('T')[0]
+    selectedDate: null
 };
 
+function isStaticWebDeployment() {
+    if (state.hasBackendApi === false) return true;
+    if (state.hasBackendApi === true) return false;
+    return window.location.hostname.includes('netlify.app') || window.location.hostname.includes('pages.dev');
+}
+
+function getLocalDateStr(d) {
+    if (!d) d = new Date();
+    if (typeof d === 'string') {
+        if (/^\d{4}-\d{2}-\d{2}$/.test(d)) return d;
+        d = new Date(d);
+    }
+    if (!(d instanceof Date) || isNaN(d)) d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
 function getTodayDateStr() {
-    return new Date().toISOString().split('T')[0];
+    return getLocalDateStr(new Date());
 }
 
 function getUserHeaders() {
@@ -242,6 +262,7 @@ async function handleLogout() {
 async function fetchSystemStatus() {
     try {
         const data = await safeFetchJson('/api/status');
+        state.hasBackendApi = !!(data && data.status === 'online');
         const dot = document.getElementById('db-dot');
         const text = document.getElementById('db-text');
         if (data) {
@@ -251,7 +272,9 @@ async function fetchSystemStatus() {
             if (dot) dot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse';
             if (text) text.innerText = 'Online Patient Portal';
         }
-    } catch (e) {}
+    } catch (e) {
+        state.hasBackendApi = false;
+    }
 }
 
 // Local Storage & Client Fallback Engine for Static Web Deployments (Netlify/Cloudflare)
@@ -605,7 +628,7 @@ function generateDefaultClientLogs() {
     for (let i = 0; i < 7; i++) {
         const d = new Date(todayObj);
         d.setDate(todayObj.getDate() - i);
-        const dStr = d.toISOString().split('T')[0];
+        const dStr = getLocalDateStr(d);
 
         rxList.forEach(rx => {
             const freq = rx.dosage_frequency_type || 'TWICE_DAILY';
@@ -738,17 +761,17 @@ function buildScheduleFromData(rxs, logs, targetDate) {
     const todayObj = new Date();
 
     return rxs.map(rx => {
-        const morningLog = logs.find(l => (l.prescription_id === rx.id || l.medicine_name === rx.medicine_name) && l.scheduled_time === 'MORNING' && l.taken_at && l.taken_at.startsWith(dateStr));
-        const afternoonLog = logs.find(l => (l.prescription_id === rx.id || l.medicine_name === rx.medicine_name) && l.scheduled_time === 'AFTERNOON' && l.taken_at && l.taken_at.startsWith(dateStr));
-        const eveningLog = logs.find(l => (l.prescription_id === rx.id || l.medicine_name === rx.medicine_name) && l.scheduled_time === 'EVENING' && l.taken_at && l.taken_at.startsWith(dateStr));
-        const nightLog = logs.find(l => (l.prescription_id === rx.id || l.medicine_name === rx.medicine_name) && l.scheduled_time === 'NIGHT' && l.taken_at && l.taken_at.startsWith(dateStr));
+        const morningLog = logs.find(l => (l.prescription_id === rx.id || l.medicine_name === rx.medicine_name) && l.scheduled_time === 'MORNING' && l.taken_at && (l.taken_at.startsWith(dateStr) || l.taken_at.substring(0, 10) === dateStr));
+        const afternoonLog = logs.find(l => (l.prescription_id === rx.id || l.medicine_name === rx.medicine_name) && l.scheduled_time === 'AFTERNOON' && l.taken_at && (l.taken_at.startsWith(dateStr) || l.taken_at.substring(0, 10) === dateStr));
+        const eveningLog = logs.find(l => (l.prescription_id === rx.id || l.medicine_name === rx.medicine_name) && l.scheduled_time === 'EVENING' && l.taken_at && (l.taken_at.startsWith(dateStr) || l.taken_at.substring(0, 10) === dateStr));
+        const nightLog = logs.find(l => (l.prescription_id === rx.id || l.medicine_name === rx.medicine_name) && l.scheduled_time === 'NIGHT' && l.taken_at && (l.taken_at.startsWith(dateStr) || l.taken_at.substring(0, 10) === dateStr));
 
         const history7Days = [];
         for (let i = 6; i >= 0; i--) {
             const d = new Date(todayObj);
             d.setDate(todayObj.getDate() - i);
-            const dStr = d.toISOString().split('T')[0];
-            const dayLogs = logs.filter(l => (l.prescription_id === rx.id || l.medicine_name === rx.medicine_name) && l.taken_at && l.taken_at.startsWith(dStr) && l.status === 'TAKEN');
+            const dStr = getLocalDateStr(d);
+            const dayLogs = logs.filter(l => (l.prescription_id === rx.id || l.medicine_name === rx.medicine_name) && l.taken_at && (l.taken_at.startsWith(dStr) || l.taken_at.substring(0, 10) === dStr) && l.status === 'TAKEN');
             history7Days.push({
                 date: dStr,
                 dayLabel: i === 0 ? 'Today' : (i === 1 ? 'Yest' : d.toLocaleDateString('en-US', { weekday: 'short' })),
@@ -856,17 +879,17 @@ function getClientSideSchedule(targetDate) {
     const todayObj = new Date();
 
     return rxs.map(rx => {
-        const morningLog = logs.find(l => l.prescription_id === rx.id && l.scheduled_time === 'MORNING' && l.taken_at.startsWith(dateStr));
-        const afternoonLog = logs.find(l => l.prescription_id === rx.id && l.scheduled_time === 'AFTERNOON' && l.taken_at.startsWith(dateStr));
-        const eveningLog = logs.find(l => l.prescription_id === rx.id && l.scheduled_time === 'EVENING' && l.taken_at.startsWith(dateStr));
-        const nightLog = logs.find(l => l.prescription_id === rx.id && l.scheduled_time === 'NIGHT' && l.taken_at.startsWith(dateStr));
+        const morningLog = logs.find(l => l.prescription_id === rx.id && l.scheduled_time === 'MORNING' && l.taken_at && (l.taken_at.startsWith(dateStr) || l.taken_at.substring(0, 10) === dateStr));
+        const afternoonLog = logs.find(l => l.prescription_id === rx.id && l.scheduled_time === 'AFTERNOON' && l.taken_at && (l.taken_at.startsWith(dateStr) || l.taken_at.substring(0, 10) === dateStr));
+        const eveningLog = logs.find(l => l.prescription_id === rx.id && l.scheduled_time === 'EVENING' && l.taken_at && (l.taken_at.startsWith(dateStr) || l.taken_at.substring(0, 10) === dateStr));
+        const nightLog = logs.find(l => l.prescription_id === rx.id && l.scheduled_time === 'NIGHT' && l.taken_at && (l.taken_at.startsWith(dateStr) || l.taken_at.substring(0, 10) === dateStr));
 
         const history7Days = [];
         for (let i = 6; i >= 0; i--) {
             const d = new Date(todayObj);
             d.setDate(todayObj.getDate() - i);
-            const dStr = d.toISOString().split('T')[0];
-            const dayLogs = logs.filter(l => l.prescription_id === rx.id && l.taken_at.startsWith(dStr) && l.status === 'TAKEN');
+            const dStr = getLocalDateStr(d);
+            const dayLogs = logs.filter(l => l.prescription_id === rx.id && l.taken_at && (l.taken_at.startsWith(dStr) || l.taken_at.substring(0, 10) === dStr) && l.status === 'TAKEN');
             history7Days.push({
                 date: dStr,
                 dayLabel: i === 0 ? 'Today' : (i === 1 ? 'Yest' : d.toLocaleDateString('en-US', { weekday: 'short' })),
@@ -910,7 +933,7 @@ async function loadPatientPortal() {
 async function fetchPatientStats() {
     try {
         const selDate = state.selectedDate || getTodayDateStr();
-        const isNetlify = window.location.hostname.includes('netlify.app') || window.location.hostname.includes('pages.dev');
+        const isNetlify = isStaticWebDeployment();
         let stats = null;
         if (!isNetlify) {
             stats = await safeFetchJson(`/api/patient/stats?date=${encodeURIComponent(selDate)}&t=${Date.now()}`, { headers: getUserHeaders() });
@@ -1106,7 +1129,7 @@ async function fetchSchedule() {
     renderSevenDayBar();
     try {
         const selDate = state.selectedDate || getTodayDateStr();
-        const isNetlify = window.location.hostname.includes('netlify.app') || window.location.hostname.includes('pages.dev');
+        const isNetlify = isStaticWebDeployment();
         let data = null;
         if (!isNetlify) {
             data = await safeFetchJson(`/api/patient/today-schedule?date=${encodeURIComponent(selDate)}&t=${Date.now()}`, { headers: getUserHeaders() });
@@ -1142,7 +1165,7 @@ function renderSevenDayBar() {
     for (let i = 6; i >= 0; i--) {
         const d = new Date(todayObj);
         d.setDate(todayObj.getDate() - i);
-        const dStr = d.toISOString().split('T')[0];
+        const dStr = getLocalDateStr(d);
         const isSelected = dStr === activeDateStr;
         const isToday = i === 0;
         const isYesterday = i === 1;
@@ -1370,7 +1393,7 @@ function toggleDoseSlotClient(prescriptionId, slotName, targetDate) {
     const rx = rxs.find(r => r.id === prescriptionId);
     if (!rx) return { is_taken: false, tablets_consumed: 1 };
 
-    const existingLogIdx = logs.findIndex(l => l.prescription_id === prescriptionId && l.scheduled_time === slotName && l.taken_at.startsWith(dateStr));
+    const existingLogIdx = logs.findIndex(l => l.prescription_id === prescriptionId && l.scheduled_time === slotName && l.taken_at && (l.taken_at.startsWith(dateStr) || l.taken_at.substring(0, 10) === dateStr));
     const doseQty = rx.tablets_per_dose || 1;
     let isNowTaken = false;
 
@@ -1387,7 +1410,7 @@ function toggleDoseSlotClient(prescriptionId, slotName, targetDate) {
             scheduled_time: slotName,
             status: 'TAKEN',
             tablets_consumed: doseQty,
-            taken_at: `${dateStr}T${new Date().toISOString().split('T')[1]}`
+            taken_at: `${dateStr}T12:00:00.000Z`
         });
         isNowTaken = true;
     }
@@ -1402,7 +1425,7 @@ function toggleDoseSlotClient(prescriptionId, slotName, targetDate) {
 async function toggleDoseSlot(prescriptionId, slotName) {
     try {
         const selDate = state.selectedDate || getTodayDateStr();
-        const isNetlify = window.location.hostname.includes('netlify.app') || window.location.hostname.includes('pages.dev');
+        const isNetlify = isStaticWebDeployment();
         let data = null;
 
         if (!isNetlify) {
@@ -1422,13 +1445,14 @@ async function toggleDoseSlot(prescriptionId, slotName) {
             const medName = rx ? rx.medicine_name : '';
             const doseQty = rx ? (parseFloat(rx.tablets_per_dose) || 1) : 1;
             const remainingAfter = rx ? Math.max(0, parseFloat((parseFloat(rx.total_tablets_remaining || 0) - doseQty).toFixed(2))) : 0;
+            const userEmail = (state.currentUser && state.currentUser.email) ? state.currentUser.email : 'patient-1';
 
             const { data: existingLogs } = await state.supabaseClient
                 .from('medication_logs')
                 .select('*')
                 .eq('scheduled_time', slotName);
             
-            const existingLog = existingLogs ? existingLogs.find(l => (l.prescription_id === prescriptionId || l.medicine_name === medName) && l.taken_at && l.taken_at.startsWith(selDate)) : null;
+            const existingLog = existingLogs ? existingLogs.find(l => (l.prescription_id === prescriptionId || l.medicine_name === medName) && l.taken_at && (l.taken_at.startsWith(selDate) || l.taken_at.substring(0, 10) === selDate)) : null;
 
             if (existingLog) {
                 await state.supabaseClient.from('medication_logs').delete().eq('id', existingLog.id);
@@ -1436,15 +1460,21 @@ async function toggleDoseSlot(prescriptionId, slotName) {
             } else {
                 const newLog = {
                     id: 'log-' + Date.now(),
+                    user_id: userEmail,
                     prescription_id: prescriptionId,
                     medicine_name: medName || 'Medicine',
                     scheduled_time: slotName,
                     status: 'TAKEN',
                     tablets_consumed: doseQty,
                     tablets_remaining_after: remainingAfter,
-                    taken_at: `${selDate}T${new Date().toISOString().split('T')[1]}`
+                    taken_at: `${selDate}T12:00:00.000Z`
                 };
-                await state.supabaseClient.from('medication_logs').insert([newLog]);
+                
+                const { error: insErr } = await state.supabaseClient.from('medication_logs').insert([newLog]);
+                if (insErr && insErr.message && insErr.message.includes('user_id')) {
+                    delete newLog.user_id;
+                    await state.supabaseClient.from('medication_logs').insert([newLog]);
+                }
 
                 if (rx && rx.id) {
                     await state.supabaseClient.from('patient_prescriptions').update({
@@ -1477,7 +1507,7 @@ async function toggleDoseSlot(prescriptionId, slotName) {
 // Medicine Cabinet (Direct Supabase DB Integration)
 async function fetchCabinet() {
     try {
-        const isNetlify = window.location.hostname.includes('netlify.app') || window.location.hostname.includes('pages.dev');
+        const isNetlify = isStaticWebDeployment();
         let data = null;
         if (!isNetlify) {
             data = await safeFetchJson(`/api/patient/prescriptions?t=${Date.now()}`, { headers: getUserHeaders() });
@@ -1585,7 +1615,7 @@ function renderCabinetGrid() {
 // Pharmacy Orders Management (Direct Supabase DB Integration)
 async function fetchOrders() {
     try {
-        const isNetlify = window.location.hostname.includes('netlify.app') || window.location.hostname.includes('pages.dev');
+        const isNetlify = isStaticWebDeployment();
         let data = null;
         if (!isNetlify) {
             data = await safeFetchJson(`/api/patient/orders?t=${Date.now()}`, { headers: getUserHeaders() });

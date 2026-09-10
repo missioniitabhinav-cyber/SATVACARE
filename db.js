@@ -566,18 +566,21 @@ const DB = {
         const todayObj = new Date();
 
         return rxs.map(rx => {
-            const morningLog = logs.find(l => l.prescription_id === rx.id && l.scheduled_time === 'MORNING' && l.taken_at.startsWith(dateStr));
-            const afternoonLog = logs.find(l => l.prescription_id === rx.id && l.scheduled_time === 'AFTERNOON' && l.taken_at.startsWith(dateStr));
-            const eveningLog = logs.find(l => l.prescription_id === rx.id && l.scheduled_time === 'EVENING' && l.taken_at.startsWith(dateStr));
-            const nightLog = logs.find(l => l.prescription_id === rx.id && l.scheduled_time === 'NIGHT' && l.taken_at.startsWith(dateStr));
+            const morningLog = logs.find(l => l.prescription_id === rx.id && l.scheduled_time === 'MORNING' && l.taken_at && (l.taken_at.startsWith(dateStr) || l.taken_at.substring(0, 10) === dateStr));
+            const afternoonLog = logs.find(l => l.prescription_id === rx.id && l.scheduled_time === 'AFTERNOON' && l.taken_at && (l.taken_at.startsWith(dateStr) || l.taken_at.substring(0, 10) === dateStr));
+            const eveningLog = logs.find(l => l.prescription_id === rx.id && l.scheduled_time === 'EVENING' && l.taken_at && (l.taken_at.startsWith(dateStr) || l.taken_at.substring(0, 10) === dateStr));
+            const nightLog = logs.find(l => l.prescription_id === rx.id && l.scheduled_time === 'NIGHT' && l.taken_at && (l.taken_at.startsWith(dateStr) || l.taken_at.substring(0, 10) === dateStr));
 
             // Generate 7-day intake summary array (last 7 days up to today)
             const history7Days = [];
             for (let i = 6; i >= 0; i--) {
                 const d = new Date(todayObj);
                 d.setDate(todayObj.getDate() - i);
-                const dStr = d.toISOString().split('T')[0];
-                const dayLogs = logs.filter(l => l.prescription_id === rx.id && l.taken_at.startsWith(dStr) && l.status === 'TAKEN');
+                const year = d.getFullYear();
+                const month = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                const dStr = `${year}-${month}-${day}`;
+                const dayLogs = logs.filter(l => l.prescription_id === rx.id && l.taken_at && (l.taken_at.startsWith(dStr) || l.taken_at.substring(0, 10) === dStr) && l.status === 'TAKEN');
                 
                 history7Days.push({
                     date: dStr,
@@ -612,10 +615,9 @@ const DB = {
             ? target_date 
             : new Date().toISOString().split('T')[0];
 
-        const currentTimePart = new Date().toISOString().split('T')[1];
-        const takenAtTimestamp = `${dateStr}T${currentTimePart}`;
+        const takenAtTimestamp = `${dateStr}T12:00:00.000Z`;
 
-        const existingLogIndex = logs.findIndex(l => l.prescription_id === prescription_id && l.scheduled_time === slot_name && l.taken_at.startsWith(dateStr) && matchesUser(l, user_email));
+        const existingLogIndex = logs.findIndex(l => l.prescription_id === prescription_id && l.scheduled_time === slot_name && l.taken_at && (l.taken_at.startsWith(dateStr) || l.taken_at.substring(0, 10) === dateStr) && matchesUser(l, user_email));
 
         const doseQuantity = rx.tablets_per_dose || inferTabletsPerDose(rx);
         let newRemaining = rx.total_tablets_remaining;

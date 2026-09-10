@@ -50,6 +50,7 @@ CREATE TABLE IF NOT EXISTS public.patient_prescriptions (
 -- Medication Intake History Log Table
 CREATE TABLE IF NOT EXISTS public.medication_logs (
     id TEXT PRIMARY KEY,
+    user_id TEXT DEFAULT 'patient-1',
     prescription_id TEXT REFERENCES public.patient_prescriptions(id) ON DELETE CASCADE,
     medicine_name TEXT NOT NULL,
     brand_name TEXT,
@@ -105,6 +106,7 @@ ALTER TABLE public.patient_prescriptions ADD COLUMN IF NOT EXISTS units_per_pack
 ALTER TABLE public.patient_prescriptions ALTER COLUMN total_tablets_remaining TYPE NUMERIC USING total_tablets_remaining::NUMERIC;
 ALTER TABLE public.patient_prescriptions ALTER COLUMN daily_frequency TYPE NUMERIC USING daily_frequency::NUMERIC;
 
+ALTER TABLE public.medication_logs ADD COLUMN IF NOT EXISTS user_id TEXT DEFAULT 'patient-1';
 ALTER TABLE public.medication_logs ALTER COLUMN tablets_consumed TYPE NUMERIC USING tablets_consumed::NUMERIC;
 ALTER TABLE public.medication_logs ALTER COLUMN tablets_remaining_after TYPE NUMERIC USING tablets_remaining_after::NUMERIC;
 
