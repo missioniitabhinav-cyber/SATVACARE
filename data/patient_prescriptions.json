@@ -11,27 +11,23 @@
     "total_tablets_remaining": 58,
     "refill_threshold_days": 5,
     "unit_price": 0,
-    "doctor_name": "DR.VIKRANT SOOD",
+    "doctor_name": null,
     "pharmacy_name": null,
-    "prescription_number": "311501",
-    "start_date": "2026-09-04",
+    "prescription_number": null,
+    "start_date": "2026-09-10",
     "end_date": null,
-    "created_at": "2026-09-04T08:28:35.696435+00:00",
-    "updated_at": "2026-09-04T08:29:03.133Z",
+    "created_at": "2026-09-10T15:38:42.959928+00:00",
+    "updated_at": "2026-09-10T15:38:42.959928+00:00",
     "brand_name": "",
     "generic_name": "",
     "dosage_frequency_type": "ONCE_NIGHT",
     "meal_relation": "AFTER_MEAL",
-    "clinic_hospital": "",
+    "clinic_hospital": null,
     "duration_days": null,
     "storage_condition": "ROOM_TEMP",
-    "days_supply_remaining": 29,
-    "is_runout_alert_5days": false,
-    "is_out_of_stock": false,
-    "frequency_label": "Twice a Day (08:00 AM - 08:00 PM)",
-    "meal_relation_text": "Take after meal / food",
-    "units_per_pack": 10,
-    "tablets_per_dose": 1
+    "prescription_type": "RX",
+    "tablets_per_dose": 1,
+    "units_per_pack": 10
   },
   {
     "id": "rx-1788510623626",
@@ -52,8 +48,8 @@
     "end_date": null,
     "created_at": "2026-09-04T08:30:23.260677+00:00",
     "updated_at": "2026-09-04T08:30:23.260677+00:00",
-    "brand_name": null,
-    "generic_name": null,
+    "brand_name": "",
+    "generic_name": "",
     "dosage_frequency_type": "ONCE_NIGHT",
     "meal_relation": "AFTER_MEAL",
     "clinic_hospital": null,
@@ -61,13 +57,6 @@
     "storage_condition": "ROOM_TEMP",
     "prescription_type": "RX",
     "tablets_per_dose": 1,
-    "days_supply_remaining": 58,
-    "is_runout_alert_5days": false,
-    "is_out_of_stock": false,
-    "frequency_label": "Night Only (09:00 PM)",
-    "prescription_type_label": "Rx (Standard Prescription)",
-    "dose_quantity_label": "1 Tablet (Full Dose)",
-    "meal_relation_text": "Take after meal / food",
     "units_per_pack": 10
   },
   {
@@ -98,14 +87,7 @@
     "storage_condition": "ROOM_TEMP",
     "prescription_type": "NRX",
     "tablets_per_dose": 1,
-    "units_per_pack": 10,
-    "days_supply_remaining": 25,
-    "is_runout_alert_5days": false,
-    "is_out_of_stock": false,
-    "frequency_label": "Twice a Day (08:00 AM - 08:00 PM)",
-    "prescription_type_label": "NRx (Controlled Substance)",
-    "dose_quantity_label": "1 Tablet (Full Dose)",
-    "meal_relation_text": "Take after meal / food"
+    "units_per_pack": 10
   },
   {
     "id": "rx-1788511056204",
@@ -135,14 +117,7 @@
     "storage_condition": "ROOM_TEMP",
     "prescription_type": "TRX",
     "tablets_per_dose": 1,
-    "units_per_pack": 10,
-    "days_supply_remaining": 58,
-    "is_runout_alert_5days": false,
-    "is_out_of_stock": false,
-    "frequency_label": "Morning Only (08:00 AM)",
-    "prescription_type_label": "TRx (Chronic Care Refill)",
-    "dose_quantity_label": "1 Tablet (Full Dose)",
-    "meal_relation_text": "Take after meal / food"
+    "units_per_pack": 10
   },
   {
     "id": "rx-1788513043079",
@@ -172,14 +147,7 @@
     "storage_condition": "PROTECT_LIGHT",
     "prescription_type": "TRX",
     "tablets_per_dose": 0.5,
-    "units_per_pack": 10,
-    "days_supply_remaining": 39,
-    "is_runout_alert_5days": false,
-    "is_out_of_stock": false,
-    "frequency_label": "Morning Only (08:00 AM)",
-    "prescription_type_label": "TRx (Chronic Care Refill)",
-    "dose_quantity_label": "1/2 Tablet (Half Dose)",
-    "meal_relation_text": "Take after meal / food"
+    "units_per_pack": 10
   },
   {
     "id": "rx-1788513998926",
@@ -209,14 +177,7 @@
     "storage_condition": "PROTECT_LIGHT",
     "prescription_type": "NRX",
     "tablets_per_dose": 1,
-    "units_per_pack": 10,
-    "days_supply_remaining": 24,
-    "is_runout_alert_5days": false,
-    "is_out_of_stock": false,
-    "frequency_label": "Twice a Day (08:00 AM - 08:00 PM)",
-    "prescription_type_label": "NRx (Controlled Substance)",
-    "dose_quantity_label": "1 Tablet (Full Dose)",
-    "meal_relation_text": "Take after meal / food"
+    "units_per_pack": 10
   },
   {
     "id": "rx-1788514150897",
@@ -246,14 +207,7 @@
     "storage_condition": "PROTECT_LIGHT",
     "prescription_type": "TRX",
     "tablets_per_dose": 1,
-    "units_per_pack": 10,
-    "days_supply_remaining": 64,
-    "is_runout_alert_5days": false,
-    "is_out_of_stock": false,
-    "frequency_label": "Morning Only (08:00 AM)",
-    "prescription_type_label": "TRx (Chronic Care Refill)",
-    "dose_quantity_label": "1 Tablet (Full Dose)",
-    "meal_relation_text": "Take after meal / food"
+    "units_per_pack": 10
   },
   {
     "id": "rx-1788514253289",
@@ -283,14 +237,7 @@
     "storage_condition": "REFRIGERATE",
     "prescription_type": "NRX",
     "tablets_per_dose": 1,
-    "units_per_pack": 10,
-    "days_supply_remaining": 6,
-    "is_runout_alert_5days": false,
-    "is_out_of_stock": false,
-    "frequency_label": "Twice a Day (08:00 AM - 08:00 PM)",
-    "prescription_type_label": "NRx (Controlled Substance)",
-    "dose_quantity_label": "1 Tablet (Full Dose)",
-    "meal_relation_text": "Take on empty stomach (Before Meal)"
+    "units_per_pack": 10
   },
   {
     "id": "rx-1788514357766",
@@ -320,15 +267,7 @@
     "storage_condition": "REFRIGERATE",
     "prescription_type": "TRX",
     "tablets_per_dose": 1,
-    "units_per_pack": 10,
-    "days_supply_remaining": 26,
-    "is_runout_alert_5days": false,
-    "is_out_of_stock": false,
-    "frequency_label": "Twice a Day (08:00 AM - 08:00 PM)",
-    "prescription_type_label": "TRx (Chronic Care Refill)",
-    "dose_quantity_label": "1 Tablet (Full Dose)",
-    "meal_relation_text": "Take on empty stomach (Before Meal)",
-    "user_email": "patient@medibuddy.com"
+    "units_per_pack": 10
   },
   {
     "id": "rx-1788514496864",
@@ -358,14 +297,7 @@
     "storage_condition": "PROTECT_LIGHT",
     "prescription_type": "RX",
     "tablets_per_dose": 1,
-    "units_per_pack": 10,
-    "days_supply_remaining": 36,
-    "is_runout_alert_5days": false,
-    "is_out_of_stock": false,
-    "frequency_label": "Twice a Day (08:00 AM - 08:00 PM)",
-    "prescription_type_label": "Rx (Standard Prescription)",
-    "dose_quantity_label": "1 Tablet (Full Dose)",
-    "meal_relation_text": "Take after meal / food"
+    "units_per_pack": 10
   },
   {
     "id": "rx-1788514628284",
@@ -395,14 +327,7 @@
     "storage_condition": "PROTECT_LIGHT",
     "prescription_type": "RX",
     "tablets_per_dose": 1,
-    "units_per_pack": 10,
-    "days_supply_remaining": 55,
-    "is_runout_alert_5days": false,
-    "is_out_of_stock": false,
-    "frequency_label": "Morning Only (08:00 AM)",
-    "prescription_type_label": "TRx (Chronic Care Refill)",
-    "dose_quantity_label": "1 Tablet (Full Dose)",
-    "meal_relation_text": "Take after meal / food"
+    "units_per_pack": 10
   },
   {
     "id": "rx-1788515506301",
@@ -432,15 +357,7 @@
     "storage_condition": "PROTECT_LIGHT",
     "prescription_type": "NRX",
     "tablets_per_dose": 0.5,
-    "units_per_pack": 10,
-    "days_supply_remaining": 26,
-    "is_runout_alert_5days": false,
-    "is_out_of_stock": false,
-    "frequency_label": "Night Only (09:00 PM)",
-    "prescription_type_label": "NRx (Controlled Substance)",
-    "dose_quantity_label": "1/2 Tablet (Half Dose)",
-    "meal_relation_text": "Take after meal / food",
-    "user_email": "patient@medibuddy.com"
+    "units_per_pack": 10
   },
   {
     "id": "rx-1788521369579",
@@ -470,15 +387,7 @@
     "storage_condition": "PROTECT_LIGHT",
     "prescription_type": "RX",
     "tablets_per_dose": 1,
-    "units_per_pack": 10,
-    "days_supply_remaining": 56,
-    "is_runout_alert_5days": false,
-    "is_out_of_stock": false,
-    "frequency_label": "Night Only (09:00 PM)",
-    "prescription_type_label": "Rx (Standard Prescription)",
-    "dose_quantity_label": "1 Tablet (Full Dose)",
-    "meal_relation_text": "Take after meal / food",
-    "user_email": "admin@sattvacare.com"
+    "units_per_pack": 10
   },
   {
     "id": "rx-1788521519308",
@@ -508,15 +417,7 @@
     "storage_condition": "PROTECT_LIGHT",
     "prescription_type": "RX",
     "tablets_per_dose": 1,
-    "units_per_pack": 10,
-    "days_supply_remaining": 54,
-    "is_runout_alert_5days": false,
-    "is_out_of_stock": false,
-    "frequency_label": "Morning Only (08:00 AM)",
-    "prescription_type_label": "Rx (Standard Prescription)",
-    "dose_quantity_label": "1 Tablet (Full Dose)",
-    "meal_relation_text": "Take after meal / food",
-    "user_email": "admin@sattvacare.com"
+    "units_per_pack": 10
   },
   {
     "id": "rx-1788521640546",
@@ -546,15 +447,7 @@
     "storage_condition": "PROTECT_LIGHT",
     "prescription_type": "NRX",
     "tablets_per_dose": 1,
-    "units_per_pack": 10,
-    "days_supply_remaining": 22,
-    "is_runout_alert_5days": false,
-    "is_out_of_stock": false,
-    "frequency_label": "Twice a Day (08:00 AM - 08:00 PM)",
-    "prescription_type_label": "NRx (Controlled Substance)",
-    "dose_quantity_label": "1 Tablet (Full Dose)",
-    "meal_relation_text": "Take after meal / food",
-    "user_email": "admin@sattvacare.com"
+    "units_per_pack": 10
   },
   {
     "id": "rx-1788521747634",
@@ -584,15 +477,7 @@
     "storage_condition": "PROTECT_LIGHT",
     "prescription_type": "NRX",
     "tablets_per_dose": 1,
-    "units_per_pack": 10,
-    "days_supply_remaining": 22,
-    "is_runout_alert_5days": false,
-    "is_out_of_stock": false,
-    "frequency_label": "Twice a Day (08:00 AM - 08:00 PM)",
-    "prescription_type_label": "NRx (Controlled Substance)",
-    "dose_quantity_label": "1 Tablet (Full Dose)",
-    "meal_relation_text": "Take after meal / food",
-    "user_email": "admin@sattvacare.com"
+    "units_per_pack": 10
   },
   {
     "id": "rx-1788521831415",
@@ -622,15 +507,7 @@
     "storage_condition": "REFRIGERATE",
     "prescription_type": "TRX",
     "tablets_per_dose": 1,
-    "units_per_pack": 10,
-    "days_supply_remaining": 24,
-    "is_runout_alert_5days": false,
-    "is_out_of_stock": false,
-    "frequency_label": "Twice a Day (08:00 AM - 08:00 PM)",
-    "prescription_type_label": "TRx (Chronic Care Refill)",
-    "dose_quantity_label": "1 Tablet (Full Dose)",
-    "meal_relation_text": "Take after meal / food",
-    "user_email": "admin@sattvacare.com"
+    "units_per_pack": 10
   },
   {
     "id": "rx-1788521897455",
@@ -660,15 +537,7 @@
     "storage_condition": "PROTECT_LIGHT",
     "prescription_type": "TRX",
     "tablets_per_dose": 1,
-    "units_per_pack": 10,
-    "days_supply_remaining": 24,
-    "is_runout_alert_5days": false,
-    "is_out_of_stock": false,
-    "frequency_label": "Twice a Day (08:00 AM - 08:00 PM)",
-    "prescription_type_label": "TRx (Chronic Care Refill)",
-    "dose_quantity_label": "1 Tablet (Full Dose)",
-    "meal_relation_text": "Take after meal / food",
-    "user_email": "admin@sattvacare.com"
+    "units_per_pack": 10
   },
   {
     "id": "rx-1788522041657",
@@ -698,15 +567,7 @@
     "storage_condition": "ROOM_TEMP",
     "prescription_type": "RX",
     "tablets_per_dose": 1,
-    "units_per_pack": 10,
-    "days_supply_remaining": 44,
-    "is_runout_alert_5days": false,
-    "is_out_of_stock": false,
-    "frequency_label": "Twice a Day (08:00 AM - 08:00 PM)",
-    "prescription_type_label": "Rx (Standard Prescription)",
-    "dose_quantity_label": "1 Tablet (Full Dose)",
-    "meal_relation_text": "Take after meal / food",
-    "user_email": "admin@sattvacare.com"
+    "units_per_pack": 10
   },
   {
     "id": "rx-1788522143013",
@@ -736,15 +597,7 @@
     "storage_condition": "PROTECT_LIGHT",
     "prescription_type": "TRX",
     "tablets_per_dose": 0.5,
-    "units_per_pack": 10,
-    "days_supply_remaining": 36,
-    "is_runout_alert_5days": false,
-    "is_out_of_stock": false,
-    "frequency_label": "Morning Only (08:00 AM)",
-    "prescription_type_label": "TRx (Chronic Care Refill)",
-    "dose_quantity_label": "1/2 Tablet (Half Dose)",
-    "meal_relation_text": "Take after meal / food",
-    "user_email": "admin@sattvacare.com"
+    "units_per_pack": 10
   },
   {
     "id": "rx-1788522223009",
@@ -774,15 +627,7 @@
     "storage_condition": "PROTECT_LIGHT",
     "prescription_type": "TRX",
     "tablets_per_dose": 1,
-    "units_per_pack": 10,
-    "days_supply_remaining": 47,
-    "is_runout_alert_5days": false,
-    "is_out_of_stock": false,
-    "frequency_label": "Morning Only (08:00 AM)",
-    "prescription_type_label": "TRx (Chronic Care Refill)",
-    "dose_quantity_label": "1 Tablet (Full Dose)",
-    "meal_relation_text": "Take after meal / food",
-    "user_email": "admin@sattvacare.com"
+    "units_per_pack": 10
   },
   {
     "id": "rx-1788522314356",
@@ -812,15 +657,7 @@
     "storage_condition": "PROTECT_LIGHT",
     "prescription_type": "TRX",
     "tablets_per_dose": 1,
-    "units_per_pack": 10,
-    "days_supply_remaining": 56,
-    "is_runout_alert_5days": false,
-    "is_out_of_stock": false,
-    "frequency_label": "Morning Only (08:00 AM)",
-    "prescription_type_label": "TRx (Chronic Care Refill)",
-    "dose_quantity_label": "1 Tablet (Full Dose)",
-    "meal_relation_text": "Take after meal / food",
-    "user_email": "admin@sattvacare.com"
+    "units_per_pack": 10
   },
   {
     "id": "rx-1788522916922",
@@ -850,15 +687,7 @@
     "storage_condition": "PROTECT_LIGHT",
     "prescription_type": "NRX",
     "tablets_per_dose": 0.5,
-    "units_per_pack": 10,
-    "days_supply_remaining": 22,
-    "is_runout_alert_5days": false,
-    "is_out_of_stock": false,
-    "frequency_label": "Night Only (09:00 PM)",
-    "prescription_type_label": "NRx (Controlled Substance)",
-    "dose_quantity_label": "1/2 Tablet (Half Dose)",
-    "meal_relation_text": "Take after meal / food",
-    "user_email": "admin@sattvacare.com"
+    "units_per_pack": 10
   },
   {
     "id": "rx-1788522989084",
@@ -888,14 +717,6 @@
     "storage_condition": "PROTECT_LIGHT",
     "prescription_type": "RX",
     "tablets_per_dose": 1,
-    "units_per_pack": 10,
-    "days_supply_remaining": 23,
-    "is_runout_alert_5days": false,
-    "is_out_of_stock": false,
-    "frequency_label": "Night Only (09:00 PM)",
-    "prescription_type_label": "Rx (Standard Prescription)",
-    "dose_quantity_label": "1 Tablet (Full Dose)",
-    "meal_relation_text": "Take after meal / food",
-    "user_email": "admin@sattvacare.com"
+    "units_per_pack": 10
   }
 ]

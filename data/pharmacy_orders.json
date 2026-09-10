@@ -2,7 +2,6 @@
   {
     "id": "ord-1788694790644",
     "user_id": "admin@sattvacare.com",
-    "user_email": "admin@sattvacare.com",
     "prescription_id": "rx-1788521897455",
     "medicine_name": "PANGRAF 0.25",
     "brand_name": "",
@@ -14,14 +13,14 @@
     "status": "SHIPPED",
     "order_date": "2026-09-06",
     "expected_delivery": "2026-09-12",
+    "delivered_at": null,
     "notes": "DELHIVERY: 14289887631024",
-    "created_at": "2026-09-06T11:39:50.644Z",
-    "updated_at": "2026-09-06T11:49:15.844Z"
+    "created_at": "2026-09-10T15:38:08.032616+00:00",
+    "updated_at": "2026-09-10T15:38:08.032616+00:00"
   },
   {
     "id": "ord-1788694732450",
     "user_id": "admin@sattvacare.com",
-    "user_email": "admin@sattvacare.com",
     "prescription_id": "rx-1788521897455",
     "medicine_name": "PANGRAF 0.25",
     "brand_name": "",
@@ -33,15 +32,14 @@
     "status": "SHIPPED",
     "order_date": "2026-09-06",
     "expected_delivery": "2026-09-12",
+    "delivered_at": null,
     "notes": "DELHIVERY: 14289887631024",
     "created_at": "2026-09-06T11:38:52.45+00:00",
-    "updated_at": "2026-09-06T11:38:52.45+00:00",
-    "delivered_at": null
+    "updated_at": "2026-09-06T11:38:52.45+00:00"
   },
   {
     "id": "ord-1788694653761",
     "user_id": "admin@sattvacare.com",
-    "user_email": "admin@sattvacare.com",
     "prescription_id": "rx-1788522989084",
     "medicine_name": "MG-OR",
     "brand_name": "",
@@ -53,15 +51,14 @@
     "status": "SHIPPED",
     "order_date": "2026-09-06",
     "expected_delivery": "2026-09-12",
+    "delivered_at": null,
     "notes": "DELHIVERY:14289887631024",
     "created_at": "2026-09-06T11:37:33.761+00:00",
-    "updated_at": "2026-09-06T11:37:33.761+00:00",
-    "delivered_at": null
+    "updated_at": "2026-09-06T11:37:33.761+00:00"
   },
   {
     "id": "ord-1788694567440",
     "user_id": "admin@sattvacare.com",
-    "user_email": "admin@sattvacare.com",
     "prescription_id": "rx-1788522041657",
     "medicine_name": "UDILIV 450",
     "brand_name": "",
@@ -73,15 +70,14 @@
     "status": "DELIVERED",
     "order_date": "2026-09-06",
     "expected_delivery": "2026-09-05",
+    "delivered_at": "2026-09-06T16:51:25.435+00:00",
     "notes": "",
     "created_at": "2026-09-06T11:36:07.44+00:00",
-    "updated_at": "2026-09-06T16:51:25.435+00:00",
-    "delivered_at": "2026-09-06T16:51:25.435+00:00"
+    "updated_at": "2026-09-06T16:51:25.435+00:00"
   },
   {
     "id": "ord-1788520355494",
     "user_id": "patient@medibuddy.com",
-    "user_email": "patient@medibuddy.com",
     "prescription_id": "rx-1788514357766",
     "medicine_name": "PANGRAF 0.5",
     "brand_name": "",
@@ -93,14 +89,14 @@
     "status": "SHIPPED",
     "order_date": "2026-09-04",
     "expected_delivery": null,
+    "delivered_at": null,
     "notes": "Updated tracking note via Edit Order",
-    "created_at": "2026-09-04T11:12:35.494Z",
-    "updated_at": "2026-09-06T11:48:33.077Z"
+    "created_at": "2026-09-10T15:38:08.032616+00:00",
+    "updated_at": "2026-09-10T15:38:08.032616+00:00"
   },
   {
     "id": "ord-1788520257370",
     "user_id": "patient@medibuddy.com",
-    "user_email": "patient@medibuddy.com",
     "prescription_id": "rx-1788514357766",
     "medicine_name": "PANGRAF 0.5",
     "brand_name": "",
@@ -112,9 +108,10 @@
     "status": "OUT_FOR_DELIVERY",
     "order_date": "2026-09-04",
     "expected_delivery": "2026-09-06",
+    "delivered_at": null,
     "notes": "",
-    "created_at": "2026-09-04T11:10:57.371Z",
-    "updated_at": "2026-09-04T11:10:57.371Z"
+    "created_at": "2026-09-10T15:38:08.032616+00:00",
+    "updated_at": "2026-09-10T15:38:08.032616+00:00"
   },
   {
     "id": "ord-1788516151339",
@@ -130,9 +127,10 @@
     "status": "SHIPPED",
     "order_date": "2026-09-04",
     "expected_delivery": "2026-09-06",
+    "delivered_at": null,
     "notes": "DELHIVERY:14289887499682",
-    "created_at": "2026-09-04T10:02:31.339Z",
-    "updated_at": "2026-09-04T10:02:31.339Z"
+    "created_at": "2026-09-10T15:38:08.032616+00:00",
+    "updated_at": "2026-09-10T15:38:08.032616+00:00"
   },
   {
     "id": "ord-1788848409614",
