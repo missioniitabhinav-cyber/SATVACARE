@@ -3953,14 +3953,20 @@ const AI_SEQUENTIAL_MEDICINES = [
         generic_name: 'Macrogol 3350 + Electrolytes',
         dosage_strength: '13.8g',
         medicine_type: 'Powder Sachet',
+        classification_type: 'TRX',
         frequency_type: 'TWICE_DAILY',
         meal_relation: 'AFTER_MEAL',
         tablets_per_dose: 1,
         total_pills: 30,
         units_per_pack: 10,
         doctor: 'DR. VIKRANT SOOD',
-        hospital: 'ILBS Hospital',
-        instructions: 'Dissolve sachet in 125ml water. Take after meals.'
+        hospital: 'ILBS Hospital New Delhi',
+        prescription_number: 'ILBS.311501',
+        duration_days: 14,
+        storage_condition: 'COOL_DRY_PLACE',
+        instructions: 'Dissolve 1 sachet in 125ml water. Take after morning and evening meals.',
+        batch_number: 'MVC-2026-09',
+        expiry_date: '2027-12-31'
     },
     {
         medicine_name: 'ATENOLOL',
@@ -3968,14 +3974,20 @@ const AI_SEQUENTIAL_MEDICINES = [
         generic_name: 'Atenolol 50mg',
         dosage_strength: '50mg',
         medicine_type: 'Tablet',
+        classification_type: 'RX',
         frequency_type: 'ONCE_DAILY',
         meal_relation: 'BEFORE_MEAL',
         tablets_per_dose: 1,
         total_pills: 30,
         units_per_pack: 10,
         doctor: 'DR. RAJESH SHARMA',
-        hospital: 'Apollo Healthcare',
-        instructions: 'Take 1 tablet every morning before breakfast for hypertension.'
+        hospital: 'Apollo Heart Institute',
+        prescription_number: 'AP-884210',
+        duration_days: 30,
+        storage_condition: 'ROOM_TEMP',
+        instructions: 'Take 1 tablet every morning before breakfast for blood pressure control.',
+        batch_number: 'ATN-2026-X4',
+        expiry_date: '2028-06-30'
     },
     {
         medicine_name: 'PANADOL',
@@ -3983,6 +3995,7 @@ const AI_SEQUENTIAL_MEDICINES = [
         generic_name: 'Paracetamol 500mg',
         dosage_strength: '500mg',
         medicine_type: 'Tablet',
+        classification_type: 'OTC',
         frequency_type: 'THRICE_DAILY',
         meal_relation: 'AFTER_MEAL',
         tablets_per_dose: 1,
@@ -3990,7 +4003,12 @@ const AI_SEQUENTIAL_MEDICINES = [
         units_per_pack: 10,
         doctor: 'DR. ANITA ROY',
         hospital: 'Max Super Speciality',
-        instructions: 'Take after meals for fever/pain relief.'
+        prescription_number: 'MX-442109',
+        duration_days: 5,
+        storage_condition: 'ROOM_TEMP',
+        instructions: 'Take after meals for fever and mild to moderate pain relief. Do not exceed 4000mg/day.',
+        batch_number: 'PND-2026-B2',
+        expiry_date: '2027-09-30'
     },
     {
         medicine_name: 'FUROSEMIDE',
@@ -3998,14 +4016,20 @@ const AI_SEQUENTIAL_MEDICINES = [
         generic_name: 'Furosemide 40mg',
         dosage_strength: '40mg',
         medicine_type: 'Tablet',
+        classification_type: 'RX',
         frequency_type: 'ONCE_DAILY',
         meal_relation: 'BEFORE_MEAL',
         tablets_per_dose: 1,
         total_pills: 30,
         units_per_pack: 10,
         doctor: 'DR. VIKRANT SOOD',
-        hospital: 'ILBS Hospital',
-        instructions: 'Take in morning to prevent fluid retention.'
+        hospital: 'ILBS Hospital New Delhi',
+        prescription_number: 'ILBS.319022',
+        duration_days: 30,
+        storage_condition: 'PROTECT_FROM_LIGHT',
+        instructions: 'Take in morning before 9 AM to reduce edema and fluid accumulation.',
+        batch_number: 'FRS-2026-K1',
+        expiry_date: '2028-01-15'
     },
     {
         medicine_name: 'METFORMIN',
@@ -4013,14 +4037,20 @@ const AI_SEQUENTIAL_MEDICINES = [
         generic_name: 'Metformin Hydrochloride 500mg',
         dosage_strength: '500mg',
         medicine_type: 'Tablet',
+        classification_type: 'TRX',
         frequency_type: 'TWICE_DAILY',
         meal_relation: 'AFTER_MEAL',
         tablets_per_dose: 1,
         total_pills: 60,
         units_per_pack: 15,
         doctor: 'DR. SUNIL MEHTA',
-        hospital: 'Fortis Hospital',
-        instructions: 'Take twice daily with meals for glucose regulation.'
+        hospital: 'Fortis Healthcare',
+        prescription_number: 'FT-662910',
+        duration_days: 30,
+        storage_condition: 'ROOM_TEMP',
+        instructions: 'Take twice daily with meals for glycaemic control. Avoid heavy alcohol.',
+        batch_number: 'MTF-2026-P3',
+        expiry_date: '2027-11-30'
     },
     {
         medicine_name: 'WARFARIN',
@@ -4028,6 +4058,7 @@ const AI_SEQUENTIAL_MEDICINES = [
         generic_name: 'Warfarin Sodium 5mg',
         dosage_strength: '5mg',
         medicine_type: 'Tablet',
+        classification_type: 'RX',
         frequency_type: 'ONCE_DAILY',
         meal_relation: 'AFTER_MEAL',
         tablets_per_dose: 1,
@@ -4035,7 +4066,12 @@ const AI_SEQUENTIAL_MEDICINES = [
         units_per_pack: 10,
         doctor: 'DR. KAVITA GUPTA',
         hospital: 'Medanta Heart Institute',
-        instructions: 'Take once daily at 6:00 PM. Monitor INR blood levels.'
+        prescription_number: 'MD-102948',
+        duration_days: 30,
+        storage_condition: 'ROOM_TEMP',
+        instructions: 'Take once daily at 6:00 PM. Periodic INR blood test monitoring mandatory.',
+        batch_number: 'WFR-2026-M8',
+        expiry_date: '2028-04-30'
     },
     {
         medicine_name: 'ASPIRIN',
@@ -4043,14 +4079,20 @@ const AI_SEQUENTIAL_MEDICINES = [
         generic_name: 'Aspirin Gastro-resistant 75mg',
         dosage_strength: '75mg',
         medicine_type: 'Tablet',
+        classification_type: 'RX',
         frequency_type: 'ONCE_DAILY',
         meal_relation: 'AFTER_MEAL',
         tablets_per_dose: 1,
         total_pills: 30,
         units_per_pack: 14,
         doctor: 'DR. RAJESH SHARMA',
-        hospital: 'Apollo Healthcare',
-        instructions: 'Take after dinner as prescribed for cardiovascular protection.'
+        hospital: 'Apollo Heart Institute',
+        prescription_number: 'AP-990124',
+        duration_days: 30,
+        storage_condition: 'COOL_DRY_PLACE',
+        instructions: 'Take after dinner for antiplatelet cardio protection.',
+        batch_number: 'ASP-2026-C5',
+        expiry_date: '2027-10-31'
     },
     {
         medicine_name: 'AMODEP',
@@ -4058,6 +4100,7 @@ const AI_SEQUENTIAL_MEDICINES = [
         generic_name: 'Amlodipine Besylate 5mg',
         dosage_strength: '5mg',
         medicine_type: 'Tablet',
+        classification_type: 'RX',
         frequency_type: 'ONCE_DAILY',
         meal_relation: 'AFTER_MEAL',
         tablets_per_dose: 1,
@@ -4065,7 +4108,12 @@ const AI_SEQUENTIAL_MEDICINES = [
         units_per_pack: 10,
         doctor: 'DR. ANITA ROY',
         hospital: 'Max Super Speciality',
-        instructions: 'Take once daily for blood pressure management.'
+        prescription_number: 'MX-772183',
+        duration_days: 30,
+        storage_condition: 'ROOM_TEMP',
+        instructions: 'Take once daily in morning for hypertension treatment.',
+        batch_number: 'AMD-2026-Z2',
+        expiry_date: '2028-08-31'
     },
     {
         medicine_name: 'CLOBANIL',
@@ -4073,6 +4121,7 @@ const AI_SEQUENTIAL_MEDICINES = [
         generic_name: 'Clobazam 5mg',
         dosage_strength: '5mg',
         medicine_type: 'Tablet',
+        classification_type: 'NRX',
         frequency_type: 'NIGHT_ONLY',
         meal_relation: 'AFTER_MEAL',
         tablets_per_dose: 1,
@@ -4080,7 +4129,12 @@ const AI_SEQUENTIAL_MEDICINES = [
         units_per_pack: 10,
         doctor: 'DR. SANJAY VERMA',
         hospital: 'AIIMS New Delhi',
-        instructions: 'Take at bedtime as prescribed.'
+        prescription_number: 'AI-330192',
+        duration_days: 15,
+        storage_condition: 'ROOM_TEMP',
+        instructions: 'Take strictly at bedtime as prescribed under doctor supervision.',
+        batch_number: 'CLB-2026-N9',
+        expiry_date: '2027-08-15'
     },
     {
         medicine_name: 'STORVAS',
@@ -4088,6 +4142,7 @@ const AI_SEQUENTIAL_MEDICINES = [
         generic_name: 'Atorvastatin Calcium 10mg',
         dosage_strength: '10mg',
         medicine_type: 'Tablet',
+        classification_type: 'TRX',
         frequency_type: 'NIGHT_ONLY',
         meal_relation: 'AFTER_MEAL',
         tablets_per_dose: 1,
@@ -4095,7 +4150,12 @@ const AI_SEQUENTIAL_MEDICINES = [
         units_per_pack: 15,
         doctor: 'DR. KAVITA GUPTA',
         hospital: 'Medanta Heart Institute',
-        instructions: 'Take 1 tablet at night for lipid control.'
+        prescription_number: 'MD-551029',
+        duration_days: 30,
+        storage_condition: 'ROOM_TEMP',
+        instructions: 'Take 1 tablet at night after dinner for lipid and cholesterol regulation.',
+        batch_number: 'STV-2026-L4',
+        expiry_date: '2028-05-31'
     }
 ];
 
@@ -4188,6 +4248,7 @@ async function processPrescriptionOCR(event) {
                 generic_name: apiRes.generic_name || apiRes.medicine_name,
                 dosage_strength: apiRes.dosage_strength || '10mg',
                 medicine_type: apiRes.medicine_type || 'Tablet',
+                classification_type: apiRes.classification_type || 'RX',
                 frequency_type: apiRes.frequency_type || 'TWICE_DAILY',
                 meal_relation: apiRes.meal_relation || 'AFTER_MEAL',
                 tablets_per_dose: apiRes.tablets_per_dose || 1,
@@ -4195,7 +4256,12 @@ async function processPrescriptionOCR(event) {
                 units_per_pack: apiRes.units_per_pack || 10,
                 doctor: apiRes.doctor_name || 'DR. VIKRANT SOOD',
                 hospital: apiRes.clinic_hospital || 'Apollo Healthcare',
-                instructions: apiRes.instructions || 'Take as prescribed.'
+                prescription_number: apiRes.prescription_number || `RX-${Math.floor(100000 + Math.random() * 900000)}`,
+                duration_days: apiRes.duration_days || 14,
+                storage_condition: apiRes.storage_condition || 'ROOM_TEMP',
+                instructions: apiRes.instructions || 'Take as prescribed by physician.',
+                batch_number: apiRes.batch_number || 'B-2026-A1',
+                expiry_date: apiRes.expiry_date || '2027-12-31'
             };
         }
 
@@ -4222,6 +4288,7 @@ async function processPrescriptionOCR(event) {
         if (document.getElementById('rx-generic')) document.getElementById('rx-generic').value = targetMed.generic_name || '';
         document.getElementById('rx-strength').value = targetMed.dosage_strength || '';
         if (document.getElementById('rx-type')) document.getElementById('rx-type').value = targetMed.medicine_type || 'Tablet';
+        if (document.getElementById('rx-classification-type')) document.getElementById('rx-classification-type').value = targetMed.classification_type || 'RX';
         document.getElementById('rx-frequency-type').value = targetMed.frequency_type || 'TWICE_DAILY';
         document.getElementById('rx-meal-relation').value = targetMed.meal_relation || 'AFTER_MEAL';
         if (document.getElementById('rx-tablets-per-dose')) document.getElementById('rx-tablets-per-dose').value = targetMed.tablets_per_dose || 1;
@@ -4229,9 +4296,35 @@ async function processPrescriptionOCR(event) {
         if (document.getElementById('rx-units-per-pack')) document.getElementById('rx-units-per-pack').value = targetMed.units_per_pack || 10;
         if (document.getElementById('rx-doctor')) document.getElementById('rx-doctor').value = targetMed.doctor || '';
         if (document.getElementById('rx-hospital')) document.getElementById('rx-hospital').value = targetMed.hospital || '';
+        if (document.getElementById('rx-number')) document.getElementById('rx-number').value = targetMed.prescription_number || `RX-${Math.floor(100000 + Math.random() * 900000)}`;
+        if (document.getElementById('rx-duration')) document.getElementById('rx-duration').value = targetMed.duration_days || 14;
+        if (document.getElementById('rx-storage')) document.getElementById('rx-storage').value = targetMed.storage_condition || 'ROOM_TEMP';
         if (document.getElementById('rx-instructions')) document.getElementById('rx-instructions').value = targetMed.instructions || '';
 
-        showToast(`✓ Hugging Face AI Scanned: ${targetMed.medicine_name} (${targetMed.dosage_strength})`, 'success');
+        // Auto-populate dynamic batch strip row
+        const batchContainer = document.getElementById('rx-batch-list-container');
+        if (batchContainer) {
+            batchContainer.innerHTML = '';
+            const div = document.createElement('div');
+            div.className = 'grid grid-cols-1 sm:grid-cols-3 gap-2.5 bg-white p-3 rounded-xl border border-slate-200 shadow-2xs items-center batch-row';
+            div.innerHTML = `
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-0.5">Batch No.</label>
+                    <input type="text" value="${targetMed.batch_number || 'B-2026-A1'}" class="batch-no-input w-full px-2.5 py-1.5 rounded-lg bg-slate-50 border border-slate-300 text-xs font-semibold text-slate-900 focus:border-teal-600 outline-none uppercase" placeholder="e.g. BATCH-101">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-0.5">Strips Count</label>
+                    <input type="number" min="1" value="3" class="batch-strip-input w-full px-2.5 py-1.5 rounded-lg bg-slate-50 border border-slate-300 text-xs font-semibold text-slate-900 focus:border-teal-600 outline-none" oninput="autoCalcTotalPills()">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-0.5">Expiry Date</label>
+                    <input type="date" value="${targetMed.expiry_date || '2027-12-31'}" class="batch-expiry-input w-full px-2.5 py-1.5 rounded-lg bg-slate-50 border border-slate-300 text-xs font-semibold text-slate-900 focus:border-teal-600 outline-none">
+                </div>
+            `;
+            batchContainer.appendChild(div);
+        }
+
+        showToast(`✓ Hugging Face AI Extracted All Info: ${targetMed.medicine_name} (${targetMed.dosage_strength})`, 'success');
         checkDrugContraindications(targetMed.medicine_name);
 
     } catch (e) {
