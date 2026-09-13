@@ -89,6 +89,7 @@ async function initSupabaseAuth() {
 
         if (url && key && window.supabase) {
             state.supabaseClient = window.supabase.createClient(url, key);
+            initSupabaseRealtimeSubscriptions();
         }
     } catch (e) {}
 }
@@ -3472,4 +3473,237 @@ function renderAnalyticsSymptomCard() {
             </div>
         `;
     }).join('');
+}
+
+
+// ====================================================================
+// 🌐 OFFLINE-FIRST "BUILD FOR BHARAT" BATCH SYNC ENGINE
+// ====================================================================
+const OFFLINE_QUEUE_KEY = 'sattvacare_offline_sync_queue';
+
+function getOfflineQueue() {
+    try {
+        const data = localStorage.getItem(OFFLINE_QUEUE_KEY);
+        return data ? JSON.parse(data) : [];
+    } catch (e) {
+        return [];
+    }
+}
+
+function saveOfflineQueue(queue) {
+    try {
+        localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(queue));
+        updateOfflineBadgeUI();
+    } catch (e) {}
+}
+
+function enqueueOfflineAction(actionType, payload) {
+    const queue = getOfflineQueue();
+    queue.push({
+        id: 'sync-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7),
+        action_type: actionType,
+        payload: payload,
+        timestamp: new Date().toISOString()
+    });
+    saveOfflineQueue(queue);
+    showToast('🌐 Offline Mode (Bharat Sync): Action saved locally. Will auto-sync when network connects!', 'info');
+}
+
+async function syncOfflineQueueBatch() {
+    updateOfflineBadgeUI();
+    if (!navigator.onLine) return;
+
+    const queue = getOfflineQueue();
+    if (queue.length === 0) return;
+
+    let syncedCount = 0;
+    const remainingQueue = [];
+
+    for (const item of queue) {
+        try {
+            let success = false;
+
+            if (item.action_type === 'toggle_dose') {
+                if (state.supabaseClient) {
+                    const { prescription_id, slot_name, is_taken } = item.payload;
+                    if (is_taken) {
+                        const { error } = await state.supabaseClient.from('medication_logs').insert([{
+                            id: 'log-' + Date.now(),
+                            user_id: (state.currentUser && state.currentUser.email) ? state.currentUser.email : 'patient@sattvacare.com',
+                            prescription_id: prescription_id,
+                            medicine_name: item.payload.medicine_name || 'Medicine',
+                            scheduled_time: slot_name,
+                            status: 'TAKEN',
+                            taken_at: new Date().toISOString()
+                        }]);
+                        if (!error) success = true;
+                    }
+                } else {
+                    const apiRes = await safeFetchJson('/api/patient/toggle-slot', {
+                        method: 'POST',
+                        headers: getUserHeaders(),
+                        body: JSON.stringify(item.payload)
+                    });
+                    if (apiRes) success = true;
+                }
+            } else if (item.action_type === 'add_vital') {
+                if (state.supabaseClient) {
+                    const { error } = await state.supabaseClient.from('vitals_logs').insert([{
+                        id: 'vit-' + Date.now(),
+                        user_id: (state.currentUser && state.currentUser.email) ? state.currentUser.email : 'patient@sattvacare.com',
+                        ...item.payload,
+                        created_at: new Date().toISOString()
+                    }]);
+                    if (!error) success = true;
+                } else {
+                    const apiRes = await safeFetchJson('/api/vitals', {
+                        method: 'POST',
+                        headers: getUserHeaders(),
+                        body: JSON.stringify(item.payload)
+                    });
+                    if (apiRes) success = true;
+                }
+            } else if (item.action_type === 'add_order') {
+                if (state.supabaseClient) {
+                    const { error } = await state.supabaseClient.from('pharmacy_orders').insert([{
+                        id: 'ord-' + Date.now(),
+                        user_id: (state.currentUser && state.currentUser.email) ? state.currentUser.email : 'patient@sattvacare.com',
+                        ...item.payload,
+                        created_at: new Date().toISOString()
+                    }]);
+                    if (!error) success = true;
+                } else {
+                    const apiRes = await safeFetchJson('/api/patient/orders', {
+                        method: 'POST',
+                        headers: getUserHeaders(),
+                        body: JSON.stringify(item.payload)
+                    });
+                    if (apiRes) success = true;
+                }
+            } else if (item.action_type === 'add_prescription') {
+                if (state.supabaseClient) {
+                    const { error } = await state.supabaseClient.from('patient_prescriptions').insert([{
+                        id: 'rx-' + Date.now(),
+                        user_id: (state.currentUser && state.currentUser.email) ? state.currentUser.email : 'patient@sattvacare.com',
+                        ...item.payload,
+                        created_at: new Date().toISOString()
+                    }]);
+                    if (!error) success = true;
+                } else {
+                    const apiRes = await safeFetchJson('/api/prescriptions', {
+                        method: 'POST',
+                        headers: getUserHeaders(),
+                        body: JSON.stringify(item.payload)
+                    });
+                    if (apiRes) success = true;
+                }
+            }
+
+            if (success) {
+                syncedCount++;
+            } else {
+                remainingQueue.push(item);
+            }
+        } catch (e) {
+            remainingQueue.push(item);
+        }
+    }
+
+    saveOfflineQueue(remainingQueue);
+
+    if (syncedCount > 0) {
+        showToast(`🌐 Build for Bharat Sync: ${syncedCount} offline health log(s) auto-synced to Sattva Care Cloud!`, 'success');
+        await loadPatientPortal();
+    }
+}
+
+function updateOfflineBadgeUI() {
+    const queue = getOfflineQueue();
+    const badgeContainer = document.getElementById('header-network-status-badge');
+    if (!badgeContainer) return;
+
+    if (!navigator.onLine) {
+        badgeContainer.innerHTML = `
+            <span class="px-2.5 py-1 bg-amber-100 text-amber-900 border border-amber-300 text-[10px] font-bold rounded-lg flex items-center gap-1.5 shadow-xs">
+                <i class="fa-solid fa-wifi-slash text-amber-600"></i> Offline Mode (${queue.length} Pending)
+            </span>
+        `;
+    } else if (queue.length > 0) {
+        badgeContainer.innerHTML = `
+            <span class="px-2.5 py-1 bg-sky-100 text-sky-900 border border-sky-300 text-[10px] font-bold rounded-lg flex items-center gap-1.5 shadow-xs animate-pulse">
+                <i class="fa-solid fa-rotate text-sky-600 animate-spin"></i> Syncing ${queue.length} Bharat Logs...
+            </span>
+        `;
+    } else {
+        badgeContainer.innerHTML = `
+            <span class="px-2.5 py-1 bg-emerald-100 text-emerald-900 border border-emerald-300 text-[10px] font-bold rounded-lg flex items-center gap-1.5 shadow-xs">
+                <i class="fa-solid fa-cloud-check text-emerald-600"></i> Cloud Synced
+            </span>
+        `;
+    }
+}
+
+window.addEventListener('online', () => {
+    updateOfflineBadgeUI();
+    syncOfflineQueueBatch();
+});
+window.addEventListener('offline', updateOfflineBadgeUI);
+setInterval(syncOfflineQueueBatch, 12000);
+
+
+// ====================================================================
+// ⚡ REAL-TIME PHARMACY DISPATCH & SUPABASE CLOUD SUBSCRIPTIONS
+// ====================================================================
+let realtimeChannel = null;
+
+function initSupabaseRealtimeSubscriptions() {
+    if (!state.supabaseClient || realtimeChannel) return;
+
+    try {
+        realtimeChannel = state.supabaseClient
+            .channel('sattvacare-realtime-dispatch')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'pharmacy_orders' }, (payload) => {
+                const userEmail = (state.currentUser && state.currentUser.email) ? state.currentUser.email : 'patient@sattvacare.com';
+                const item = payload.new || payload.old;
+                if (item && isUserMatch(item, userEmail)) {
+                    if (payload.eventType === 'INSERT') {
+                        showToast(`⚡ Real-Time Pharmacy Dispatch: Refill Order #${item.order_number || ''} placed!`, 'success');
+                    } else if (payload.eventType === 'UPDATE') {
+                        showToast(`⚡ Real-Time Alert: Order #${item.order_number || ''} status changed to ${item.status}`, 'info');
+                    }
+                    playDoseChimeSound();
+                    loadPatientPortal();
+                }
+            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'patient_prescriptions' }, (payload) => {
+                const userEmail = (state.currentUser && state.currentUser.email) ? state.currentUser.email : 'patient@sattvacare.com';
+                const item = payload.new || payload.old;
+                if (item && isUserMatch(item, userEmail)) {
+                    showToast('⚡ Real-Time Sync: Medicine cabinet updated!', 'info');
+                    loadPatientPortal();
+                }
+            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'medication_logs' }, (payload) => {
+                const userEmail = (state.currentUser && state.currentUser.email) ? state.currentUser.email : 'patient@sattvacare.com';
+                const item = payload.new || payload.old;
+                if (item && isUserMatch(item, userEmail)) {
+                    loadPatientPortal();
+                }
+            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'vitals_logs' }, (payload) => {
+                const userEmail = (state.currentUser && state.currentUser.email) ? state.currentUser.email : 'patient@sattvacare.com';
+                const item = payload.new || payload.old;
+                if (item && isUserMatch(item, userEmail)) {
+                    showToast('⚡ Real-Time Sync: New health vitals logged!', 'info');
+                    loadPatientPortal();
+                }
+            })
+            .subscribe((status) => {
+                if (status === 'SUBSCRIBED') {
+                    console.log('⚡ Sattva Care Real-Time Subscription Active');
+                }
+            });
+    } catch (e) {
+        console.error('Realtime subscription error:', e);
+    }
 }

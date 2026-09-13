@@ -95,7 +95,23 @@ CREATE TABLE IF NOT EXISTS public.pharmacy_orders (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 4. Safe Column Migrations for Existing Tables
+-- 4. Health Vitals Logs Table
+CREATE TABLE IF NOT EXISTS public.vitals_logs (
+    id TEXT PRIMARY KEY,
+    user_id TEXT DEFAULT 'patient-1',
+    user_email TEXT DEFAULT 'patient@sattvacare.com',
+    sys_bp INTEGER,
+    dia_bp INTEGER,
+    blood_sugar INTEGER,
+    sugar_type TEXT DEFAULT 'FASTING',
+    pulse INTEGER,
+    symptoms TEXT,
+    notes TEXT,
+    logged_at TIMESTAMPTZ DEFAULT NOW(),
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 5. Safe Column Migrations for Existing Tables
 ALTER TABLE public.patient_prescriptions ADD COLUMN IF NOT EXISTS user_id TEXT DEFAULT 'patient-1';
 ALTER TABLE public.patient_prescriptions ADD COLUMN IF NOT EXISTS user_email TEXT DEFAULT 'patient@medibuddy.com';
 ALTER TABLE public.patient_prescriptions ADD COLUMN IF NOT EXISTS prescription_type TEXT DEFAULT 'RX';
@@ -126,6 +142,7 @@ ALTER TABLE public.pharmacy_orders ADD COLUMN IF NOT EXISTS user_email TEXT DEFA
 ALTER TABLE public.patient_prescriptions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.medication_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.pharmacy_orders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.vitals_logs ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Allow access patient_prescriptions" ON public.patient_prescriptions;
 CREATE POLICY "Allow access patient_prescriptions" ON public.patient_prescriptions FOR ALL USING (true) WITH CHECK (true);
@@ -136,8 +153,12 @@ CREATE POLICY "Allow access medication_logs" ON public.medication_logs FOR ALL U
 DROP POLICY IF EXISTS "Allow access pharmacy_orders" ON public.pharmacy_orders;
 CREATE POLICY "Allow access pharmacy_orders" ON public.pharmacy_orders FOR ALL USING (true) WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Allow access vitals_logs" ON public.vitals_logs;
+CREATE POLICY "Allow access vitals_logs" ON public.vitals_logs FOR ALL USING (true) WITH CHECK (true);
+
 -- 6. Indexes for Maximum Performance
 CREATE INDEX IF NOT EXISTS idx_rx_user_id ON public.patient_prescriptions(user_id);
 CREATE INDEX IF NOT EXISTS idx_logs_prescription_id ON public.medication_logs(prescription_id);
 CREATE INDEX IF NOT EXISTS idx_logs_taken_at ON public.medication_logs(taken_at);
 CREATE INDEX IF NOT EXISTS idx_orders_user_id ON public.pharmacy_orders(user_id);
+CREATE INDEX IF NOT EXISTS idx_vitals_user_id ON public.vitals_logs(user_id);
