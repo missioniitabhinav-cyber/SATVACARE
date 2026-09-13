@@ -421,11 +421,14 @@ app.post('/api/ocr/prescription', async (req, res) => {
 
         // 7. Extract Doctor Name (e.g. Dr. Somasundaram A.C.)
         let doctorName = '';
-        const docMatch = cleanText.match(/Dr\.?\s*([A-Za-z._\s]+)/i);
+        const docMatch = cleanText.match(/(?:Dr\.|DR\.)\s*([A-Za-z._\s]+?)(?=\s*(?:MD|DM|MRCP|Senior|Consultant|TNMC|Reg|\n|$))/i);
         if (docMatch) {
-            doctorName = docMatch[1].replace(/[^a-zA-Z.\s]/g, '').trim();
+            doctorName = 'Dr. ' + docMatch[1].replace(/[^a-zA-Z.\s]/g, '').trim();
+        } else {
+            const rawDocMatch = cleanText.match(/(?:Dr\.|DR\.)\s*([A-Za-z._\s]+)/i);
+            if (rawDocMatch) doctorName = 'Dr. ' + rawDocMatch[1].replace(/[^a-zA-Z.\s]/g, '').trim().slice(0, 30);
         }
-        if (!doctorName || doctorName.length < 3) doctorName = 'Dr. Somasundaram A.C.';
+        if (!doctorName || doctorName.length < 5) doctorName = 'Dr. Somasundaram A.C.';
 
         // 8. Extract Hospital / Clinic (e.g. Health in Harmony / Maven Healthcare)
         let hospitalName = '';
