@@ -709,11 +709,30 @@ const DB = {
 
             if (isSupabaseConnected) {
                 try {
-                    const dbPayload = sanitizeLogDbPayload(newLog, user_email);
-                    const { error } = await supabase.from('medication_logs').insert([dbPayload]);
-                    if (error && error.message && error.message.includes('user_id')) {
-                        delete dbPayload.user_id;
-                        await supabase.from('medication_logs').insert([dbPayload]);
+                    const cleanLog = {
+                        id: newLog.id,
+                        prescription_id: rx.id,
+                        medicine_name: rx.medicine_name,
+                        scheduled_time: slot_name,
+                        status: 'TAKEN',
+                        tablets_consumed: doseQuantity,
+                        tablets_remaining_after: newRemaining,
+                        taken_at: takenAtTimestamp
+                    };
+                    const { error } = await supabase.from('medication_logs').insert([{ user_id: user_email, ...cleanLog }]);
+                    if (error) {
+                        const { error: error2 } = await supabase.from('medication_logs').insert([cleanLog]);
+                        if (error2) {
+                            await supabase.from('medication_logs').insert([{
+                                id: cleanLog.id,
+                                prescription_id: cleanLog.prescription_id,
+                                medicine_name: cleanLog.medicine_name,
+                                scheduled_time: cleanLog.scheduled_time,
+                                status: 'TAKEN',
+                                tablets_consumed: doseQuantity,
+                                taken_at: takenAtTimestamp
+                            }]);
+                        }
                     }
                 } catch (e) {}
             }

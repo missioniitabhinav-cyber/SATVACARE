@@ -292,7 +292,17 @@ async function getSupabasePrescriptions() {
             .order('created_at', { ascending: false });
         if (error || !data || !Array.isArray(data)) return null;
         const userScoped = data.filter(item => isUserMatch(item, userEmail));
-        return userScoped.map(enhancePrescriptionClient);
+
+        // Deduplicate by normalized medicine name to prevent duplicate cards
+        const uniqueMap = new Map();
+        userScoped.forEach(item => {
+            const normName = (item.medicine_name || '').trim().toLowerCase();
+            if (normName && !uniqueMap.has(normName)) {
+                uniqueMap.set(normName, item);
+            }
+        });
+        const deduplicated = Array.from(uniqueMap.values());
+        return deduplicated.map(enhancePrescriptionClient);
     } catch (e) {
         return null;
     }
@@ -1224,7 +1234,7 @@ async function toggleDoseSlot(prescriptionId, slotName) {
             } else {
                 // Insert log into Supabase
                 const newRemaining = Math.max(0, parseFloat((currentStock - doseQty).toFixed(2)));
-                const newLog = {
+                const cleanLog = {
                     id: 'log-' + Date.now(),
                     prescription_id: prescriptionId,
                     medicine_name: medName || 'Medicine',
@@ -1232,13 +1242,23 @@ async function toggleDoseSlot(prescriptionId, slotName) {
                     status: 'TAKEN',
                     tablets_consumed: doseQty,
                     tablets_remaining_after: newRemaining,
-                    taken_at: `${selDate}T12:00:00.000Z`,
-                    date: selDate
+                    taken_at: `${selDate}T12:00:00.000Z`
                 };
 
-                let { error: insErr } = await state.supabaseClient.from('medication_logs').insert([{ user_id: userEmail, ...newLog }]);
+                let { error: insErr } = await state.supabaseClient.from('medication_logs').insert([{ user_id: userEmail, ...cleanLog }]);
                 if (insErr) {
-                    await state.supabaseClient.from('medication_logs').insert([newLog]);
+                    let { error: insErr2 } = await state.supabaseClient.from('medication_logs').insert([cleanLog]);
+                    if (insErr2) {
+                        await state.supabaseClient.from('medication_logs').insert([{
+                            id: cleanLog.id,
+                            prescription_id: cleanLog.prescription_id,
+                            medicine_name: cleanLog.medicine_name,
+                            scheduled_time: cleanLog.scheduled_time,
+                            status: cleanLog.status,
+                            tablets_consumed: cleanLog.tablets_consumed,
+                            taken_at: cleanLog.taken_at
+                        }]);
+                    }
                 }
 
                 // Deduct pill stock in Supabase

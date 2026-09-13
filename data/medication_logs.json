@@ -9,5 +9,16 @@
     "tablets_remaining_after": 29,
     "taken_at": "2026-09-13T10:15:27.457+00:00",
     "notes": null
+  },
+  {
+    "id": "log-1789295493117",
+    "prescription_id": "rx-1788522989084",
+    "medicine_name": "MG-OR",
+    "scheduled_time": "NIGHT",
+    "status": "TAKEN",
+    "tablets_consumed": 1,
+    "tablets_remaining_after": 48,
+    "taken_at": "2026-09-13T12:00:00+00:00",
+    "notes": null
   }
 ]
