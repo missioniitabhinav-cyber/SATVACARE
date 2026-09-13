@@ -608,6 +608,7 @@ function switchTab(tabName) {
 
 // Load Patient Portal
 async function loadPatientPortal() {
+    loadHydrationState();
 
     await Promise.all([
         fetchPatientStats(),
@@ -2756,32 +2757,56 @@ function renderPrintableMedicalPass() {
 }
 
 // 📲 WhatsApp Caregiver & Doctor Share Modal
-function openWhatsAppShareModal() {
-    const modal = document.getElementById('whatsapp-share-modal');
-    const preview = document.getElementById('whatsapp-preview-box');
+function generateWhatsAppReportText() {
     const userEmail = (state.currentUser && state.currentUser.email) ? state.currentUser.email : 'patient@medibuddy.com';
     const dateStr = state.selectedDate || getTodayDateStr();
+    const stats = state.stats || {};
+    const schedule = state.schedule || [];
 
     let msg = `🏥 *SATTVA CARE / MEDIBUDDY PATIENT INTAKE REPORT*\n`;
     msg += `👤 *Patient:* ${userEmail}\n`;
     msg += `📅 *Date:* ${dateStr}\n`;
-    msg += `📊 *Adherence:* ${state.stats ? state.stats.adherence_percentage : 100}% (${state.stats ? state.stats.today_taken_count : 0} doses completed)\n\n`;
-    msg += `💊 *MEDICINE INTAKE SUMMARY:*\n`;
+    msg += `📊 *Adherence:* ${stats.adherence_percentage || 0}% (${stats.today_taken_count || 0} of ${stats.today_scheduled_count || 0} doses completed)\n\n`;
+    msg += `💊 *MEDICINE INTAKE & CABINET STOCK SUMMARY:*\n`;
 
-    (state.schedule || []).forEach(s => {
-        const takenSlots = [];
-        if (s.morning_taken) takenSlots.push(`Morning (${s.morning_taken_time || 'Done ✓'})`);
-        if (s.afternoon_taken) takenSlots.push(`Afternoon (${s.afternoon_taken_time || 'Done ✓'})`);
-        if (s.evening_taken) takenSlots.push(`Evening (${s.evening_taken_time || 'Done ✓'})`);
-        if (s.night_taken) takenSlots.push(`Night (${s.night_taken_time || 'Done ✓'})`);
+    let calculatedTotalPills = 0;
 
-        msg += `• *${s.medicine_name}* (${s.dosage_strength || 'Tablet'}): ${takenSlots.length > 0 ? takenSlots.join(', ') : 'Pending'}\n`;
-    });
+    if (schedule.length === 0) {
+        msg += `(No active prescriptions in schedule)\n`;
+    } else {
+        schedule.forEach(s => {
+            const pillsRemaining = parseFloat(s.total_tablets_remaining || 0);
+            calculatedTotalPills += pillsRemaining;
 
-    msg += `\n📦 *Cabinet Pill Stock:* ${state.stats ? state.stats.total_pills_remaining : 0} pills remaining.`;
-    
-    preview.innerText = msg;
-    modal.classList.remove('hidden');
+            const takenSlots = [];
+            if (s.morning_taken) takenSlots.push(`Morning (${s.morning_taken_time || 'Taken ✓'})`);
+            if (s.afternoon_taken) takenSlots.push(`Afternoon (${s.afternoon_taken_time || 'Taken ✓'})`);
+            if (s.evening_taken) takenSlots.push(`Evening (${s.evening_taken_time || 'Taken ✓'})`);
+            if (s.night_taken) takenSlots.push(`Night (${s.night_taken_time || 'Taken ✓'})`);
+
+            const statusStr = takenSlots.length > 0 ? `✅ Taken: ${takenSlots.join(', ')}` : `⏳ Pending`;
+            const stockStr = pillsRemaining <= 0 ? `⚠️ 0 pills (OUT OF STOCK)` : `📦 Stock: ${pillsRemaining} pills remaining`;
+
+            msg += `• *${s.medicine_name}* (${s.dosage_strength || 'Tablet'})\n`;
+            msg += `  Status: ${statusStr}\n`;
+            msg += `  Cabinet: ${stockStr}\n`;
+        });
+    }
+
+    const totalStock = (stats.total_pills_remaining !== undefined && stats.total_pills_remaining !== null) 
+        ? stats.total_pills_remaining 
+        : calculatedTotalPills;
+
+    msg += `\n📦 *Total Cabinet Pill Stock:* ${totalStock} pills remaining across ${schedule.length} medicines.`;
+    return msg;
+}
+
+function openWhatsAppShareModal() {
+    const modal = document.getElementById('whatsapp-share-modal');
+    const preview = document.getElementById('whatsapp-preview-box');
+    const msg = generateWhatsAppReportText();
+    if (preview) preview.innerText = msg;
+    if (modal) modal.classList.remove('hidden');
 }
 
 function closeWhatsAppShareModal() {
@@ -2791,7 +2816,7 @@ function closeWhatsAppShareModal() {
 function sendWhatsAppMessage() {
     const preview = document.getElementById('whatsapp-preview-box');
     const phoneInput = document.getElementById('whatsapp-phone-input');
-    const text = encodeURIComponent(preview.innerText);
+    const text = encodeURIComponent(preview ? preview.innerText : generateWhatsAppReportText());
     const phone = (phoneInput && phoneInput.value.trim()) ? phoneInput.value.trim().replace(/[^0-9]/g, '') : '';
     
     const url = phone ? `https://wa.me/${phone}?text=${text}` : `https://wa.me/?text=${text}`;
@@ -2996,5 +3021,287 @@ function downloadExpenseStatement() {
     });
     downloadFile(txt, `Sattva_Pharmacy_GST_Receipt_${Date.now()}.txt`, 'text/plain');
     showToast('✓ GST Pharmacy Receipt downloaded!', 'success');
+}
+
+// 📄 Doctor Prescription Document Vault Handlers
+let currentVaultFileBase64 = null;
+
+function openVaultModal() {
+    const modal = document.getElementById('rx-vault-modal');
+    if (modal) modal.classList.remove('hidden');
+    fetchVaultDocuments();
+}
+
+function closeVaultModal() {
+    const modal = document.getElementById('rx-vault-modal');
+    if (modal) modal.classList.add('hidden');
+}
+
+function handleVaultFileSelected(e) {
+    const file = e.target.files[0];
+    if (!file) {
+        currentVaultFileBase64 = null;
+        return;
+    }
+    const reader = new FileReader();
+    reader.onload = function(evt) {
+        currentVaultFileBase64 = evt.target.result;
+    };
+    reader.readAsDataURL(file);
+}
+
+async function handleVaultUpload(e) {
+    e.preventDefault();
+    const doctor = document.getElementById('vault-doctor-name').value.trim();
+    const hospital = document.getElementById('vault-hospital').value.trim();
+    const docDate = document.getElementById('vault-date').value || getTodayDateStr();
+    const title = document.getElementById('vault-title').value.trim();
+    const notes = document.getElementById('vault-notes').value.trim();
+    const fileInput = document.getElementById('vault-file-input');
+
+    if (!doctor || !title) {
+        showToast('Please fill doctor name and document title', 'error');
+        return;
+    }
+
+    const newDoc = {
+        doctor_name: doctor,
+        hospital_clinic: hospital,
+        document_date: docDate,
+        title: title,
+        diagnosis_notes: notes,
+        file_data: currentVaultFileBase64 || '',
+        file_name: (fileInput && fileInput.files[0]) ? fileInput.files[0].name : 'prescription_slip.pdf'
+    };
+
+    let result = null;
+    if (!isStaticWebDeployment()) {
+        result = await safeFetchJson('/api/patient/vault', {
+            method: 'POST',
+            headers: getUserHeaders(),
+            body: JSON.stringify(newDoc)
+        });
+    }
+
+    if (!result) {
+        const vaultKey = getClientStorageKey('vault');
+        let docs = JSON.parse(localStorage.getItem(vaultKey) || '[]');
+        newDoc.id = 'doc-' + Date.now();
+        newDoc.created_at = new Date().toISOString();
+        docs.unshift(newDoc);
+        localStorage.setItem(vaultKey, JSON.stringify(docs));
+    }
+
+    showToast('✓ Prescription paper saved to Doctor Vault!', 'success');
+    const form = document.getElementById('vault-upload-form');
+    if (form) form.reset();
+    currentVaultFileBase64 = null;
+    fetchVaultDocuments();
+}
+
+async function fetchVaultDocuments() {
+    let docs = null;
+    if (!isStaticWebDeployment()) {
+        docs = await safeFetchJson(`/api/patient/vault?t=${Date.now()}`, { headers: getUserHeaders() });
+    }
+    if (!docs) {
+        const vaultKey = getClientStorageKey('vault');
+        docs = JSON.parse(localStorage.getItem(vaultKey) || '[]');
+    }
+    renderVaultDocuments(docs || []);
+}
+
+function renderVaultDocuments(docs) {
+    const grid = document.getElementById('vault-documents-grid');
+    if (!grid) return;
+
+    if (!docs || docs.length === 0) {
+        grid.innerHTML = `
+            <div class="col-span-full py-8 text-center bg-white rounded-2xl border border-slate-200 p-6 space-y-2">
+                <i class="fa-solid fa-folder-open text-slate-300 text-3xl"></i>
+                <p class="text-xs font-bold text-slate-500">No prescription papers uploaded yet.</p>
+                <p class="text-[11px] text-slate-400">Use the upload form above to add paper slips, doctor receipts, or lab test reports.</p>
+            </div>
+        `;
+        return;
+    }
+
+    grid.innerHTML = docs.map(d => `
+        <div class="bg-white p-4 rounded-2xl border border-teal-200 shadow-sm hover:shadow-md transition space-y-3">
+            <div class="flex items-start justify-between">
+                <div>
+                    <span class="px-2 py-0.5 bg-teal-100 text-teal-800 rounded-md text-[10px] font-black uppercase">
+                        ${escapeHtml(d.document_date || 'N/A')}
+                    </span>
+                    <h5 class="text-xs font-black text-slate-900 mt-1">${escapeHtml(d.title)}</h5>
+                    <p class="text-[11px] font-bold text-teal-800"><i class="fa-solid fa-user-doctor text-teal-600 mr-1"></i>${escapeHtml(d.doctor_name)}</p>
+                    ${d.hospital_clinic ? `<p class="text-[10px] text-slate-500 font-semibold"><i class="fa-solid fa-hospital mr-1"></i>${escapeHtml(d.hospital_clinic)}</p>` : ''}
+                </div>
+                <button onclick="deleteVaultDocument('${d.id}')" title="Delete document" class="text-rose-400 hover:text-rose-600 text-xs p-1">
+                    <i class="fa-solid fa-trash-can"></i>
+                </button>
+            </div>
+
+            ${d.diagnosis_notes ? `
+                <div class="p-2 rounded-xl bg-slate-50 border border-slate-200 text-[11px] font-medium text-slate-700">
+                    <i class="fa-solid fa-notes-medical text-teal-600 mr-1"></i>${escapeHtml(d.diagnosis_notes)}
+                </div>
+            ` : ''}
+
+            <div class="pt-2 border-t border-slate-100 flex items-center justify-between">
+                <span class="text-[10px] text-slate-400 font-mono">${escapeHtml(d.file_name || 'prescription_slip')}</span>
+                ${d.file_data ? `
+                    <a href="${d.file_data}" download="${escapeHtml(d.file_name || 'prescription_slip')}" target="_blank" class="px-3 py-1 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-[10px] font-black shadow-xs flex items-center gap-1">
+                        <i class="fa-solid fa-download"></i> View / Download
+                    </a>
+                ` : `
+                    <span class="text-[10px] text-slate-400 font-bold">Paper Record</span>
+                `}
+            </div>
+        </div>
+    `).join('');
+}
+
+async function deleteVaultDocument(id) {
+    if (!confirm('Are you sure you want to delete this document from your vault?')) return;
+    if (!isStaticWebDeployment()) {
+        await safeFetchJson(`/api/patient/vault/${id}`, {
+            method: 'DELETE',
+            headers: getUserHeaders()
+        });
+    }
+    const vaultKey = getClientStorageKey('vault');
+    let docs = JSON.parse(localStorage.getItem(vaultKey) || '[]');
+    docs = docs.filter(d => d.id !== id);
+    localStorage.setItem(vaultKey, JSON.stringify(docs));
+    showToast('Document deleted from vault', 'info');
+    fetchVaultDocuments();
+}
+
+// 🚨 Emergency Caregiver SOS Handlers
+function triggerEmergencySOS() {
+    const modal = document.getElementById('emergency-sos-modal');
+    const preview = document.getElementById('sos-message-preview');
+    const userEmail = (state.currentUser && state.currentUser.email) ? state.currentUser.email : 'patient@medibuddy.com';
+    const activeMeds = (state.schedule || []).map(s => `${s.medicine_name} (${s.dosage_strength || 'Tablet'})`).join(', ');
+
+    let text = `🚨 *EMERGENCY MEDICAL SOS ALERT*\n`;
+    text += `👤 *Patient:* ${userEmail}\n`;
+    text += `🕒 *Time:* ${new Date().toLocaleString()}\n`;
+    text += `💊 *Current Medications:* ${activeMeds || 'None registered'}\n`;
+    text += `⚠️ *Urgent Action Required:* Patient triggered emergency medical assistance alert. Please contact or check on patient immediately.`;
+
+    if (preview) preview.innerText = text;
+    if (modal) {
+        modal.classList.remove('hidden');
+        setTimeout(() => modal.classList.remove('opacity-0'), 10);
+    }
+}
+
+function closeEmergencySOSModal() {
+    const modal = document.getElementById('emergency-sos-modal');
+    if (modal) {
+        modal.classList.add('opacity-0');
+        setTimeout(() => modal.classList.add('hidden'), 300);
+    }
+}
+
+function dispatchWhatsAppSOS() {
+    const preview = document.getElementById('sos-message-preview');
+    if (!preview) return;
+    const text = encodeURIComponent(preview.innerText);
+    window.open(`https://wa.me/?text=${text}`, '_blank');
+    closeEmergencySOSModal();
+}
+
+function copySOSText() {
+    const preview = document.getElementById('sos-message-preview');
+    if (!preview) return;
+    navigator.clipboard.writeText(preview.innerText).then(() => {
+        showToast('✓ Emergency SOS message copied to clipboard!', 'success');
+    }).catch(() => {
+        showToast('SOS message copied!', 'success');
+    });
+}
+
+// 💧 Daily Hydration Tracker Handlers
+function logWaterGlass(glassNum) {
+    const key = getClientStorageKey(`water_${getTodayDateStr()}`);
+    let current = parseInt(localStorage.getItem(key) || '0', 10);
+    if (glassNum <= current) {
+        current = Math.max(0, glassNum - 1);
+    } else {
+        current = glassNum;
+    }
+    localStorage.setItem(key, current.toString());
+    updateHydrationUI(current);
+    playDoseChimeSound();
+    showToast(`💧 Water intake updated: ${current}/8 glasses today!`, 'success');
+}
+
+function updateHydrationUI(count) {
+    for (let i = 1; i <= 8; i++) {
+        const btn = document.getElementById(`water-glass-${i}`);
+        if (btn) {
+            if (i <= count) {
+                btn.className = 'w-8 h-8 rounded-xl bg-cyan-500 text-white flex items-center justify-center text-xs font-black shadow-sm ring-2 ring-cyan-300 scale-105 transition';
+            } else {
+                btn.className = 'w-8 h-8 rounded-xl bg-cyan-100 hover:bg-cyan-200 text-cyan-800 border border-cyan-300 flex items-center justify-center text-xs font-bold transition';
+            }
+        }
+    }
+    const countText = document.getElementById('water-count-text');
+    if (countText) countText.innerText = `${count} of 8 Glasses (${count * 250} ml)`;
+}
+
+function loadHydrationState() {
+    const key = getClientStorageKey(`water_${getTodayDateStr()}`);
+    const current = parseInt(localStorage.getItem(key) || '0', 10);
+    updateHydrationUI(current);
+}
+
+// 🩺 Symptom & Side-Effect Logger Handlers
+function openSymptomModal() {
+    const modal = document.getElementById('symptom-modal');
+    const select = document.getElementById('symptom-linked-rx');
+    if (select) {
+        select.innerHTML = `<option value="">-- General / Unlinked Symptom --</option>` +
+            (state.schedule || []).map(s => `<option value="${escapeHtml(s.medicine_name)}">${escapeHtml(s.medicine_name)} (${escapeHtml(s.dosage_strength || 'Tablet')})</option>`).join('');
+    }
+    if (modal) {
+        modal.classList.remove('hidden');
+        setTimeout(() => modal.classList.remove('opacity-0'), 10);
+    }
+}
+
+function closeSymptomModal() {
+    const modal = document.getElementById('symptom-modal');
+    if (modal) {
+        modal.classList.add('opacity-0');
+        setTimeout(() => modal.classList.add('hidden'), 300);
+    }
+}
+
+function handleSymptomSubmit(e) {
+    e.preventDefault();
+    const name = document.getElementById('symptom-name').value.trim();
+    const rx = document.getElementById('symptom-linked-rx').value;
+    const severity = document.getElementById('symptom-severity').value;
+
+    if (!name) return;
+
+    const logKey = getClientStorageKey('symptoms');
+    let symptoms = JSON.parse(localStorage.getItem(logKey) || '[]');
+    symptoms.unshift({
+        id: 'sym-' + Date.now(),
+        symptom_name: name,
+        linked_medicine: rx,
+        severity: severity,
+        logged_at: new Date().toISOString()
+    });
+    localStorage.setItem(logKey, JSON.stringify(symptoms));
+
+    showToast(`🩺 Symptom logged successfully (${severity})`, 'success');
+    closeSymptomModal();
 }
 

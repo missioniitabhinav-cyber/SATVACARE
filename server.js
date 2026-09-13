@@ -285,6 +285,41 @@ app.get('/api/patient/calendar-30days', async (req, res) => {
     }
 });
 
+// 📄 Doctor Prescription & Document Vault Endpoints
+app.get('/api/patient/vault', async (req, res) => {
+    try {
+        const email = getUserEmail(req);
+        if (!email) return res.status(401).json({ error: 'Unauthorized. Login required.' });
+        const docs = await DB.getVaultDocuments(email);
+        res.json(docs);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/patient/vault', async (req, res) => {
+    try {
+        const email = getUserEmail(req);
+        if (!email) return res.status(401).json({ error: 'Unauthorized. Login required.' });
+        const newDoc = await DB.addVaultDocument(req.body, email);
+        res.status(201).json(newDoc);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.delete('/api/patient/vault/:id', async (req, res) => {
+    try {
+        const email = getUserEmail(req);
+        if (!email) return res.status(401).json({ error: 'Unauthorized. Login required.' });
+        const result = await DB.deleteVaultDocument(req.params.id, email);
+        res.json(result);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+
 // SPA Index Fallback
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));

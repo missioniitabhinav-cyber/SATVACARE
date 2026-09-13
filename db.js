@@ -1149,7 +1149,80 @@ const DB = {
         }
 
         return history30Days;
+    },
+
+    // 📄 Doctor Prescription & Document Vault Functions
+    async getVaultDocuments(userEmail = 'patient@medibuddy.com') {
+        const vaultFile = path.join(DATA_DIR, 'doctor_vault.json');
+        if (isSupabaseConnected && supabase) {
+            try {
+                const { data } = await supabase.from('doctor_prescriptions_vault').select('*').order('created_at', { ascending: false });
+                if (data && Array.isArray(data)) {
+                    return data.filter(d => isUserMatch(d, userEmail));
+                }
+            } catch (e) {}
+        }
+        try {
+            if (!fs.existsSync(vaultFile)) fs.writeFileSync(vaultFile, JSON.stringify([]));
+            const data = JSON.parse(fs.readFileSync(vaultFile, 'utf-8'));
+            return (data || []).filter(d => isUserMatch(d, userEmail));
+        } catch (e) {
+            return [];
+        }
+    },
+
+    async addVaultDocument(docData, userEmail = 'patient@medibuddy.com') {
+        const vaultFile = path.join(DATA_DIR, 'doctor_vault.json');
+        const newDoc = {
+            id: docData.id || ('vlt-' + Date.now()),
+            user_id: userEmail,
+            user_email: userEmail,
+            doctor_name: docData.doctor_name || 'Dr. Unknown',
+            clinic_hospital: docData.clinic_hospital || '',
+            document_title: docData.document_title || 'Doctor Prescription',
+            document_type: docData.document_type || 'Prescription Paper',
+            document_date: docData.document_date || new Date().toISOString().substring(0, 10),
+            diagnosis_notes: docData.diagnosis_notes || '',
+            file_url: docData.file_url || '',
+            file_type: docData.file_type || 'image',
+            created_at: new Date().toISOString()
+        };
+
+        if (isSupabaseConnected && supabase) {
+            try {
+                await supabase.from('doctor_prescriptions_vault').insert([newDoc]);
+            } catch (e) {}
+        }
+
+        try {
+            if (!fs.existsSync(vaultFile)) fs.writeFileSync(vaultFile, JSON.stringify([]));
+            const list = JSON.parse(fs.readFileSync(vaultFile, 'utf-8'));
+            list.unshift(newDoc);
+            fs.writeFileSync(vaultFile, JSON.stringify(list, null, 2));
+        } catch (e) {}
+
+        return newDoc;
+    },
+
+    async deleteVaultDocument(id, userEmail = 'patient@medibuddy.com') {
+        const vaultFile = path.join(DATA_DIR, 'doctor_vault.json');
+        if (isSupabaseConnected && supabase) {
+            try {
+                await supabase.from('doctor_prescriptions_vault').delete().eq('id', id);
+            } catch (e) {}
+        }
+
+        try {
+            if (fs.existsSync(vaultFile)) {
+                let list = JSON.parse(fs.readFileSync(vaultFile, 'utf-8'));
+                list = list.filter(item => item.id !== id);
+                fs.writeFileSync(vaultFile, JSON.stringify(list, null, 2));
+            }
+        } catch (e) {}
+
+        return { success: true, id };
     }
 };
 
 module.exports = DB;
+
