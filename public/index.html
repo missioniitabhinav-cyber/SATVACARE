@@ -134,9 +134,19 @@
                         <span id="db-text" class="text-[10px] font-extrabold text-teal-700 bg-teal-50 border border-teal-200 px-2 py-0.5 rounded-md ml-1">Supabase Connected</span>
                     </div>
 
+                    <button onclick="openPrintableMedicalPassModal()" class="px-3.5 py-2.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-black flex items-center gap-2 shadow-sm transition">
+                        <i class="fa-solid fa-print text-amber-400"></i>
+                        <span class="hidden md:inline">Medical Pass</span>
+                    </button>
+
+                    <button onclick="openWhatsAppShareModal()" class="px-3.5 py-2.5 rounded-2xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-800 text-xs font-black flex items-center gap-2 shadow-sm transition">
+                        <i class="fa-brands fa-whatsapp text-emerald-600 text-sm"></i>
+                        <span class="hidden md:inline">Share Report</span>
+                    </button>
+
                     <button onclick="openExportModal()" class="px-3.5 py-2.5 rounded-2xl bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 text-xs font-black flex items-center gap-2 shadow-sm transition">
                         <i class="fa-solid fa-file-export text-teal-600"></i>
-                        <span class="hidden md:inline">Export Report</span>
+                        <span class="hidden md:inline">Export</span>
                     </button>
 
                     <button onclick="openOrderModal()" class="btn-amber px-4 py-2.5 rounded-2xl text-xs font-black flex items-center gap-2 shadow-lg">
@@ -285,6 +295,51 @@
                 </div>
 
             </section>
+
+            <!-- 📊 7-Day Adherence Analytics Visual Chart & 🩺 Vitals Log Summary Widget -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <!-- 7-Day Adherence Visual Chart -->
+                <div class="lg:col-span-8 glass-card p-6 shadow-xl space-y-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="text-base font-black text-slate-900 flex items-center gap-2">
+                                <i class="fa-solid fa-chart-column text-teal-600"></i>
+                                7-Day Adherence Trend & Compliance Chart
+                            </h3>
+                            <p class="text-xs text-slate-500 font-medium">Visual breakdown of daily medicine intake over the past week</p>
+                        </div>
+                        <button onclick="openWhatsAppShareModal()" class="px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-800 text-xs font-black transition flex items-center gap-1.5 shadow-xs">
+                            <i class="fa-brands fa-whatsapp text-emerald-600 text-sm"></i> Share Report
+                        </button>
+                    </div>
+                    <div id="adherence-chart-container" class="grid grid-cols-7 gap-2 pt-2 items-end h-44"></div>
+                </div>
+
+                <!-- 🩺 Vitals & Symptoms Quick Tracker -->
+                <div class="lg:col-span-4 glass-card p-6 shadow-xl space-y-4 flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-base font-black text-slate-900 flex items-center gap-2">
+                                <i class="fa-solid fa-heart-pulse text-rose-600"></i>
+                                Health Vitals Log
+                            </h3>
+                            <button onclick="openVitalsModal()" class="px-2.5 py-1 bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 rounded-lg text-xs font-black transition">
+                                + Log Vitals
+                            </button>
+                        </div>
+                        <p class="text-xs text-slate-500 font-medium mt-1">Track Blood Pressure, Sugar & Symptoms</p>
+                        <div id="vitals-summary-widget" class="mt-4 space-y-2">
+                            <div class="p-3 bg-slate-50 border border-slate-200 rounded-2xl text-center py-4">
+                                <span class="text-xs text-slate-500 font-bold block">No vitals logged today</span>
+                                <button onclick="openVitalsModal()" class="mt-2 px-3 py-1.5 bg-teal-600 text-white rounded-xl text-xs font-black shadow-sm">+ Record BP / Sugar</button>
+                            </div>
+                        </div>
+                    </div>
+                    <button onclick="openPrintableMedicalPassModal()" class="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-black flex items-center justify-center gap-2 shadow-md transition">
+                        <i class="fa-solid fa-print text-amber-400"></i> Print Official Medical Pass
+                    </button>
+                </div>
+            </div>
 
             <!-- Interactive Search & Rx Category Filter Toolbar -->
             <div class="glass-card p-4 sm:p-5 shadow-xl flex flex-col md:flex-row items-center justify-between gap-4">
@@ -820,6 +875,196 @@
 
             <div class="flex items-center justify-end border-t border-slate-200 pt-4">
                 <button onclick="closeExportModal()" class="btn-glass px-5 py-2.5 rounded-xl text-xs font-bold">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 🩺 Vitals & Symptom Logger Modal -->
+    <div id="vitals-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-fade-in">
+        <div class="glass-card max-w-lg w-full p-6 sm:p-8 rounded-3xl shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between border-b border-slate-200 pb-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-rose-100 border border-rose-300 text-rose-600 flex items-center justify-center text-lg">
+                        <i class="fa-solid fa-heart-pulse"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-black text-slate-900">Record Health Vitals</h3>
+                        <p class="text-xs text-slate-500 font-medium">Log Blood Pressure, Sugar & Daily Symptoms</p>
+                    </div>
+                </div>
+                <button onclick="closeVitalsModal()" class="btn-glass p-2 rounded-xl text-slate-400 hover:text-slate-600">
+                    <i class="fa-solid fa-xmark text-base"></i>
+                </button>
+            </div>
+
+            <form onsubmit="handleSaveVitals(event)" class="space-y-4">
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-extrabold text-slate-700 uppercase mb-1">Systolic BP (mmHg)</label>
+                        <input type="number" id="vitals-sys-bp" min="50" max="250" placeholder="120" class="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-xs font-bold text-slate-900 focus:border-rose-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-extrabold text-slate-700 uppercase mb-1">Diastolic BP (mmHg)</label>
+                        <input type="number" id="vitals-dia-bp" min="30" max="150" placeholder="80" class="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-xs font-bold text-slate-900 focus:border-rose-500 outline-none">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-extrabold text-slate-700 uppercase mb-1">Blood Sugar (mg/dL)</label>
+                        <input type="number" id="vitals-sugar" min="20" max="600" placeholder="95" class="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-xs font-bold text-slate-900 focus:border-teal-600 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-extrabold text-slate-700 uppercase mb-1">Sugar Timing</label>
+                        <select id="vitals-sugar-type" class="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-xs font-bold text-slate-900 focus:border-teal-600 outline-none">
+                            <option value="FASTING">Fasting (Before Food)</option>
+                            <option value="POST_MEAL">Post-Meal (After Food)</option>
+                            <option value="RANDOM">Random / Any Time</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-extrabold text-slate-700 uppercase mb-1">Pulse / Heart Rate (bpm)</label>
+                    <input type="number" id="vitals-pulse" min="30" max="220" placeholder="72" class="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-xs font-bold text-slate-900 focus:border-teal-600 outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-extrabold text-slate-700 uppercase mb-1">Symptoms or Notes</label>
+                    <textarea id="vitals-symptoms" rows="2" placeholder="e.g. Mild headache, dizziness after morning dose..." class="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-xs font-medium text-slate-900 focus:border-teal-600 outline-none"></textarea>
+                </div>
+
+                <div class="flex items-center justify-end gap-3 pt-2">
+                    <button type="button" onclick="closeVitalsModal()" class="btn-glass px-4 py-2.5 rounded-xl text-xs font-bold">Cancel</button>
+                    <button type="submit" class="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-black shadow-md transition">+ Save Vitals Record</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 🖨️ Printable Official Medical Pass Modal -->
+    <div id="medical-pass-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-md animate-fade-in">
+        <div class="glass-card max-w-4xl w-full p-6 sm:p-8 rounded-3xl shadow-2xl space-y-6 max-h-[92vh] overflow-y-auto">
+            <div class="flex items-center justify-between border-b border-slate-200 pb-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-slate-900 text-amber-400 flex items-center justify-center text-lg shadow-md">
+                        <i class="fa-solid fa-id-card"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-black text-slate-900">Official Patient Medical Pass & RX Sheet</h3>
+                        <p class="text-xs text-slate-500 font-medium">Ready to print or save as PDF for physician / emergency use</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="window.print()" class="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-black shadow-md transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-print"></i> Print / Save PDF
+                    </button>
+                    <button onclick="closeMedicalPassModal()" class="btn-glass p-2 rounded-xl text-slate-400 hover:text-slate-600">
+                        <i class="fa-solid fa-xmark text-base"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Printable Pass Card Container -->
+            <div id="printable-medical-pass" class="bg-white p-8 rounded-2xl border border-slate-300 shadow-md space-y-6">
+                <!-- Pass Header -->
+                <div class="flex items-center justify-between border-b-2 border-teal-600 pb-4">
+                    <div class="flex items-center gap-3">
+                        <img src="sattva_logo.png" alt="Sattva Care" class="w-12 h-12 object-contain">
+                        <div>
+                            <h2 class="text-xl font-black text-slate-900 tracking-tight">SATTVA CARE PATIENT MEDICAL PASS</h2>
+                            <p class="text-xs text-teal-800 font-extrabold uppercase">Official Patient Medication Record • Valid 2026</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <span class="px-3 py-1 bg-teal-50 border border-teal-300 text-teal-900 rounded-lg text-xs font-black block">ID: SC-2026-PATIENT-1</span>
+                        <span class="text-[10px] text-slate-500 font-bold block mt-1" id="pass-generated-date">Date: Sep 13, 2026</span>
+                    </div>
+                </div>
+
+                <!-- Patient & Emergency Profile Grid -->
+                <div class="grid grid-cols-3 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200 text-xs">
+                    <div>
+                        <span class="text-slate-500 font-bold block text-[10px] uppercase">Patient Name / Email</span>
+                        <strong class="text-slate-900 font-extrabold text-sm block" id="pass-patient-name">Patient (patient@medibuddy.com)</strong>
+                    </div>
+                    <div>
+                        <span class="text-slate-500 font-bold block text-[10px] uppercase">Primary Physician</span>
+                        <strong class="text-slate-900 font-extrabold text-sm block" id="pass-doctor-name">Dr. MediBuddy Clinic</strong>
+                    </div>
+                    <div>
+                        <span class="text-slate-500 font-bold block text-[10px] uppercase">Emergency Helpline / Hospital</span>
+                        <strong class="text-slate-900 font-extrabold text-sm block">108 / Sattva Healthcare Emergency</strong>
+                    </div>
+                </div>
+
+                <!-- Active Prescriptions Matrix Table -->
+                <div class="space-y-2">
+                    <h4 class="text-xs font-black text-slate-800 uppercase tracking-wider">Active Prescriptions & Dosage Timings</h4>
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead>
+                            <tr class="bg-slate-800 text-white text-[11px]">
+                                <th class="p-2.5 rounded-tl-lg">Medicine & Brand</th>
+                                <th class="p-2.5">Dosage / Type</th>
+                                <th class="p-2.5">Schedule</th>
+                                <th class="p-2.5">Instructions</th>
+                                <th class="p-2.5 rounded-tr-lg">Batch / Expiry</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pass-prescriptions-table-body" class="divide-y divide-slate-200 border-b border-slate-200"></tbody>
+                    </table>
+                </div>
+
+                <!-- Patient Food & Drug Warnings -->
+                <div class="p-4 bg-amber-50 border border-amber-200 rounded-xl space-y-1">
+                    <h5 class="text-xs font-black text-amber-950 flex items-center gap-1.5">
+                        <i class="fa-solid fa-triangle-exclamation text-amber-600"></i> Special Food & Drug Warnings
+                    </h5>
+                    <div id="pass-safety-warnings-list" class="text-xs text-amber-900 font-medium space-y-0.5"></div>
+                </div>
+
+                <!-- Pass Footer -->
+                <div class="pt-4 border-t border-slate-200 flex items-center justify-between text-[10px] text-slate-500 font-bold">
+                    <span>Generated by Sattva Care Patient Management System</span>
+                    <span>Emergency Contact: +91 1800-SATTVA-CARE</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 📲 WhatsApp Share Modal -->
+    <div id="whatsapp-share-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-fade-in">
+        <div class="glass-card max-w-md w-full p-6 sm:p-8 rounded-3xl shadow-2xl space-y-6">
+            <div class="flex items-center justify-between border-b border-slate-200 pb-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-emerald-100 border border-emerald-300 text-emerald-600 flex items-center justify-center text-lg">
+                        <i class="fa-brands fa-whatsapp"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-black text-slate-900">Share Report on WhatsApp</h3>
+                        <p class="text-xs text-slate-500 font-medium">Send daily intake report to doctor / caregiver</p>
+                    </div>
+                </div>
+                <button onclick="closeWhatsAppShareModal()" class="btn-glass p-2 rounded-xl text-slate-400 hover:text-slate-600">
+                    <i class="fa-solid fa-xmark text-base"></i>
+                </button>
+            </div>
+
+            <div>
+                <label class="block text-xs font-extrabold text-slate-700 uppercase mb-1">Enter Doctor / Caregiver Phone Number (Optional)</label>
+                <input type="tel" id="whatsapp-phone-input" placeholder="+919876543210" class="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-xs font-bold text-slate-900 focus:border-emerald-600 outline-none">
+            </div>
+
+            <div>
+                <label class="block text-xs font-extrabold text-slate-700 uppercase mb-1">Message Preview</label>
+                <div id="whatsapp-preview-box" class="p-3 bg-slate-50 border border-slate-300 rounded-xl text-xs font-mono text-slate-800 whitespace-pre-wrap max-h-48 overflow-y-auto"></div>
+            </div>
+
+            <div class="flex items-center justify-end gap-3 pt-2">
+                <button type="button" onclick="closeWhatsAppShareModal()" class="btn-glass px-4 py-2.5 rounded-xl text-xs font-bold">Cancel</button>
+                <button type="button" onclick="sendWhatsAppMessage()" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black shadow-md transition flex items-center gap-2">
+                    <i class="fa-brands fa-whatsapp text-white text-base"></i> Send on WhatsApp
+                </button>
             </div>
         </div>
     </div>

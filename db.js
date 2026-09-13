@@ -27,6 +27,7 @@ const DATA_DIR = path.join(__dirname, 'data');
 const PRESCRIPTIONS_FILE = path.join(DATA_DIR, 'patient_prescriptions.json');
 const LOGS_FILE = path.join(DATA_DIR, 'medication_logs.json');
 const ORDERS_FILE = path.join(DATA_DIR, 'pharmacy_orders.json');
+const VITALS_FILE = path.join(DATA_DIR, 'vitals_logs.json');
 
 if (!fs.existsSync(DATA_DIR)) {
     fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -42,6 +43,22 @@ if (!fs.existsSync(LOGS_FILE)) {
 
 if (!fs.existsSync(ORDERS_FILE)) {
     fs.writeFileSync(ORDERS_FILE, JSON.stringify([], null, 2));
+}
+
+if (!fs.existsSync(VITALS_FILE)) {
+    fs.writeFileSync(VITALS_FILE, JSON.stringify([], null, 2));
+}
+
+function readLocalVitals() {
+    try {
+        return JSON.parse(fs.readFileSync(VITALS_FILE, 'utf-8'));
+    } catch (e) {
+        return [];
+    }
+}
+
+function writeLocalVitals(data) {
+    fs.writeFileSync(VITALS_FILE, JSON.stringify(data, null, 2));
 }
 
 function readLocalPrescriptions() {
@@ -192,6 +209,40 @@ function formatMealRelation(type) {
     }
 }
 
+function getFoodSafetyWarnings(rx, mealRelation) {
+    const warnings = [];
+    const nameUpper = (rx.medicine_name || '').toUpperCase();
+    const instUpper = (rx.instructions || '').toUpperCase();
+
+    if (mealRelation === 'BEFORE_MEAL') {
+        warnings.push('⚠️ Take on empty stomach (1 hour before or 2 hours after meals).');
+    } else if (mealRelation === 'AFTER_MEAL') {
+        warnings.push('🍲 Take after meals to minimize gastric irritation.');
+    } else if (mealRelation === 'WITH_FOOD') {
+        warnings.push('🍽️ Take with food or first bite of meal.');
+    } else if (mealRelation === 'BEDTIME') {
+        warnings.push('🌙 Take at bedtime with full glass of water.');
+    }
+
+    if (nameUpper.includes('UDILIV') || instUpper.includes('ANTACID')) {
+        warnings.push('💊 Separate intake by 2 hours from aluminum antacids.');
+    }
+    if (nameUpper.includes('STATIN') || nameUpper.includes('AZARON') || nameUpper.includes('BRIVASTER')) {
+        warnings.push('🍊 Avoid Grapefruit & Grapefruit juice while taking this medication.');
+    }
+    if (rx.prescription_type === 'NRX' || instUpper.includes('NRX')) {
+        warnings.push('🚨 Controlled NRx Medicine — Strictly avoid alcohol & driving after dose.');
+    }
+    return warnings;
+}
+
+function calculateRunoutDate(daysLeft) {
+    if (daysLeft >= 999) return 'N/A';
+    const d = new Date();
+    d.setDate(d.getDate() + daysLeft);
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
 // Enhance prescription with 5-Day Run-Out calculations & frequency text
 function enhancePrescription(rx) {
     const freqType = inferFrequencyType(rx);
@@ -204,6 +255,9 @@ function enhancePrescription(rx) {
     const isRunoutAlert5Days = daysLeft <= 5 && remaining > 0;
     const isOutOfStock = remaining === 0;
 
+    const foodWarnings = getFoodSafetyWarnings(rx, rx.meal_relation);
+    const runoutDateText = calculateRunoutDate(daysLeft);
+
     return {
         ...rx,
         units_per_pack: rx.units_per_pack ? parseInt(rx.units_per_pack, 10) : 10,
@@ -212,6 +266,8 @@ function enhancePrescription(rx) {
         tablets_per_dose: tabletsPerDose,
         daily_frequency: dailyFreq,
         days_supply_remaining: daysLeft,
+        predicted_runout_date: runoutDateText,
+        food_safety_warnings: foodWarnings,
         is_runout_alert_5days: isRunoutAlert5Days,
         is_out_of_stock: isOutOfStock,
         frequency_label: getFrequencyLabel(freqType),
@@ -959,6 +1015,56 @@ const DB = {
         writeLocalOrders(orders);
 
         return { success: true, id };
+    },
+
+    // Vitals & Symptom Logger
+    async getVitals(userEmail = 'patient@medibuddy.com') {
+        let vitals = [];
+        if (isSupabaseConnected) {
+            try {
+                const { data, error } = await supabase.from('vitals_logs').select('*').order('logged_at', { ascending: false });
+                if (!error && Array.isArray(data)) {
+                    vitals = data;
+                    writeLocalVitals(data);
+                } else {
+                    vitals = readLocalVitals();
+                }
+            } catch (e) {
+                vitals = readLocalVitals();
+            }
+        } else {
+            vitals = readLocalVitals();
+        }
+        return vitals.filter(v => matchesUser(v, userEmail));
+    },
+
+    async addVital(data, userEmail = 'patient@medibuddy.com') {
+        const newLog = {
+            id: 'vit-' + Date.now(),
+            user_id: userEmail,
+            user_email: userEmail,
+            sys_bp: data.sys_bp ? parseInt(data.sys_bp, 10) : null,
+            dia_bp: data.dia_bp ? parseInt(data.dia_bp, 10) : null,
+            blood_sugar: data.blood_sugar ? parseInt(data.blood_sugar, 10) : null,
+            sugar_type: data.sugar_type || 'FASTING',
+            pulse: data.pulse ? parseInt(data.pulse, 10) : null,
+            symptoms: data.symptoms || '',
+            notes: data.notes || '',
+            logged_at: data.logged_at || new Date().toISOString(),
+            created_at: new Date().toISOString()
+        };
+
+        if (isSupabaseConnected) {
+            try {
+                await supabase.from('vitals_logs').insert([newLog]);
+            } catch (e) {}
+        }
+
+        const vitals = readLocalVitals();
+        vitals.unshift(newLog);
+        writeLocalVitals(vitals);
+
+        return newLog;
     }
 };
 

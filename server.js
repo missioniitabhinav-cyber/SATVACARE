@@ -228,6 +228,29 @@ app.delete('/api/patient/orders/:id', async (req, res) => {
     }
 });
 
+// Vitals & Symptom Tracker Endpoints
+app.get('/api/patient/vitals', async (req, res) => {
+    try {
+        const email = getUserEmail(req);
+        if (!email) return res.status(401).json({ error: 'Unauthorized. Login required.' });
+        const vitals = await DB.getVitals(email);
+        res.json(vitals);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/patient/vitals', async (req, res) => {
+    try {
+        const email = getUserEmail(req);
+        if (!email) return res.status(401).json({ error: 'Unauthorized. Login required.' });
+        const newLog = await DB.addVital(req.body, email);
+        res.status(201).json(newLog);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // SPA Index Fallback
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));

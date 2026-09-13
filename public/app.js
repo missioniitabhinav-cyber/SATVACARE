@@ -560,8 +560,10 @@ async function loadPatientPortal() {
         fetchPatientStats(),
         fetchSchedule(),
         fetchCabinet(),
-        fetchOrders()
+        fetchOrders(),
+        fetchVitals()
     ]);
+    renderAdherenceAnalyticsChart();
 }
 
 async function fetchPatientStats() {
@@ -1173,6 +1175,7 @@ function renderScheduleCards() {
                         </p>
                         ${s.instructions ? `<p class="text-slate-700 font-medium"><i class="fa-solid fa-circle-info text-slate-500 mr-1"></i> ${escapeHtml(s.instructions)}</p>` : ''}
                         ${s.doctor_name ? `<p class="text-slate-600"><i class="fa-solid fa-user-doctor text-slate-500 mr-1"></i> ${escapeHtml(s.doctor_name)} ${s.clinic_hospital ? `(${escapeHtml(s.clinic_hospital)})` : ''}</p>` : ''}
+                        ${getFoodSafetyBadgesHTML(s.food_safety_warnings)}
                         
                         <div class="pt-2 border-t border-slate-200 space-y-2">
                             <div class="grid grid-cols-2 gap-2 text-xs">
@@ -1188,7 +1191,7 @@ function renderScheduleCards() {
                                         ${s.days_supply_remaining === 0 ? '0 Days' : `${s.days_supply_remaining} Days`}
                                     </strong>
                                     <span class="text-[10px] ${s.is_runout_alert_5days ? 'text-rose-700 font-bold' : 'text-emerald-700'} block mt-0.5 font-semibold">
-                                        ${s.days_supply_remaining === 0 ? 'Out of Stock' : `Will last ~${s.days_supply_remaining} days`}
+                                        ${s.days_supply_remaining === 0 ? 'Out of Stock' : `Runs out: ${s.predicted_runout_date || s.days_supply_remaining + 'd'}`}
                                     </span>
                                 </div>
                             </div>
@@ -2525,4 +2528,257 @@ function downloadFile(content, fileName, mimeType) {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
     }, 100);
+}
+
+// ⚠️ Food & Drug Safety Matrix Badges
+function getFoodSafetyBadgesHTML(warnings) {
+    if (!warnings || !Array.isArray(warnings) || warnings.length === 0) return '';
+    return `
+        <div class="mt-2 p-2.5 bg-amber-50/90 border border-amber-300 rounded-xl space-y-1">
+            <span class="text-[10px] font-black uppercase text-amber-900 tracking-wider flex items-center gap-1">
+                <i class="fa-solid fa-triangle-exclamation text-amber-600"></i> Precautions & Safety Warnings
+            </span>
+            ${warnings.map(w => `<p class="text-[11px] text-amber-950 font-bold leading-tight flex items-start gap-1"><span class="shrink-0">•</span> <span>${escapeHtml(w)}</span></p>`).join('')}
+        </div>
+    `;
+}
+
+// 📊 7-Day Adherence Analytics Visual Bar Chart
+function renderAdherenceAnalyticsChart() {
+    const container = document.getElementById('adherence-chart-container');
+    if (!container) return;
+
+    const todayObj = new Date();
+    const days = [];
+    
+    for (let i = 6; i >= 0; i--) {
+        const d = new Date(todayObj);
+        d.setDate(todayObj.getDate() - i);
+        const dStr = getLocalDateStr(d);
+        
+        let req = 0;
+        let taken = 0;
+        
+        (state.schedule || []).forEach(s => {
+            let reqCount = 2;
+            if (s.dosage_frequency_type === 'ONCE_MORNING' || s.dosage_frequency_type === 'ONCE_NIGHT') reqCount = 1;
+            else if (s.dosage_frequency_type === 'THRICE_DAILY') reqCount = 3;
+            else if (s.dosage_frequency_type === 'FOUR_TIMES_DAILY') reqCount = 4;
+            else if (s.dosage_frequency_type === 'AS_NEEDED') reqCount = 1;
+            
+            req += reqCount;
+
+            const hObj = (s.history_7days || []).find(h => h.date === dStr);
+            if (hObj) {
+                taken += Math.min(reqCount, hObj.takenCount || 0);
+            }
+        });
+        
+        const pct = req > 0 ? Math.min(100, Math.round((taken / req) * 100)) : 0;
+        const dayLabel = i === 0 ? 'Today' : (i === 1 ? 'Yest' : d.toLocaleDateString('en-US', { weekday: 'short' }));
+        
+        days.push({
+            date: dStr,
+            dayLabel,
+            pct,
+            taken,
+            req,
+            isToday: i === 0
+        });
+    }
+
+    container.innerHTML = days.map(d => {
+        const barHeightPct = Math.max(12, d.pct);
+        const barColor = d.pct >= 80 ? 'bg-gradient-to-t from-teal-600 to-emerald-400' : (d.pct >= 50 ? 'bg-gradient-to-t from-amber-500 to-yellow-400' : 'bg-gradient-to-t from-rose-500 to-red-400');
+        const textVal = d.pct > 0 ? `${d.pct}%` : '0%';
+        
+        return `
+            <div onclick="selectScheduleDate('${d.date}')" class="flex flex-col items-center justify-end h-full cursor-pointer group">
+                <span class="text-[10px] font-black text-slate-700 mb-1 opacity-90 group-hover:scale-110 transition-transform">${textVal}</span>
+                <div class="w-full max-w-[36px] bg-slate-100 rounded-t-xl overflow-hidden border border-slate-200 h-full flex flex-col justify-end p-0.5 shadow-inner">
+                    <div class="${barColor} rounded-t-lg transition-all duration-700 shadow-sm" style="height: ${barHeightPct}%"></div>
+                </div>
+                <span class="text-[10px] font-black mt-2 ${d.isToday ? 'text-teal-700 font-extrabold underline' : 'text-slate-500'}">${d.dayLabel}</span>
+            </div>
+        `;
+    }).join('');
+}
+
+// 🩺 Vitals & Symptom Logger
+async function fetchVitals() {
+    try {
+        const isNetlify = isStaticWebDeployment();
+        let vitals = null;
+        if (!isNetlify) {
+            vitals = await safeFetchJson(`/api/patient/vitals?t=${Date.now()}`, { headers: getUserHeaders() });
+        }
+        if (!vitals && state.supabaseClient) {
+            const { data } = await state.supabaseClient.from('vitals_logs').select('*').order('logged_at', { ascending: false });
+            vitals = data;
+        }
+        state.vitals = vitals || [];
+        renderVitalsWidget();
+    } catch (e) {
+        state.vitals = [];
+        renderVitalsWidget();
+    }
+}
+
+function renderVitalsWidget() {
+    const widget = document.getElementById('vitals-summary-widget');
+    if (!widget) return;
+
+    const list = state.vitals || [];
+    if (list.length === 0) {
+        widget.innerHTML = `
+            <div class="p-3 bg-slate-50 border border-slate-200 rounded-2xl text-center py-4">
+                <span class="text-xs text-slate-500 font-bold block">No vitals logged today</span>
+                <button onclick="openVitalsModal()" class="mt-2 px-3 py-1.5 bg-teal-600 text-white rounded-xl text-xs font-black shadow-sm">+ Record BP / Sugar</button>
+            </div>
+        `;
+        return;
+    }
+
+    const latest = list[0];
+    const loggedDate = new Date(latest.logged_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+
+    widget.innerHTML = `
+        <div class="p-3 bg-rose-50/80 border border-rose-200 rounded-2xl space-y-2">
+            <div class="flex items-center justify-between">
+                <span class="text-[10px] font-black text-rose-800 uppercase tracking-wider">Latest Log (${loggedDate})</span>
+                <span class="text-[10px] font-bold text-slate-500">${new Date(latest.logged_at).toLocaleDateString()}</span>
+            </div>
+            <div class="grid grid-cols-2 gap-2 text-xs font-black">
+                ${latest.sys_bp ? `<div class="p-2 bg-white rounded-xl border border-rose-200"><span class="text-[9px] text-slate-500 block font-normal">BP (Systolic/Diastolic)</span><span class="text-rose-900 text-sm">${latest.sys_bp}/${latest.dia_bp || 80} <span class="text-[9px] text-slate-400 font-normal">mmHg</span></span></div>` : ''}
+                ${latest.blood_sugar ? `<div class="p-2 bg-white rounded-xl border border-teal-200"><span class="text-[9px] text-slate-500 block font-normal">Blood Sugar (${latest.sugar_type || 'Fasting'})</span><span class="text-teal-900 text-sm">${latest.blood_sugar} <span class="text-[9px] text-slate-400 font-normal">mg/dL</span></span></div>` : ''}
+            </div>
+            ${latest.symptoms ? `<p class="text-[11px] text-slate-700 font-medium italic"><i class="fa-solid fa-note-sticky text-slate-400 mr-1"></i> "${escapeHtml(latest.symptoms)}"</p>` : ''}
+        </div>
+    `;
+}
+
+function openVitalsModal() {
+    document.getElementById('vitals-modal').classList.remove('hidden');
+}
+
+function closeVitalsModal() {
+    document.getElementById('vitals-modal').classList.add('hidden');
+}
+
+async function handleSaveVitals(e) {
+    e.preventDefault();
+    const sys_bp = document.getElementById('vitals-sys-bp').value;
+    const dia_bp = document.getElementById('vitals-dia-bp').value;
+    const blood_sugar = document.getElementById('vitals-sugar').value;
+    const sugar_type = document.getElementById('vitals-sugar-type').value;
+    const pulse = document.getElementById('vitals-pulse').value;
+    const symptoms = document.getElementById('vitals-symptoms').value;
+
+    const payload = { sys_bp, dia_bp, blood_sugar, sugar_type, pulse, symptoms };
+
+    try {
+        if (!isStaticWebDeployment()) {
+            await safeFetchJson('/api/patient/vitals', {
+                method: 'POST',
+                headers: getUserHeaders(),
+                body: JSON.stringify(payload)
+            });
+        } else if (state.supabaseClient) {
+            await state.supabaseClient.from('vitals_logs').insert([{ user_id: (state.currentUser && state.currentUser.email) ? state.currentUser.email : 'patient-1', ...payload }]);
+        }
+        showToast('✓ Vitals and health record saved successfully!', 'success');
+        closeVitalsModal();
+        await fetchVitals();
+    } catch (err) {
+        showToast('Failed to save vitals log', 'error');
+    }
+}
+
+// 🖨️ Printable Official Medical Pass Modal
+function openPrintableMedicalPassModal() {
+    renderPrintableMedicalPass();
+    document.getElementById('medical-pass-modal').classList.remove('hidden');
+}
+
+function closeMedicalPassModal() {
+    document.getElementById('medical-pass-modal').classList.add('hidden');
+}
+
+function renderPrintableMedicalPass() {
+    const tableBody = document.getElementById('pass-prescriptions-table-body');
+    const warningsBox = document.getElementById('pass-safety-warnings-list');
+    const userEmail = (state.currentUser && state.currentUser.email) ? state.currentUser.email : 'patient@medibuddy.com';
+    
+    document.getElementById('pass-patient-name').innerText = userEmail;
+    document.getElementById('pass-generated-date').innerText = `Generated: ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+
+    const rxs = state.prescriptions || [];
+    if (rxs.length === 0) {
+        tableBody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-slate-500 font-bold">No active prescriptions in patient cabinet</td></tr>`;
+        warningsBox.innerHTML = `<p class="text-slate-500">No active warnings</p>`;
+        return;
+    }
+
+    tableBody.innerHTML = rxs.map(r => `
+        <tr class="hover:bg-slate-50">
+            <td class="p-2.5 font-bold text-slate-900">${escapeHtml(r.medicine_name)} ${r.brand_name ? `<span class="text-teal-700 text-[10px]">(${escapeHtml(r.brand_name)})</span>` : ''}</td>
+            <td class="p-2.5 font-semibold text-slate-700">${escapeHtml(r.dosage_strength || 'Standard')} • ${escapeHtml(r.medicine_type || 'Tablet')}</td>
+            <td class="p-2.5 font-bold text-teal-800">${escapeHtml(r.frequency_label || 'Twice Daily')}</td>
+            <td class="p-2.5 font-medium text-slate-700">${escapeHtml(r.meal_relation_text || 'Take as directed')} ${r.instructions ? `<br><span class="text-[10px] text-slate-500">${escapeHtml(r.instructions)}</span>` : ''}</td>
+            <td class="p-2.5 font-semibold text-slate-600">${r.batch_number ? `Batch: ${escapeHtml(r.batch_number)}<br>` : ''}${r.expiry_date ? `Exp: ${r.expiry_date}` : 'Exp: N/A'}</td>
+        </tr>
+    `).join('');
+
+    const allWarnings = [];
+    rxs.forEach(r => {
+        if (r.food_safety_warnings && Array.isArray(r.food_safety_warnings)) {
+            r.food_safety_warnings.forEach(w => allWarnings.push(`• <strong>${escapeHtml(r.medicine_name)}</strong>: ${escapeHtml(w)}`));
+        }
+    });
+
+    warningsBox.innerHTML = allWarnings.length > 0 ? allWarnings.map(w => `<p>${w}</p>`).join('') : `<p class="text-amber-900 font-medium">Standard prescription precautions apply. Follow doctor instructions.</p>`;
+}
+
+// 📲 WhatsApp Caregiver & Doctor Share Modal
+function openWhatsAppShareModal() {
+    const modal = document.getElementById('whatsapp-share-modal');
+    const preview = document.getElementById('whatsapp-preview-box');
+    const userEmail = (state.currentUser && state.currentUser.email) ? state.currentUser.email : 'patient@medibuddy.com';
+    const dateStr = state.selectedDate || getTodayDateStr();
+
+    let msg = `🏥 *SATTVA CARE / MEDIBUDDY PATIENT INTAKE REPORT*\n`;
+    msg += `👤 *Patient:* ${userEmail}\n`;
+    msg += `📅 *Date:* ${dateStr}\n`;
+    msg += `📊 *Adherence:* ${state.stats ? state.stats.adherence_percentage : 100}% (${state.stats ? state.stats.today_taken_count : 0} doses completed)\n\n`;
+    msg += `💊 *MEDICINE INTAKE SUMMARY:*\n`;
+
+    (state.schedule || []).forEach(s => {
+        const takenSlots = [];
+        if (s.morning_taken) takenSlots.push(`Morning (${s.morning_taken_time || 'Done ✓'})`);
+        if (s.afternoon_taken) takenSlots.push(`Afternoon (${s.afternoon_taken_time || 'Done ✓'})`);
+        if (s.evening_taken) takenSlots.push(`Evening (${s.evening_taken_time || 'Done ✓'})`);
+        if (s.night_taken) takenSlots.push(`Night (${s.night_taken_time || 'Done ✓'})`);
+
+        msg += `• *${s.medicine_name}* (${s.dosage_strength || 'Tablet'}): ${takenSlots.length > 0 ? takenSlots.join(', ') : 'Pending'}\n`;
+    });
+
+    msg += `\n📦 *Cabinet Pill Stock:* ${state.stats ? state.stats.total_pills_remaining : 0} pills remaining.`;
+    
+    preview.innerText = msg;
+    modal.classList.remove('hidden');
+}
+
+function closeWhatsAppShareModal() {
+    document.getElementById('whatsapp-share-modal').classList.add('hidden');
+}
+
+function sendWhatsAppMessage() {
+    const preview = document.getElementById('whatsapp-preview-box');
+    const phoneInput = document.getElementById('whatsapp-phone-input');
+    const text = encodeURIComponent(preview.innerText);
+    const phone = (phoneInput && phoneInput.value.trim()) ? phoneInput.value.trim().replace(/[^0-9]/g, '') : '';
+    
+    const url = phone ? `https://wa.me/${phone}?text=${text}` : `https://wa.me/?text=${text}`;
+    window.open(url, '_blank');
+    closeWhatsAppShareModal();
 }
