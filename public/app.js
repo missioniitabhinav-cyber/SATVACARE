@@ -4170,86 +4170,249 @@ function init3DDigitalTwin() {
     const height = container.clientHeight || 350;
 
     dtScene = new THREE.Scene();
-    dtScene.background = new THREE.Color(0x090d16);
+    dtScene.background = new THREE.Color(0x070b14);
 
     dtCamera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
-    dtCamera.position.set(0, 1.2, 7);
+    dtCamera.position.set(0, 1.0, 6.5);
 
     dtRenderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
     dtRenderer.setSize(width, height);
     dtRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+    // Studio Lighting
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
     dtScene.add(ambientLight);
 
-    const dirLight1 = new THREE.DirectionalLight(0x14b8a6, 1.2);
-    dirLight1.position.set(5, 10, 7);
+    const dirLight1 = new THREE.DirectionalLight(0x14b8a6, 1.5);
+    dirLight1.position.set(5, 12, 8);
     dtScene.add(dirLight1);
 
-    const dirLight2 = new THREE.DirectionalLight(0x6366f1, 0.8);
-    dirLight2.position.set(-5, -5, -5);
+    const dirLight2 = new THREE.DirectionalLight(0x6366f1, 1.0);
+    dirLight2.position.set(-6, -4, -5);
     dtScene.add(dirLight2);
+
+    const pointLight = new THREE.PointLight(0x06b6d4, 1.2, 10);
+    pointLight.position.set(0, 1, 2);
+    dtScene.add(pointLight);
 
     const bodyGroup = new THREE.Group();
 
-    const headGeo = new THREE.SphereGeometry(0.55, 24, 24);
-    const headMat = new THREE.MeshPhongMaterial({ color: 0x1e293b, transparent: true, opacity: 0.85 });
-    const headMesh = new THREE.Mesh(headGeo, headMat);
-    headMesh.position.set(0, 2.2, 0);
+    // Translucent Glassy Anatomical Skin Material
+    const skinMat = new THREE.MeshPhongMaterial({
+        color: 0x0f2b3c,
+        emissive: 0x064e3b,
+        emissiveIntensity: 0.25,
+        specular: 0x2dd4bf,
+        shininess: 60,
+        transparent: true,
+        opacity: 0.45,
+        wireframe: false
+    });
+
+    const wireMat = new THREE.MeshBasicMaterial({
+        color: 0x14b8a6,
+        wireframe: true,
+        transparent: true,
+        opacity: 0.15
+    });
+
+    // 1. ANATOMICAL HEAD & NECK
+    const headGeo = new THREE.SphereGeometry(0.5, 32, 32);
+    headGeo.scale(0.85, 1.1, 0.95);
+    const headMesh = new THREE.Mesh(headGeo, skinMat);
+    headMesh.position.set(0, 2.35, 0);
     bodyGroup.add(headMesh);
+    bodyGroup.add(new THREE.Mesh(headGeo, wireMat));
 
-    const torsoGeo = new THREE.CylinderGeometry(0.75, 0.6, 1.8, 16);
-    const torsoMat = new THREE.MeshPhongMaterial({ color: 0x1e293b, transparent: true, opacity: 0.75 });
-    const torsoMesh = new THREE.Mesh(torsoGeo, torsoMat);
-    torsoMesh.position.set(0, 0.9, 0);
-    bodyGroup.add(torsoMesh);
+    // Jaw / Chin contour
+    const jawGeo = new THREE.ConeGeometry(0.32, 0.35, 16);
+    jawGeo.rotation.x = Math.PI;
+    const jawMesh = new THREE.Mesh(jawGeo, skinMat);
+    jawMesh.position.set(0, 2.05, 0.08);
+    bodyGroup.add(jawMesh);
 
-    const limbMat = new THREE.MeshBasicMaterial({ color: 0x334155, wireframe: true });
-    
-    const armL = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.15, 1.4, 8), limbMat);
-    armL.position.set(-0.95, 1.0, 0);
-    armL.rotation.z = 0.2;
-    bodyGroup.add(armL);
+    // Neck
+    const neckGeo = new THREE.CylinderGeometry(0.24, 0.28, 0.45, 16);
+    const neckMesh = new THREE.Mesh(neckGeo, skinMat);
+    neckMesh.position.set(0, 1.8, 0);
+    bodyGroup.add(neckMesh);
 
-    const armR = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.15, 1.4, 8), limbMat);
-    armR.position.set(0.95, 1.0, 0);
-    armR.rotation.z = -0.2;
-    bodyGroup.add(armR);
+    // 2. ANATOMICAL TORSO (CHEST, RIBCAGE, ABDOMEN, PELVIS)
+    const chestGeo = new THREE.CylinderGeometry(0.72, 0.62, 1.1, 24);
+    chestGeo.scale(1.1, 1.0, 0.7);
+    const chestMesh = new THREE.Mesh(chestGeo, skinMat);
+    chestMesh.position.set(0, 1.15, 0);
+    bodyGroup.add(chestMesh);
 
-    // Organ Nodes
-    const brainGeo = new THREE.IcosahedronGeometry(0.35, 2);
-    const brainMat = new THREE.MeshStandardMaterial({ color: 0xa855f7, emissive: 0xa855f7, emissiveIntensity: 0.4, roughness: 0.3 });
-    const brainNode = new THREE.Mesh(brainGeo, brainMat);
-    brainNode.position.set(0, 2.2, 0.05);
-    bodyGroup.add(brainNode);
-    organNodes.BRAIN = brainNode;
+    const abGeo = new THREE.CylinderGeometry(0.62, 0.58, 0.7, 24);
+    abGeo.scale(1.0, 1.0, 0.7);
+    const abMesh = new THREE.Mesh(abGeo, skinMat);
+    abMesh.position.set(0, 0.35, 0);
+    bodyGroup.add(abMesh);
 
-    const heartGeo = new THREE.DodecahedronGeometry(0.3, 1);
-    const heartMat = new THREE.MeshStandardMaterial({ color: 0xf43f5e, emissive: 0xf43f5e, emissiveIntensity: 0.6, roughness: 0.2 });
-    const heartNode = new THREE.Mesh(heartGeo, heartMat);
-    heartNode.position.set(-0.15, 1.15, 0.25);
-    bodyGroup.add(heartNode);
-    organNodes.HEART = heartNode;
+    const pelvisGeo = new THREE.CylinderGeometry(0.58, 0.65, 0.5, 24);
+    pelvisGeo.scale(1.05, 1.0, 0.75);
+    const pelvisMesh = new THREE.Mesh(pelvisGeo, skinMat);
+    pelvisMesh.position.set(0, -0.2, 0);
+    bodyGroup.add(pelvisMesh);
 
-    const lungGeo = new THREE.SphereGeometry(0.28, 12, 12);
-    const lungMat = new THREE.MeshStandardMaterial({ color: 0x06b6d4, emissive: 0x06b6d4, emissiveIntensity: 0.5 });
-    const lungL = new THREE.Mesh(lungGeo, lungMat);
-    lungL.position.set(-0.35, 1.1, 0.1);
-    const lungR = new THREE.Mesh(lungGeo, lungMat);
-    lungR.position.set(0.35, 1.1, 0.1);
+    // 3. ANATOMICAL ARMS & SHOULDERS
+    const shoulderGeo = new THREE.CylinderGeometry(0.22, 0.22, 1.8, 16);
+    shoulderGeo.rotation.z = Math.PI / 2;
+    const shoulderMesh = new THREE.Mesh(shoulderGeo, skinMat);
+    shoulderMesh.position.set(0, 1.55, 0);
+    bodyGroup.add(shoulderMesh);
+
+    const armLUpper = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.15, 1.0, 16), skinMat);
+    armLUpper.position.set(-0.95, 1.1, 0);
+    armLUpper.rotation.z = 0.18;
+    bodyGroup.add(armLUpper);
+
+    const armLLower = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.11, 1.0, 16), skinMat);
+    armLLower.position.set(-1.12, 0.15, 0);
+    armLLower.rotation.z = 0.12;
+    bodyGroup.add(armLLower);
+
+    const handL = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.25, 0.08), skinMat);
+    handL.position.set(-1.22, -0.42, 0);
+    bodyGroup.add(handL);
+
+    const armRUpper = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.15, 1.0, 16), skinMat);
+    armRUpper.position.set(0.95, 1.1, 0);
+    armRUpper.rotation.z = -0.18;
+    bodyGroup.add(armRUpper);
+
+    const armRLower = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.11, 1.0, 16), skinMat);
+    armRLower.position.set(1.12, 0.15, 0);
+    armRLower.rotation.z = -0.12;
+    bodyGroup.add(armRLower);
+
+    const handR = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.25, 0.08), skinMat);
+    handR.position.set(1.22, -0.42, 0);
+    bodyGroup.add(handR);
+
+    // 4. ANATOMICAL LEGS (THIGHS, CALVES, FEET)
+    const thighL = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.2, 1.3, 16), skinMat);
+    thighL.position.set(-0.35, -1.0, 0);
+    bodyGroup.add(thighL);
+
+    const calfL = new THREE.Mesh(new THREE.CylinderGeometry(0.19, 0.13, 1.3, 16), skinMat);
+    calfL.position.set(-0.38, -2.2, 0);
+    bodyGroup.add(calfL);
+
+    const footL = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.12, 0.45), skinMat);
+    footL.position.set(-0.38, -2.85, 0.12);
+    bodyGroup.add(footL);
+
+    const thighR = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.2, 1.3, 16), skinMat);
+    thighR.position.set(0.35, -1.0, 0);
+    bodyGroup.add(thighR);
+
+    const calfR = new THREE.Mesh(new THREE.CylinderGeometry(0.19, 0.13, 1.3, 16), skinMat);
+    calfR.position.set(0.38, -2.2, 0);
+    bodyGroup.add(calfR);
+
+    const footR = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.12, 0.45), skinMat);
+    footR.position.set(0.38, -2.85, 0.12);
+    bodyGroup.add(footR);
+
+    // 5. CENTRAL SPINAL COLUMN & VASCULAR NERVE TREE
+    const spineGeo = new THREE.CylinderGeometry(0.06, 0.06, 3.2, 16);
+    const spineMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.7 });
+    const spineMesh = new THREE.Mesh(spineGeo, spineMat);
+    spineMesh.position.set(0, 0.6, -0.15);
+    bodyGroup.add(spineMesh);
+
+    const artMat = new THREE.MeshBasicMaterial({ color: 0xf43f5e });
+    const aorta = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 2.2, 8), artMat);
+    aorta.position.set(-0.05, 0.8, 0.05);
+    bodyGroup.add(aorta);
+
+    // 🫀 6. REALISTIC ANATOMICAL ORGAN NODES
+    const brainGroup = new THREE.Group();
+    const cerebrumMat = new THREE.MeshStandardMaterial({
+        color: 0xa855f7,
+        emissive: 0xa855f7,
+        emissiveIntensity: 0.6,
+        roughness: 0.3,
+        metalness: 0.2
+    });
+    const cerebrumL = new THREE.Mesh(new THREE.SphereGeometry(0.24, 16, 16), cerebrumMat);
+    cerebrumL.position.set(-0.12, 2.38, 0.02);
+    cerebrumL.scale.set(0.9, 1.0, 1.2);
+
+    const cerebrumR = new THREE.Mesh(new THREE.SphereGeometry(0.24, 16, 16), cerebrumMat);
+    cerebrumR.position.set(0.12, 2.38, 0.02);
+    cerebrumR.scale.set(0.9, 1.0, 1.2);
+
+    brainGroup.add(cerebrumL);
+    brainGroup.add(cerebrumR);
+    bodyGroup.add(brainGroup);
+    organNodes.BRAIN = brainGroup;
+
+    const heartGroup = new THREE.Group();
+    const heartMat = new THREE.MeshStandardMaterial({
+        color: 0xf43f5e,
+        emissive: 0xe11d48,
+        emissiveIntensity: 0.8,
+        roughness: 0.2,
+        metalness: 0.1
+    });
+
+    const cardiacMain = new THREE.Mesh(new THREE.SphereGeometry(0.26, 20, 20), heartMat);
+    cardiacMain.scale.set(0.9, 1.2, 1.0);
+    cardiacMain.rotation.z = -0.3;
+
+    const aortaArchGeo = new THREE.TorusGeometry(0.14, 0.05, 8, 16, Math.PI);
+    const aortaArch = new THREE.Mesh(aortaArchGeo, new THREE.MeshStandardMaterial({ color: 0xf43f5e, emissive: 0xf43f5e, emissiveIntensity: 0.8 }));
+    aortaArch.position.set(0, 0.18, 0);
+    aortaArch.rotation.z = Math.PI / 2;
+
+    heartGroup.add(cardiacMain);
+    heartGroup.add(aortaArch);
+    heartGroup.position.set(-0.16, 1.22, 0.2);
+    bodyGroup.add(heartGroup);
+    organNodes.HEART = heartGroup;
+
     const lungsGroup = new THREE.Group();
+    const lungMat = new THREE.MeshStandardMaterial({
+        color: 0x06b6d4,
+        emissive: 0x0891b2,
+        emissiveIntensity: 0.6,
+        transparent: true,
+        opacity: 0.85
+    });
+
+    const lungL = new THREE.Mesh(new THREE.SphereGeometry(0.3, 16, 16), lungMat);
+    lungL.position.set(-0.35, 1.15, 0.08);
+    lungL.scale.set(0.75, 1.4, 0.85);
+
+    const lungR = new THREE.Mesh(new THREE.SphereGeometry(0.32, 16, 16), lungMat);
+    lungR.position.set(0.35, 1.15, 0.08);
+    lungR.scale.set(0.8, 1.4, 0.85);
+
     lungsGroup.add(lungL);
     lungsGroup.add(lungR);
     bodyGroup.add(lungsGroup);
     organNodes.LUNGS = lungsGroup;
 
-    const stomachGeo = new THREE.SphereGeometry(0.32, 14, 14);
-    const stomachMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, emissive: 0xf59e0b, emissiveIntensity: 0.5 });
-    const stomachNode = new THREE.Mesh(stomachGeo, stomachMat);
-    stomachNode.position.set(0.1, 0.55, 0.2);
-    bodyGroup.add(stomachNode);
-    organNodes.STOMACH = stomachNode;
+    const stomachGroup = new THREE.Group();
+    const liverMat = new THREE.MeshStandardMaterial({ color: 0xd97706, emissive: 0xd97706, emissiveIntensity: 0.6 });
+    const liverMesh = new THREE.Mesh(new THREE.SphereGeometry(0.28, 16, 16), liverMat);
+    liverMesh.position.set(-0.2, 0.55, 0.15);
+    liverMesh.scale.set(1.3, 0.8, 0.9);
 
+    const stomachMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, emissive: 0xf59e0b, emissiveIntensity: 0.6 });
+    const stomachMesh = new THREE.Mesh(new THREE.SphereGeometry(0.24, 16, 16), stomachMat);
+    stomachMesh.position.set(0.18, 0.5, 0.18);
+    stomachMesh.scale.set(1.0, 1.1, 0.9);
+
+    stomachGroup.add(liverMesh);
+    stomachGroup.add(stomachMesh);
+    bodyGroup.add(stomachGroup);
+    organNodes.STOMACH = stomachGroup;
+
+    bodyGroup.position.set(0, -0.3, 0);
     dtScene.add(bodyGroup);
 
     let isDragging = false;
@@ -4265,25 +4428,35 @@ function init3DDigitalTwin() {
         const deltaX = e.clientX - previousMousePosition.x;
         const deltaY = e.clientY - previousMousePosition.y;
 
-        bodyGroup.rotation.y += deltaX * 0.01;
-        bodyGroup.rotation.x += deltaY * 0.01;
+        bodyGroup.rotation.y += deltaX * 0.008;
+        bodyGroup.rotation.x += deltaY * 0.008;
 
         previousMousePosition = { x: e.clientX, y: e.clientY };
     });
 
     window.addEventListener('mouseup', () => { isDragging = false; });
 
+    canvas.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        dtCamera.position.z = Math.min(10, Math.max(3.5, dtCamera.position.z + e.deltaY * 0.005));
+    });
+
     function animate() {
         requestAnimationFrame(animate);
-        
+
         if (!isDragging) {
-            bodyGroup.rotation.y += 0.005;
+            bodyGroup.rotation.y += 0.004;
         }
 
         if (organNodes.HEART) {
-            const time = Date.now() * 0.004;
-            const scale = 1 + Math.sin(time) * 0.08;
-            organNodes.HEART.scale.set(scale, scale, scale);
+            const time = Date.now() * 0.005;
+            const beat = 1 + Math.sin(time * 3) * 0.09 + Math.cos(time * 6) * 0.04;
+            organNodes.HEART.scale.set(beat, beat, beat);
+        }
+
+        if (organNodes.LUNGS) {
+            const breath = 1 + Math.sin(Date.now() * 0.002) * 0.05;
+            organNodes.LUNGS.scale.set(breath, breath, breath);
         }
 
         dtRenderer.render(dtScene, dtCamera);
