@@ -4241,12 +4241,14 @@ async function processPrescriptionOCR(event) {
 
         let targetMed = null;
 
-        if (apiRes && apiRes.medicine_name && apiRes.medicine_name !== 'MOVICOL') {
+        // Use EXACT text extracted from prescription scan as-is
+        if (apiRes && (apiRes.medicine_name || apiRes.raw_text || rawText)) {
+            const rawExtracted = apiRes.raw_text || rawText || '';
             targetMed = {
-                medicine_name: apiRes.medicine_name,
-                brand_name: apiRes.brand_name || 'Pharma',
-                generic_name: apiRes.generic_name || apiRes.medicine_name,
-                dosage_strength: apiRes.dosage_strength || '10mg',
+                medicine_name: apiRes.medicine_name || 'Prescription Medicine',
+                brand_name: apiRes.brand_name || '',
+                generic_name: apiRes.generic_name || apiRes.medicine_name || '',
+                dosage_strength: apiRes.dosage_strength || '',
                 medicine_type: apiRes.medicine_type || 'Tablet',
                 classification_type: apiRes.classification_type || 'RX',
                 frequency_type: apiRes.frequency_type || 'TWICE_DAILY',
@@ -4254,33 +4256,27 @@ async function processPrescriptionOCR(event) {
                 tablets_per_dose: apiRes.tablets_per_dose || 1,
                 total_pills: apiRes.total_tablets_remaining || 30,
                 units_per_pack: apiRes.units_per_pack || 10,
-                doctor: apiRes.doctor_name || 'DR. VIKRANT SOOD',
-                hospital: apiRes.clinic_hospital || 'Apollo Healthcare',
-                prescription_number: apiRes.prescription_number || `RX-${Math.floor(100000 + Math.random() * 900000)}`,
+                doctor: apiRes.doctor_name || '',
+                hospital: apiRes.clinic_hospital || '',
+                prescription_number: apiRes.prescription_number || '',
                 duration_days: apiRes.duration_days || 14,
                 storage_condition: apiRes.storage_condition || 'ROOM_TEMP',
-                instructions: apiRes.instructions || 'Take as prescribed by physician.',
-                batch_number: apiRes.batch_number || 'B-2026-A1',
-                expiry_date: apiRes.expiry_date || '2027-12-31'
+                instructions: apiRes.instructions || rawExtracted || '',
+                batch_number: apiRes.batch_number || '',
+                expiry_date: apiRes.expiry_date || ''
             };
         }
 
-        // Sequential selection logic: 1st -> 2nd -> 3rd -> 4th non-duplicate medicine
-        if (!targetMed || existingNames.includes(targetMed.medicine_name.toUpperCase())) {
+        // If no text could be extracted from image, fall back to sequential catalog
+        if (!targetMed) {
             let nextIndex = existingPrescriptions.length % AI_SEQUENTIAL_MEDICINES.length;
             targetMed = { ...AI_SEQUENTIAL_MEDICINES[nextIndex] };
+        }
 
-            let offset = 0;
-            while (existingNames.includes(targetMed.medicine_name.toUpperCase()) && offset < AI_SEQUENTIAL_MEDICINES.length) {
-                offset++;
-                nextIndex = (existingPrescriptions.length + offset) % AI_SEQUENTIAL_MEDICINES.length;
-                targetMed = { ...AI_SEQUENTIAL_MEDICINES[nextIndex] };
-            }
-
-            if (existingNames.includes(targetMed.medicine_name.toUpperCase())) {
-                const count = existingNames.filter(n => n.startsWith(targetMed.medicine_name.toUpperCase())).length + 1;
-                targetMed.medicine_name = `${targetMed.medicine_name} #${count}`;
-            }
+        // Avoid exact duplicate title collisions
+        if (existingNames.includes(targetMed.medicine_name.toUpperCase())) {
+            const count = existingNames.filter(n => n.startsWith(targetMed.medicine_name.toUpperCase())).length + 1;
+            targetMed.medicine_name = `${targetMed.medicine_name} #${count}`;
         }
 
         document.getElementById('rx-name').value = targetMed.medicine_name;
