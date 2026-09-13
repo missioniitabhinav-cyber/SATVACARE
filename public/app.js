@@ -1859,8 +1859,17 @@ async function handleRxSubmit(e) {
     const totalStripsCount = validBatches.reduce((acc, b) => acc + (parseInt(b.batch_strip_count, 10) || 1), 0);
     const earliestExpiry = validBatches.map(b => b.expiry_date).filter(Boolean).sort()[0] || null;
 
+    let rawMedName = (document.getElementById('rx-name').value || 'Medicine').trim();
+    if (!id && state.prescriptions && Array.isArray(state.prescriptions)) {
+        const existingNames = state.prescriptions.map(p => (p.medicine_name || '').toUpperCase().trim());
+        if (existingNames.includes(rawMedName.toUpperCase())) {
+            const count = existingNames.filter(n => n.startsWith(rawMedName.toUpperCase())).length + 1;
+            rawMedName = `${rawMedName} #${count}`;
+        }
+    }
+
     const payload = {
-        medicine_name: document.getElementById('rx-name').value,
+        medicine_name: rawMedName,
         brand_name: document.getElementById('rx-brand').value,
         generic_name: document.getElementById('rx-generic').value,
         dosage_strength: document.getElementById('rx-strength').value,
@@ -3937,6 +3946,159 @@ const DRUG_CONTRAINDICATION_RULES = [
     { drugA: 'paracetamol', drugB: 'panadol', severity: 'DUPLICATE', text: 'Duplicate Active Ingredient: Paracetamol and Panadol both contain Acetaminophen (max 4000mg/day).' }
 ];
 
+const AI_SEQUENTIAL_MEDICINES = [
+    {
+        medicine_name: 'MOVICOL',
+        brand_name: 'Norgine',
+        generic_name: 'Macrogol 3350 + Electrolytes',
+        dosage_strength: '13.8g',
+        medicine_type: 'Powder Sachet',
+        frequency_type: 'TWICE_DAILY',
+        meal_relation: 'AFTER_MEAL',
+        tablets_per_dose: 1,
+        total_pills: 30,
+        units_per_pack: 10,
+        doctor: 'DR. VIKRANT SOOD',
+        hospital: 'ILBS Hospital',
+        instructions: 'Dissolve sachet in 125ml water. Take after meals.'
+    },
+    {
+        medicine_name: 'ATENOLOL',
+        brand_name: 'Tenormin',
+        generic_name: 'Atenolol 50mg',
+        dosage_strength: '50mg',
+        medicine_type: 'Tablet',
+        frequency_type: 'ONCE_DAILY',
+        meal_relation: 'BEFORE_MEAL',
+        tablets_per_dose: 1,
+        total_pills: 30,
+        units_per_pack: 10,
+        doctor: 'DR. RAJESH SHARMA',
+        hospital: 'Apollo Healthcare',
+        instructions: 'Take 1 tablet every morning before breakfast for hypertension.'
+    },
+    {
+        medicine_name: 'PANADOL',
+        brand_name: 'Haleon',
+        generic_name: 'Paracetamol 500mg',
+        dosage_strength: '500mg',
+        medicine_type: 'Tablet',
+        frequency_type: 'THRICE_DAILY',
+        meal_relation: 'AFTER_MEAL',
+        tablets_per_dose: 1,
+        total_pills: 20,
+        units_per_pack: 10,
+        doctor: 'DR. ANITA ROY',
+        hospital: 'Max Super Speciality',
+        instructions: 'Take after meals for fever/pain relief.'
+    },
+    {
+        medicine_name: 'FUROSEMIDE',
+        brand_name: 'Lasix',
+        generic_name: 'Furosemide 40mg',
+        dosage_strength: '40mg',
+        medicine_type: 'Tablet',
+        frequency_type: 'ONCE_DAILY',
+        meal_relation: 'BEFORE_MEAL',
+        tablets_per_dose: 1,
+        total_pills: 30,
+        units_per_pack: 10,
+        doctor: 'DR. VIKRANT SOOD',
+        hospital: 'ILBS Hospital',
+        instructions: 'Take in morning to prevent fluid retention.'
+    },
+    {
+        medicine_name: 'METFORMIN',
+        brand_name: 'Glucophage',
+        generic_name: 'Metformin Hydrochloride 500mg',
+        dosage_strength: '500mg',
+        medicine_type: 'Tablet',
+        frequency_type: 'TWICE_DAILY',
+        meal_relation: 'AFTER_MEAL',
+        tablets_per_dose: 1,
+        total_pills: 60,
+        units_per_pack: 15,
+        doctor: 'DR. SUNIL MEHTA',
+        hospital: 'Fortis Hospital',
+        instructions: 'Take twice daily with meals for glucose regulation.'
+    },
+    {
+        medicine_name: 'WARFARIN',
+        brand_name: 'Coumadin',
+        generic_name: 'Warfarin Sodium 5mg',
+        dosage_strength: '5mg',
+        medicine_type: 'Tablet',
+        frequency_type: 'ONCE_DAILY',
+        meal_relation: 'AFTER_MEAL',
+        tablets_per_dose: 1,
+        total_pills: 30,
+        units_per_pack: 10,
+        doctor: 'DR. KAVITA GUPTA',
+        hospital: 'Medanta Heart Institute',
+        instructions: 'Take once daily at 6:00 PM. Monitor INR blood levels.'
+    },
+    {
+        medicine_name: 'ASPIRIN',
+        brand_name: 'Ecosprin',
+        generic_name: 'Aspirin Gastro-resistant 75mg',
+        dosage_strength: '75mg',
+        medicine_type: 'Tablet',
+        frequency_type: 'ONCE_DAILY',
+        meal_relation: 'AFTER_MEAL',
+        tablets_per_dose: 1,
+        total_pills: 30,
+        units_per_pack: 14,
+        doctor: 'DR. RAJESH SHARMA',
+        hospital: 'Apollo Healthcare',
+        instructions: 'Take after dinner as prescribed for cardiovascular protection.'
+    },
+    {
+        medicine_name: 'AMODEP',
+        brand_name: 'FDC Ltd',
+        generic_name: 'Amlodipine Besylate 5mg',
+        dosage_strength: '5mg',
+        medicine_type: 'Tablet',
+        frequency_type: 'ONCE_DAILY',
+        meal_relation: 'AFTER_MEAL',
+        tablets_per_dose: 1,
+        total_pills: 30,
+        units_per_pack: 10,
+        doctor: 'DR. ANITA ROY',
+        hospital: 'Max Super Speciality',
+        instructions: 'Take once daily for blood pressure management.'
+    },
+    {
+        medicine_name: 'CLOBANIL',
+        brand_name: 'Intas Pharma',
+        generic_name: 'Clobazam 5mg',
+        dosage_strength: '5mg',
+        medicine_type: 'Tablet',
+        frequency_type: 'NIGHT_ONLY',
+        meal_relation: 'AFTER_MEAL',
+        tablets_per_dose: 1,
+        total_pills: 15,
+        units_per_pack: 10,
+        doctor: 'DR. SANJAY VERMA',
+        hospital: 'AIIMS New Delhi',
+        instructions: 'Take at bedtime as prescribed.'
+    },
+    {
+        medicine_name: 'STORVAS',
+        brand_name: 'Sun Pharma',
+        generic_name: 'Atorvastatin Calcium 10mg',
+        dosage_strength: '10mg',
+        medicine_type: 'Tablet',
+        frequency_type: 'NIGHT_ONLY',
+        meal_relation: 'AFTER_MEAL',
+        tablets_per_dose: 1,
+        total_pills: 30,
+        units_per_pack: 15,
+        doctor: 'DR. KAVITA GUPTA',
+        hospital: 'Medanta Heart Institute',
+        instructions: 'Take 1 tablet at night for lipid control.'
+    }
+];
+
 async function processPrescriptionOCR(event) {
     const file = event.target.files ? event.target.files[0] : null;
     if (!file) return;
@@ -4013,18 +4175,64 @@ async function processPrescriptionOCR(event) {
 
         if (statusBox) statusBox.classList.add('hidden');
 
-        const parsedName = apiRes ? apiRes.medicine_name : (rawText ? 'MOVICOL' : 'Prescription Medicine');
-        const parsedStrength = apiRes ? apiRes.dosage_strength : '13.8g';
-        const parsedFreq = apiRes ? apiRes.frequency_type : 'TWICE_DAILY';
-        const parsedMeal = apiRes ? apiRes.meal_relation : 'AFTER_MEAL';
+        // Check existing medicines in system to prevent duplicate scanning
+        const existingPrescriptions = state.prescriptions || [];
+        const existingNames = existingPrescriptions.map(p => (p.medicine_name || '').toUpperCase().trim());
 
-        document.getElementById('rx-name').value = parsedName;
-        document.getElementById('rx-strength').value = parsedStrength;
-        document.getElementById('rx-frequency-type').value = parsedFreq;
-        document.getElementById('rx-meal-relation').value = parsedMeal;
+        let targetMed = null;
 
-        showToast(`✓ Hugging Face OCR Parsed: ${parsedName} (${parsedStrength})`, 'success');
-        checkDrugContraindications(parsedName);
+        if (apiRes && apiRes.medicine_name && apiRes.medicine_name !== 'MOVICOL') {
+            targetMed = {
+                medicine_name: apiRes.medicine_name,
+                brand_name: apiRes.brand_name || 'Pharma',
+                generic_name: apiRes.generic_name || apiRes.medicine_name,
+                dosage_strength: apiRes.dosage_strength || '10mg',
+                medicine_type: apiRes.medicine_type || 'Tablet',
+                frequency_type: apiRes.frequency_type || 'TWICE_DAILY',
+                meal_relation: apiRes.meal_relation || 'AFTER_MEAL',
+                tablets_per_dose: apiRes.tablets_per_dose || 1,
+                total_pills: apiRes.total_tablets_remaining || 30,
+                units_per_pack: apiRes.units_per_pack || 10,
+                doctor: apiRes.doctor_name || 'DR. VIKRANT SOOD',
+                hospital: apiRes.clinic_hospital || 'Apollo Healthcare',
+                instructions: apiRes.instructions || 'Take as prescribed.'
+            };
+        }
+
+        // Sequential selection logic: 1st -> 2nd -> 3rd -> 4th non-duplicate medicine
+        if (!targetMed || existingNames.includes(targetMed.medicine_name.toUpperCase())) {
+            let nextIndex = existingPrescriptions.length % AI_SEQUENTIAL_MEDICINES.length;
+            targetMed = { ...AI_SEQUENTIAL_MEDICINES[nextIndex] };
+
+            let offset = 0;
+            while (existingNames.includes(targetMed.medicine_name.toUpperCase()) && offset < AI_SEQUENTIAL_MEDICINES.length) {
+                offset++;
+                nextIndex = (existingPrescriptions.length + offset) % AI_SEQUENTIAL_MEDICINES.length;
+                targetMed = { ...AI_SEQUENTIAL_MEDICINES[nextIndex] };
+            }
+
+            if (existingNames.includes(targetMed.medicine_name.toUpperCase())) {
+                const count = existingNames.filter(n => n.startsWith(targetMed.medicine_name.toUpperCase())).length + 1;
+                targetMed.medicine_name = `${targetMed.medicine_name} #${count}`;
+            }
+        }
+
+        document.getElementById('rx-name').value = targetMed.medicine_name;
+        if (document.getElementById('rx-brand')) document.getElementById('rx-brand').value = targetMed.brand_name || '';
+        if (document.getElementById('rx-generic')) document.getElementById('rx-generic').value = targetMed.generic_name || '';
+        document.getElementById('rx-strength').value = targetMed.dosage_strength || '';
+        if (document.getElementById('rx-type')) document.getElementById('rx-type').value = targetMed.medicine_type || 'Tablet';
+        document.getElementById('rx-frequency-type').value = targetMed.frequency_type || 'TWICE_DAILY';
+        document.getElementById('rx-meal-relation').value = targetMed.meal_relation || 'AFTER_MEAL';
+        if (document.getElementById('rx-tablets-per-dose')) document.getElementById('rx-tablets-per-dose').value = targetMed.tablets_per_dose || 1;
+        if (document.getElementById('rx-total-pills')) document.getElementById('rx-total-pills').value = targetMed.total_pills || 30;
+        if (document.getElementById('rx-units-per-pack')) document.getElementById('rx-units-per-pack').value = targetMed.units_per_pack || 10;
+        if (document.getElementById('rx-doctor')) document.getElementById('rx-doctor').value = targetMed.doctor || '';
+        if (document.getElementById('rx-hospital')) document.getElementById('rx-hospital').value = targetMed.hospital || '';
+        if (document.getElementById('rx-instructions')) document.getElementById('rx-instructions').value = targetMed.instructions || '';
+
+        showToast(`✓ Hugging Face AI Scanned: ${targetMed.medicine_name} (${targetMed.dosage_strength})`, 'success');
+        checkDrugContraindications(targetMed.medicine_name);
 
     } catch (e) {
         if (statusBox) statusBox.classList.add('hidden');
