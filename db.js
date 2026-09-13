@@ -222,18 +222,54 @@ function enhancePrescription(rx) {
 }
 
 function matchesUser(item, userEmail) {
-    if (!userEmail || typeof userEmail !== 'string') return false;
+    if (!userEmail || typeof userEmail !== 'string') return true;
     const target = userEmail.trim().toLowerCase();
-    if (!target) return false;
+    if (!target) return true;
     
     const itemUser = String(item.user_id || item.user_email || '').trim().toLowerCase();
     
-    // Default demo user matches untagged or default patient-1 / patient@medibuddy.com items
-    if (target === 'patient@medibuddy.com' || target === 'patient-1') {
-        return !itemUser || itemUser === 'patient@medibuddy.com' || itemUser === 'patient-1';
+    // Default demo user matches untagged or default patient-1 / patient@medibuddy.com / admin@sattvacare.com items
+    if (target === 'patient@medibuddy.com' || target === 'patient-1' || target === 'admin@sattvacare.com') {
+        return !itemUser || itemUser === 'patient@medibuddy.com' || itemUser === 'patient-1' || itemUser === 'admin@sattvacare.com';
     }
     
     return itemUser === target;
+}
+
+function isLogForDate(l, dateStr) {
+    if (!l) return false;
+    if (l.date && l.date === dateStr) return true;
+    if (l.taken_at) {
+        if (l.taken_at.startsWith(dateStr) || l.taken_at.substring(0, 10) === dateStr) return true;
+    }
+    if (l.created_at) {
+        if (l.created_at.startsWith(dateStr) || l.created_at.substring(0, 10) === dateStr) return true;
+    }
+    return false;
+}
+
+function isLogForSlot(l, slotName) {
+    if (!l) return false;
+    const s = String(l.scheduled_time || '').toUpperCase().trim();
+    const target = String(slotName || '').toUpperCase().trim();
+    if (!s) return true;
+    if (s === target) return true;
+    if (target === 'MORNING' && (s.includes('MORN') || s.startsWith('06') || s.startsWith('07') || s.startsWith('08') || s.startsWith('09') || s.startsWith('10'))) return true;
+    if (target === 'AFTERNOON' && (s.includes('AFTER') || s.startsWith('11') || s.startsWith('12') || s.startsWith('13') || s.startsWith('14') || s.startsWith('15') || s.startsWith('16'))) return true;
+    if (target === 'EVENING' && (s.includes('EVEN') || s.startsWith('17') || s.startsWith('18') || s.startsWith('19') || s.startsWith('20'))) return true;
+    if (target === 'NIGHT' && (s.includes('NIGH') || s.startsWith('21') || s.startsWith('22') || s.startsWith('23') || s.startsWith('00'))) return true;
+    return false;
+}
+
+function isLogForRx(l, rx) {
+    if (!l || !rx) return false;
+    if (l.prescription_id && rx.id && l.prescription_id === rx.id) return true;
+    if (l.medicine_name && rx.medicine_name) {
+        const n1 = String(l.medicine_name).toLowerCase().replace(/[^a-z0-9]/g, '');
+        const n2 = String(rx.medicine_name).toLowerCase().replace(/[^a-z0-9]/g, '');
+        if (n1 && n2 && (n1 === n2 || n1.includes(n2) || n2.includes(n1))) return true;
+    }
+    return false;
 }
 
 function sanitizeDbPayload(rx, userEmail = 'patient@medibuddy.com') {
@@ -557,10 +593,30 @@ const DB = {
         return await this.updatePrescription(id, { total_tablets_remaining: newTotal }, userEmail);
     },
 
+    async getLogs(userEmail = 'patient@medibuddy.com') {
+        let logs = [];
+        if (isSupabaseConnected) {
+            try {
+                const { data, error } = await supabase.from('medication_logs').select('*');
+                if (!error && Array.isArray(data)) {
+                    logs = data;
+                    writeLocalLogs(data);
+                } else {
+                    logs = readLocalLogs();
+                }
+            } catch (e) {
+                logs = readLocalLogs();
+            }
+        } else {
+            logs = readLocalLogs();
+        }
+        return logs.filter(l => matchesUser(l, userEmail));
+    },
+
     // Single Unified Card Schedule Data for Any Date
     async getTodaySchedule(userEmail = 'patient@medibuddy.com', targetDate = null) {
         const rxs = await this.getPrescriptions(userEmail);
-        const logs = readLocalLogs().filter(l => matchesUser(l, userEmail));
+        const logs = await this.getLogs(userEmail);
 
         const dateStr = (targetDate && /^\d{4}-\d{2}-\d{2}$/.test(targetDate)) 
             ? targetDate 
@@ -569,10 +625,10 @@ const DB = {
         const todayObj = new Date();
 
         return rxs.map(rx => {
-            const morningLog = logs.find(l => l.prescription_id === rx.id && l.scheduled_time === 'MORNING' && l.taken_at && (l.taken_at.startsWith(dateStr) || l.taken_at.substring(0, 10) === dateStr));
-            const afternoonLog = logs.find(l => l.prescription_id === rx.id && l.scheduled_time === 'AFTERNOON' && l.taken_at && (l.taken_at.startsWith(dateStr) || l.taken_at.substring(0, 10) === dateStr));
-            const eveningLog = logs.find(l => l.prescription_id === rx.id && l.scheduled_time === 'EVENING' && l.taken_at && (l.taken_at.startsWith(dateStr) || l.taken_at.substring(0, 10) === dateStr));
-            const nightLog = logs.find(l => l.prescription_id === rx.id && l.scheduled_time === 'NIGHT' && l.taken_at && (l.taken_at.startsWith(dateStr) || l.taken_at.substring(0, 10) === dateStr));
+            const morningLog = logs.find(l => isLogForRx(l, rx) && isLogForSlot(l, 'MORNING') && isLogForDate(l, dateStr));
+            const afternoonLog = logs.find(l => isLogForRx(l, rx) && isLogForSlot(l, 'AFTERNOON') && isLogForDate(l, dateStr));
+            const eveningLog = logs.find(l => isLogForRx(l, rx) && isLogForSlot(l, 'EVENING') && isLogForDate(l, dateStr));
+            const nightLog = logs.find(l => isLogForRx(l, rx) && isLogForSlot(l, 'NIGHT') && isLogForDate(l, dateStr));
 
             // Generate 7-day intake summary array (last 7 days up to today)
             const history7Days = [];
@@ -583,7 +639,7 @@ const DB = {
                 const month = String(d.getMonth() + 1).padStart(2, '0');
                 const day = String(d.getDate()).padStart(2, '0');
                 const dStr = `${year}-${month}-${day}`;
-                const dayLogs = logs.filter(l => l.prescription_id === rx.id && l.taken_at && (l.taken_at.startsWith(dStr) || l.taken_at.substring(0, 10) === dStr) && l.status === 'TAKEN');
+                const dayLogs = logs.filter(l => isLogForRx(l, rx) && isLogForDate(l, dStr) && l.status === 'TAKEN');
                 
                 history7Days.push({
                     date: dStr,
@@ -613,23 +669,29 @@ const DB = {
         const rx = await this.getPrescriptionById(prescription_id, user_email);
         if (!rx) throw new Error('Prescription record not found');
 
-        const logs = readLocalLogs();
+        const logs = await this.getLogs(user_email);
         const dateStr = (target_date && /^\d{4}-\d{2}-\d{2}$/.test(target_date)) 
             ? target_date 
             : new Date().toISOString().split('T')[0];
 
         const takenAtTimestamp = `${dateStr}T12:00:00.000Z`;
 
-        const existingLogIndex = logs.findIndex(l => l.prescription_id === prescription_id && l.scheduled_time === slot_name && l.taken_at && (l.taken_at.startsWith(dateStr) || l.taken_at.substring(0, 10) === dateStr) && matchesUser(l, user_email));
+        const existingLogIndex = logs.findIndex(l => isLogForRx(l, rx) && isLogForSlot(l, slot_name) && isLogForDate(l, dateStr));
 
         const doseQuantity = rx.tablets_per_dose || inferTabletsPerDose(rx);
         let newRemaining = rx.total_tablets_remaining;
         let isNowTaken = false;
 
         if (existingLogIndex !== -1 && logs[existingLogIndex].status === 'TAKEN') {
+            const deletedLog = logs[existingLogIndex];
             newRemaining = parseFloat((newRemaining + doseQuantity).toFixed(2));
             logs.splice(existingLogIndex, 1);
             isNowTaken = false;
+            if (isSupabaseConnected) {
+                try {
+                    await supabase.from('medication_logs').delete().eq('id', deletedLog.id);
+                } catch (e) {}
+            }
         } else {
             if (rx.total_tablets_remaining <= 0) {
                 throw new Error(`Your cabinet is empty for ${rx.medicine_name}! Please refill.`);
@@ -641,7 +703,7 @@ const DB = {
                 id: 'log-' + Date.now(),
                 user_id: user_email,
                 user_email: user_email,
-                prescription_id,
+                prescription_id: rx.id,
                 medicine_name: rx.medicine_name,
                 brand_name: rx.brand_name || '',
                 scheduled_time: slot_name,
@@ -656,7 +718,11 @@ const DB = {
             if (isSupabaseConnected) {
                 try {
                     const dbPayload = sanitizeLogDbPayload(newLog, user_email);
-                    await supabase.from('medication_logs').insert([dbPayload]);
+                    const { error } = await supabase.from('medication_logs').insert([dbPayload]);
+                    if (error && error.message && error.message.includes('user_id')) {
+                        delete dbPayload.user_id;
+                        await supabase.from('medication_logs').insert([dbPayload]);
+                    }
                 } catch (e) {}
             }
         }
