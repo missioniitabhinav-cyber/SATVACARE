@@ -554,8 +554,61 @@ function getClientSideSchedule(targetDate) {
     return buildScheduleFromData(rxs, logs, dateStr);
 }
 
+// ⚡ Quick Tools Dropdown Toggle
+function toggleToolsDropdown() {
+    const menu = document.getElementById('tools-dropdown-menu');
+    if (menu) menu.classList.toggle('hidden');
+}
+
+// Close tools dropdown on outside click
+document.addEventListener('click', (e) => {
+    const menu = document.getElementById('tools-dropdown-menu');
+    const btn = e.target.closest('button[onclick*="toggleToolsDropdown"]');
+    if (menu && !menu.classList.contains('hidden') && !btn && !menu.contains(e.target)) {
+        menu.classList.add('hidden');
+    }
+});
+
+// 📌 4-Tab Interactive View Switcher Engine
+function switchTab(tabName) {
+    state.activeTab = tabName || 'schedule';
+
+    const tabs = ['schedule', 'cabinet', 'analytics', 'orders'];
+    tabs.forEach(t => {
+        const btn = document.getElementById(`nav-tab-${t}`);
+        const content = document.getElementById(`tab-content-${t}`);
+
+        if (btn) {
+            if (t === state.activeTab) {
+                btn.className = 'nav-tab-btn nav-tab-btn-active';
+            } else {
+                btn.className = 'nav-tab-btn nav-tab-btn-inactive';
+            }
+        }
+
+        if (content) {
+            if (t === state.activeTab) {
+                content.classList.remove('hidden');
+            } else {
+                content.classList.add('hidden');
+            }
+        }
+    });
+
+    if (state.activeTab === 'analytics') {
+        renderAdherenceAnalyticsChart();
+    } else if (state.activeTab === 'cabinet') {
+        renderCabinetGrid(state.prescriptions);
+    } else if (state.activeTab === 'orders') {
+        renderOrdersList(state.orders);
+    } else if (state.activeTab === 'schedule') {
+        renderScheduleCards(state.schedule);
+    }
+}
+
 // Load Patient Portal
 async function loadPatientPortal() {
+
     await Promise.all([
         fetchPatientStats(),
         fetchSchedule(),

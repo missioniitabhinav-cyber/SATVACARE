@@ -366,6 +366,77 @@ label {
 }
 
 /* ====================================================================
+   QUICK TOOLS DROPDOWN & INTERACTIVE TAB SYSTEM
+   ==================================================================== */
+.tools-dropdown-menu {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 0.5rem);
+    width: 16rem;
+    background: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 1.5rem !important;
+    box-shadow: 0 20px 40px -10px rgba(15, 23, 42, 0.15), 0 0 15px rgba(20, 184, 166, 0.05) !important;
+    padding: 0.5rem;
+    z-index: 50;
+    transform-origin: top right;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.tools-dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+    padding: 0.625rem 0.875rem;
+    border-radius: 1rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #334155;
+    transition: all 0.15s ease;
+    border: none;
+    background: transparent;
+    text-align: left;
+}
+.tools-dropdown-item:hover {
+    background-color: #f0fdf4;
+    color: #0d9488;
+}
+
+/* Sleek Tab Styling */
+.nav-tab-btn {
+    padding: 0.625rem 1.25rem;
+    border-radius: 1rem;
+    font-size: 0.8125rem;
+    font-weight: 800;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    border: 1px solid transparent;
+}
+.nav-tab-btn-active {
+    background: #0d9488 !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 15px rgba(13, 148, 136, 0.3);
+}
+.nav-tab-btn-active * {
+    color: #ffffff !important;
+}
+.nav-tab-btn-inactive {
+    background: #ffffff;
+    color: #475569 !important;
+    border-color: #e2e8f0;
+}
+.nav-tab-btn-inactive:hover {
+    background: #f8fafc;
+    color: #0f172a !important;
+    border-color: #cbd5e1;
+}
+
+
+/* ====================================================================
    OFFICIAL PRINTABLE MEDICAL PASS (@media print)
    ==================================================================== */
 @media print {

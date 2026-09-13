@@ -112,7 +112,7 @@
         <!-- Top Navigation Bar -->
         <header class="bg-white/95 backdrop-blur-xl border-b border-slate-200 sticky top-0 z-30 shadow-xs">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
-                <!-- Brand Info -->
+                <!-- Brand Info & Family Switcher -->
                 <div class="flex items-center gap-3">
                     <div class="w-10 h-10 rounded-xl bg-white border border-slate-200 p-1 shadow-md flex items-center justify-center overflow-hidden shrink-0">
                         <img src="sattva_logo.png" alt="SATTVA Logo" class="w-full h-full object-contain">
@@ -121,348 +121,286 @@
                         <h1 class="text-xl font-black text-slate-900 flex items-center gap-2 tracking-tight">
                             SATTVA <span class="text-[10px] font-black px-2 py-0.5 rounded-full bg-teal-50 text-teal-700 border border-teal-200 uppercase tracking-widest">CARE</span>
                         </h1>
-                        <p class="text-xs text-slate-500 font-medium" id="header-today-date">Today's Dose Tracker</p>
+                        <p class="text-xs text-slate-500 font-medium hidden sm:block" id="header-today-date">Today's Dose Tracker</p>
+                    </div>
+
+                    <!-- Family Profile Selector Pill -->
+                    <div class="relative ml-2">
+                        <select id="family-profile-select" onchange="switchFamilyProfile(event)" class="py-1.5 px-3 rounded-xl bg-teal-50/80 border border-teal-200 text-xs font-black text-teal-900 focus:border-teal-600 outline-none shadow-xs">
+                            <option value="patient@medibuddy.com">👤 Self (Patient)</option>
+                            <option value="father@medibuddy.com">👔 Father</option>
+                            <option value="mother@medibuddy.com">👗 Mother</option>
+                            <option value="child@medibuddy.com">👶 Child</option>
+                        </select>
                     </div>
                 </div>
 
-                <!-- Header Actions -->
-                <div class="flex items-center gap-3">
-                    <div class="hidden md:flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-white border border-slate-300 text-xs shadow-xs">
+                <!-- Header Action Buttons -->
+                <div class="flex items-center gap-2.5">
+                    <!-- Supabase Connection Badge -->
+                    <div class="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-xs">
                         <div id="db-dot" class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></div>
-                        <i class="fa-solid fa-user-circle text-teal-600"></i>
-                        <span id="user-display-email" class="font-bold text-slate-700">patient@medibuddy.com</span>
-                        <span id="db-text" class="text-[10px] font-extrabold text-teal-700 bg-teal-50 border border-teal-200 px-2 py-0.5 rounded-md ml-1">Supabase Connected</span>
+                        <span id="user-display-email" class="font-bold text-slate-700 max-w-[150px] truncate">patient@medibuddy.com</span>
+                        <span id="db-text" class="text-[10px] font-extrabold text-teal-700 bg-teal-50 border border-teal-200 px-1.5 py-0.5 rounded ml-1">Supabase</span>
                     </div>
 
-                    <!-- Family Profile Selector Dropdown -->
-                    <div class="relative">
-                        <select id="family-profile-select" onchange="switchFamilyProfile(event)" class="py-2 px-3 rounded-2xl bg-teal-50 border border-teal-300 text-xs font-black text-teal-900 focus:border-teal-600 outline-none shadow-xs">
-                            <option value="patient@medibuddy.com">👤 Self (Main Patient)</option>
-                            <option value="father@medibuddy.com">👔 Father (Elder Care)</option>
-                            <option value="mother@medibuddy.com">👗 Mother (Elder Care)</option>
-                            <option value="child@medibuddy.com">👶 Child (Dependent)</option>
-                        </select>
-                    </div>
-
-                    <!-- PWA Install Button -->
-                    <button id="pwa-install-btn" onclick="installPWAApp()" class="hidden px-3.5 py-2.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black flex items-center gap-1.5 shadow-md transition">
-                        <i class="fa-solid fa-mobile-screen-button text-amber-300"></i>
-                        <span class="hidden md:inline">Install App</span>
-                    </button>
-
-                    <!-- 30-Day Heatmap Button -->
-                    <button onclick="open30DayCalendarModal()" class="px-3.5 py-2.5 rounded-2xl bg-white hover:bg-slate-100 border border-slate-300 text-slate-800 text-xs font-black flex items-center gap-1.5 shadow-xs transition">
-                        <i class="fa-solid fa-calendar-days text-teal-600"></i>
-                        <span class="hidden lg:inline">30-Day Matrix</span>
-                    </button>
-
-                    <!-- Pharmacy Expense Tracker Button -->
-                    <button onclick="openExpenseModal()" class="px-3.5 py-2.5 rounded-2xl bg-white hover:bg-slate-100 border border-slate-300 text-slate-800 text-xs font-black flex items-center gap-1.5 shadow-xs transition">
-                        <i class="fa-solid fa-receipt text-indigo-600"></i>
-                        <span class="hidden lg:inline">Expenses</span>
-                    </button>
-
-
-                    <button onclick="openPrintableMedicalPassModal()" class="px-3.5 py-2.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-black flex items-center gap-2 shadow-sm transition">
-                        <i class="fa-solid fa-print text-amber-400"></i>
-                        <span class="hidden md:inline">Medical Pass</span>
-                    </button>
-
-                    <button onclick="openWhatsAppShareModal()" class="px-3.5 py-2.5 rounded-2xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-800 text-xs font-black flex items-center gap-2 shadow-sm transition">
-                        <i class="fa-brands fa-whatsapp text-emerald-600 text-sm"></i>
-                        <span class="hidden md:inline">Share Report</span>
-                    </button>
-
-                    <button onclick="openExportModal()" class="px-3.5 py-2.5 rounded-2xl bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 text-xs font-black flex items-center gap-2 shadow-sm transition">
-                        <i class="fa-solid fa-file-export text-teal-600"></i>
-                        <span class="hidden md:inline">Export</span>
-                    </button>
-
-                    <button onclick="openOrderModal()" class="btn-amber px-4 py-2.5 rounded-2xl text-xs font-black flex items-center gap-2 shadow-lg">
-                        <i class="fa-solid fa-cart-shopping text-white"></i>
-                        <span class="hidden sm:inline">Order Medicine</span>
-                    </button>
-
-                    <button onclick="openAddPrescriptionModal()" class="btn-primary px-4 py-2.5 rounded-2xl text-xs font-black flex items-center gap-2 shadow-lg">
+                    <!-- Primary Action: Add Medicine -->
+                    <button onclick="openAddPrescriptionModal()" class="btn-primary px-3.5 sm:px-4 py-2 rounded-xl text-xs font-black flex items-center gap-1.5 shadow-md">
                         <i class="fa-solid fa-plus text-white"></i>
                         <span class="hidden sm:inline">Add Medicine</span>
                     </button>
 
-                    <button onclick="handleLogout()" title="Sign Out" class="p-2 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-600 transition">
-                        <i class="fa-solid fa-right-from-bracket"></i>
+                    <!-- Quick Action: Order Pills -->
+                    <button onclick="openOrderModal()" class="btn-amber px-3.5 py-2 rounded-xl text-xs font-black flex items-center gap-1.5 shadow-md">
+                        <i class="fa-solid fa-cart-shopping text-white"></i>
+                        <span class="hidden sm:inline">Order</span>
                     </button>
+
+                    <!-- ⚡ Quick Tools Dropdown Button -->
+                    <div class="relative">
+                        <button onclick="toggleToolsDropdown()" class="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-800 text-xs font-black flex items-center gap-1.5 transition shadow-xs">
+                            <i class="fa-solid fa-bolt text-teal-600"></i>
+                            <span class="hidden md:inline">Tools</span>
+                            <i class="fa-solid fa-chevron-down text-[10px] text-slate-500"></i>
+                        </button>
+
+                        <!-- Tools Dropdown Menu -->
+                        <div id="tools-dropdown-menu" class="tools-dropdown-menu hidden">
+                            <button onclick="open30DayCalendarModal(); toggleToolsDropdown();" class="tools-dropdown-item">
+                                <i class="fa-solid fa-calendar-days text-teal-600 w-4 text-center"></i>
+                                <span>30-Day Adherence Matrix</span>
+                            </button>
+                            <button onclick="openExpenseModal(); toggleToolsDropdown();" class="tools-dropdown-item">
+                                <i class="fa-solid fa-receipt text-indigo-600 w-4 text-center"></i>
+                                <span>Pharmacy Expense Tracker</span>
+                            </button>
+                            <button onclick="openPrintableMedicalPassModal(); toggleToolsDropdown();" class="tools-dropdown-item">
+                                <i class="fa-solid fa-print text-amber-600 w-4 text-center"></i>
+                                <span>Official Medical Pass</span>
+                            </button>
+                            <button onclick="openWhatsAppShareModal(); toggleToolsDropdown();" class="tools-dropdown-item">
+                                <i class="fa-brands fa-whatsapp text-emerald-600 w-4 text-center"></i>
+                                <span>Share WhatsApp Report</span>
+                            </button>
+                            <button onclick="openExportModal(); toggleToolsDropdown();" class="tools-dropdown-item">
+                                <i class="fa-solid fa-file-export text-sky-600 w-4 text-center"></i>
+                                <span>Export (PDF / JSON)</span>
+                            </button>
+                            <button id="pwa-install-btn" onclick="installPWAApp(); toggleToolsDropdown();" class="tools-dropdown-item hidden">
+                                <i class="fa-solid fa-mobile-screen-button text-purple-600 w-4 text-center"></i>
+                                <span>Install App to Home Screen</span>
+                            </button>
+                            <div class="border-t border-slate-200 my-1"></div>
+                            <button onclick="handleLogout()" class="tools-dropdown-item text-rose-600 hover:bg-rose-50">
+                                <i class="fa-solid fa-right-from-bracket w-4 text-center"></i>
+                                <span>Sign Out</span>
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </header>
 
         <!-- Main Body -->
-        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
 
-            <!-- 🌟 Patient Welcome Hero Banner -->
-            <div class="glass-card p-6 sm:p-8 bg-gradient-to-r from-teal-500/10 via-emerald-500/5 to-cyan-500/10 border border-teal-500/30 rounded-3xl shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative overflow-hidden">
-                <div class="space-y-1.5 relative z-10">
+            <!-- 🌟 Compact Patient Welcome & Intake Scorecard -->
+            <div class="glass-card p-5 sm:p-6 bg-gradient-to-r from-teal-600/10 via-emerald-500/5 to-cyan-600/10 border border-teal-500/20 rounded-3xl shadow-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-4 relative overflow-hidden">
+                <div class="space-y-1 relative z-10">
                     <div class="flex items-center gap-2">
-                        <span class="px-3 py-1 bg-teal-500/15 text-teal-700 font-extrabold text-xs rounded-full border border-teal-500/30 inline-flex items-center gap-1.5">
-                            <span class="w-2 h-2 rounded-full bg-teal-500 animate-pulse"></span> Personal Health Portal
+                        <span class="px-2.5 py-0.5 bg-teal-600/10 text-teal-800 font-extrabold text-[11px] rounded-full border border-teal-500/20 inline-flex items-center gap-1.5 uppercase tracking-wider">
+                            <span class="w-2 h-2 rounded-full bg-teal-500 animate-pulse"></span> Sattva Care Portal
                         </span>
                     </div>
-                    <h2 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-                        Welcome Back to Sattva Care! 🩺
+                    <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                        Welcome Back, Patient! 🩺
                     </h2>
-                    <p class="text-xs sm:text-sm text-slate-600 font-medium max-w-xl">
-                        Track your prescriptions, log your daily morning/night pill intake, monitor cabinet inventory, and keep your health schedule 100% on track.
+                    <p class="text-xs text-slate-600 font-medium">
+                        Log your daily morning & night doses, manage your cabinet inventory, and keep your health 100% on track.
                     </p>
                 </div>
-                <div class="flex items-center gap-3 shrink-0 relative z-10">
-                    <button onclick="openAddPrescriptionModal()" class="btn-primary text-xs font-black px-5 py-3 rounded-2xl flex items-center gap-2 shadow-lg">
-                        <i class="fa-solid fa-plus text-white"></i> Add Medicine
-                    </button>
-                    <button onclick="openOrderModal()" class="btn-amber text-xs font-black px-5 py-3 rounded-2xl flex items-center gap-2 shadow-lg">
-                        <i class="fa-solid fa-cart-shopping text-white"></i> Order Pills
-                    </button>
-                </div>
-            </div>
 
-            <!-- 🚨 Urgent 5-Day Stockout Alert Banner -->
-            <div id="urgent-stockout-banner" class="hidden rounded-3xl bg-gradient-to-r from-rose-500/10 via-red-500/10 to-amber-500/10 border border-rose-300/80 p-6 shadow-xl relative overflow-hidden backdrop-blur-md">
-                <div class="flex items-start gap-4">
-                    <div class="w-12 h-12 rounded-2xl bg-red-100 border border-red-200 flex items-center justify-center shrink-0">
-                        <i class="fa-solid fa-capsules text-red-600 text-2xl animate-bounce"></i>
+                <!-- Daily Scorecard Badges -->
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 w-full md:w-auto shrink-0 relative z-10">
+                    <div class="p-3 bg-white/90 border border-slate-200 rounded-2xl text-center shadow-xs">
+                        <span class="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest block">Today's Intake</span>
+                        <strong id="stat-adherence" class="text-2xl font-black text-teal-600 block">0%</strong>
+                        <span id="stat-doses-taken-text" class="text-[10px] text-slate-500 font-semibold block">0 of 0 taken</span>
                     </div>
-                    <div class="space-y-2">
-                        <h3 class="text-base font-black text-rose-950 flex items-center gap-2 tracking-wide">
-                            <span>REFILL REQUIRED! 5-DAY SUPPLY ALERT</span>
-                            <span id="banner-alert-count" class="px-2.5 py-0.5 text-xs bg-red-600 text-white rounded-full font-black">0 items</span>
-                        </h3>
-                        <p class="text-xs text-slate-700 font-medium">
-                            Your cabinet will run out of stock within <strong class="underline decoration-red-500">5 days</strong> based on your daily prescription schedule. Refill or order online now to avoid missing doses.
-                        </p>
-                        <div id="banner-alert-list" class="flex flex-wrap gap-2 pt-1"></div>
+
+                    <div class="p-3 bg-white/90 border border-slate-200 rounded-2xl text-center shadow-xs">
+                        <span class="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest block">Next Scheduled</span>
+                        <strong id="stat-next-dose-time" class="text-lg font-black text-emerald-700 block truncate">08:00 AM</strong>
+                        <span id="stat-next-dose-name" class="text-[10px] text-slate-500 font-semibold block truncate">Morning Dose</span>
+                    </div>
+
+                    <div class="p-3 bg-white/90 border border-slate-200 rounded-2xl text-center shadow-xs col-span-2 sm:col-span-1">
+                        <span class="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest block">Cabinet Stock</span>
+                        <strong id="stat-total-pills" class="text-2xl font-black text-slate-900 block">0</strong>
+                        <span id="stat-rxs-count" class="text-[10px] text-slate-500 font-semibold block">0 Medicines</span>
                     </div>
                 </div>
             </div>
 
-            <!-- ⚠️ 1-Month (30-Day) Expiry Notification Alert Banner -->
-            <div id="expiry-30day-banner" class="hidden rounded-3xl bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/10 border border-amber-300 p-6 shadow-xl relative overflow-hidden backdrop-blur-md">
-                <div class="flex items-start gap-4">
-                    <div class="w-12 h-12 rounded-2xl bg-amber-100 border border-amber-300 flex items-center justify-center shrink-0">
-                        <i class="fa-solid fa-calendar-xmark text-amber-700 text-2xl animate-pulse"></i>
+            <!-- 🚨 Stockout Alert Banner -->
+            <div id="urgent-stockout-banner" class="hidden rounded-2xl bg-rose-50 border border-rose-200 p-4 shadow-sm relative">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-xl bg-rose-100 border border-rose-300 text-rose-700 flex items-center justify-center shrink-0">
+                        <i class="fa-solid fa-capsules text-lg"></i>
                     </div>
-                    <div class="space-y-2">
-                        <h3 class="text-base font-black text-amber-950 flex items-center gap-2 tracking-wide">
-                            <span>⚠️ 1-MONTH MEDICINE EXPIRY WARNING</span>
-                            <span id="expiry-banner-count" class="px-2.5 py-0.5 text-xs bg-amber-600 text-white rounded-full font-black">0 items</span>
-                        </h3>
-                        <p class="text-xs text-slate-700 font-medium">
-                            The following medicines or batch strips in your cabinet are expiring within <strong class="underline decoration-amber-600">1 month (30 days)</strong> or have already expired. Please check and replace expired stock.
-                        </p>
-                        <div id="expiry-banner-list" class="flex flex-wrap gap-2 pt-1"></div>
+                    <div class="flex-1">
+                        <h4 class="text-xs font-black text-rose-950 flex items-center gap-2">
+                            <span>REFILL REQUIRED (5-DAY SUPPLY ALERT)</span>
+                            <span id="banner-alert-count" class="px-2 py-0.5 text-[10px] bg-rose-600 text-white rounded-full font-black">0 items</span>
+                        </h4>
+                        <div id="banner-alert-list" class="flex flex-wrap gap-1.5 pt-1"></div>
                     </div>
                 </div>
             </div>
 
-            <!-- Health Stats Dashboard -->
-            <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                
-                <!-- Stat 1: Adherence -->
-                <div class="glass-card glass-card-hover p-6 shadow-xl flex items-center justify-between">
-                    <div>
-                        <span class="text-[11px] font-extrabold text-slate-500 uppercase tracking-widest block">Today's Adherence</span>
-                        <div class="mt-2 flex items-baseline gap-1">
-                            <span id="stat-adherence" class="text-4xl font-black text-teal-600">0%</span>
-                            <span class="text-xs text-teal-700 font-bold">taken</span>
-                        </div>
-                        <p class="text-xs text-slate-600 font-medium mt-1" id="stat-doses-taken-text">0 of 0 doses logged</p>
+            <!-- ⚠️ Expiry Warning Banner -->
+            <div id="expiry-30day-banner" class="hidden rounded-2xl bg-amber-50 border border-amber-200 p-4 shadow-sm relative">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-xl bg-amber-100 border border-amber-300 text-amber-700 flex items-center justify-center shrink-0">
+                        <i class="fa-solid fa-calendar-xmark text-lg"></i>
                     </div>
-                    <div class="w-14 h-14 rounded-2xl bg-teal-50 border border-teal-200 flex items-center justify-center text-teal-600 text-2xl shadow-sm">
-                        <i class="fa-solid fa-circle-check"></i>
+                    <div class="flex-1">
+                        <h4 class="text-xs font-black text-amber-950 flex items-center gap-2">
+                            <span>MEDICINE EXPIRY WARNING (30 DAYS)</span>
+                            <span id="expiry-banner-count" class="px-2 py-0.5 text-[10px] bg-amber-600 text-white rounded-full font-black">0 items</span>
+                        </h4>
+                        <div id="expiry-banner-list" class="flex flex-wrap gap-1.5 pt-1"></div>
                     </div>
-                </div>
-
-                <!-- Stat 2: Total Cabinet Pills -->
-                <div class="glass-card glass-card-hover p-6 shadow-xl flex items-center justify-between">
-                    <div>
-                        <span class="text-[11px] font-extrabold text-slate-500 uppercase tracking-widest block">Cabinet Pill Count</span>
-                        <div class="mt-2 flex items-baseline gap-1">
-                            <span id="stat-total-pills" class="text-4xl font-black text-slate-900">0</span>
-                            <span class="text-xs text-slate-600 font-bold">pills</span>
-                        </div>
-                        <p class="text-xs text-slate-600 font-medium mt-1" id="stat-rxs-count">Across 0 prescriptions</p>
-                    </div>
-                    <div class="w-14 h-14 rounded-2xl bg-sky-50 border border-sky-200 flex items-center justify-center text-sky-600 text-2xl shadow-sm">
-                        <i class="fa-solid fa-tablets"></i>
-                    </div>
-                </div>
-
-                <!-- Stat 3: 5-Day Alerts -->
-                <div onclick="switchTab('cabinet')" class="cursor-pointer glass-card glass-card-hover p-6 shadow-xl flex items-center justify-between border-rose-300 hover:border-rose-500 transition">
-                    <div>
-                        <span class="text-[11px] font-extrabold text-rose-700 uppercase tracking-widest block">5-Day Refill Alerts</span>
-                        <div class="mt-2 flex items-baseline gap-2">
-                            <span id="stat-runout-count" class="text-4xl font-black text-rose-600">0</span>
-                            <span class="text-[10px] px-2 py-0.5 bg-rose-100 text-rose-700 rounded-full border border-rose-300 font-black">Urgent</span>
-                        </div>
-                        <p class="text-xs text-slate-600 font-medium mt-1">Based on daily intake</p>
-                    </div>
-                    <div class="w-14 h-14 rounded-2xl bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-600 text-2xl shadow-sm">
-                        <i class="fa-solid fa-triangle-exclamation"></i>
-                    </div>
-                </div>
-
-                <!-- Stat 4: Upcoming Dose -->
-                <div class="glass-card glass-card-hover p-6 shadow-xl flex items-center justify-between">
-                    <div>
-                        <span class="text-[11px] font-extrabold text-emerald-700 uppercase tracking-widest block">Next Scheduled Dose</span>
-                        <div class="mt-2">
-                            <span id="stat-next-dose-time" class="text-2xl font-black text-emerald-700 truncate block max-w-[140px]">08:00 AM</span>
-                        </div>
-                        <p class="text-xs text-slate-600 font-medium mt-1 truncate max-w-[140px]" id="stat-next-dose-name">Morning Dose</p>
-                    </div>
-                    <div class="w-14 h-14 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 text-2xl shadow-sm">
-                        <i class="fa-solid fa-clock"></i>
-                    </div>
-                </div>
-
-            </section>
-
-            <!-- 📊 7-Day Adherence Analytics Visual Chart & 🩺 Vitals Log Summary Widget -->
-            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                <!-- 7-Day Adherence Visual Chart -->
-                <div class="lg:col-span-8 glass-card p-6 shadow-xl space-y-4">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <h3 class="text-base font-black text-slate-900 flex items-center gap-2">
-                                <i class="fa-solid fa-chart-column text-teal-600"></i>
-                                7-Day Adherence Trend & Compliance Chart
-                            </h3>
-                            <p class="text-xs text-slate-500 font-medium">Visual breakdown of daily medicine intake over the past week</p>
-                        </div>
-                        <button onclick="openWhatsAppShareModal()" class="px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-800 text-xs font-black transition flex items-center gap-1.5 shadow-xs">
-                            <i class="fa-brands fa-whatsapp text-emerald-600 text-sm"></i> Share Report
-                        </button>
-                    </div>
-                    <div id="adherence-chart-container" class="grid grid-cols-7 gap-2 pt-2 items-end h-44"></div>
-                </div>
-
-                <!-- 🩺 Vitals & Symptoms Quick Tracker -->
-                <div class="lg:col-span-4 glass-card p-6 shadow-xl space-y-4 flex flex-col justify-between">
-                    <div>
-                        <div class="flex items-center justify-between">
-                            <h3 class="text-base font-black text-slate-900 flex items-center gap-2">
-                                <i class="fa-solid fa-heart-pulse text-rose-600"></i>
-                                Health Vitals Log
-                            </h3>
-                            <button onclick="openVitalsModal()" class="px-2.5 py-1 bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 rounded-lg text-xs font-black transition">
-                                + Log Vitals
-                            </button>
-                        </div>
-                        <p class="text-xs text-slate-500 font-medium mt-1">Track Blood Pressure, Sugar & Symptoms</p>
-                        <div id="vitals-summary-widget" class="mt-4 space-y-2">
-                            <div class="p-3 bg-slate-50 border border-slate-200 rounded-2xl text-center py-4">
-                                <span class="text-xs text-slate-500 font-bold block">No vitals logged today</span>
-                                <button onclick="openVitalsModal()" class="mt-2 px-3 py-1.5 bg-teal-600 text-white rounded-xl text-xs font-black shadow-sm">+ Record BP / Sugar</button>
-                            </div>
-                        </div>
-                    </div>
-                    <button onclick="openPrintableMedicalPassModal()" class="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-black flex items-center justify-center gap-2 shadow-md transition">
-                        <i class="fa-solid fa-print text-amber-400"></i> Print Official Medical Pass
-                    </button>
                 </div>
             </div>
 
-            <!-- Interactive Search & Rx Category Filter Toolbar -->
-            <div class="glass-card p-4 sm:p-5 shadow-xl flex flex-col md:flex-row items-center justify-between gap-4">
-                <!-- Search Input -->
-                <div class="relative w-full md:w-80">
-                    <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
-                    <input type="text" id="search-input" oninput="handleSearchInput(event)" placeholder="Search medicine, brand, doctor..." 
-                        class="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-300 text-xs text-slate-900 font-semibold focus:border-teal-600 outline-none transition">
-                </div>
-
-                <!-- Filter Category Badges -->
-                <div class="flex flex-wrap items-center gap-2 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
-                    <span class="text-[11px] font-black text-slate-500 uppercase mr-1 hidden sm:inline">Filter:</span>
-                    <button onclick="setCategoryFilter('ALL')" id="filter-cat-all" class="px-3.5 py-1.5 rounded-xl text-xs font-black transition bg-teal-600 text-white shadow-md shadow-teal-600/20">
-                        All Prescriptions
-                    </button>
-                    <button onclick="setCategoryFilter('RX')" id="filter-cat-rx" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition text-slate-700 hover:text-slate-900 border border-slate-300 bg-white shadow-xs">
-                        🩺 Rx Prescribed
-                    </button>
-                    <button onclick="setCategoryFilter('NRX')" id="filter-cat-nrx" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition text-slate-700 hover:text-slate-900 border border-slate-300 bg-white shadow-xs">
-                        🔴 NRx Controlled
-                    </button>
-                    <button onclick="setCategoryFilter('TRX')" id="filter-cat-trx" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition text-slate-700 hover:text-slate-900 border border-slate-300 bg-white shadow-xs">
-                        🟣 TRx Chronic
-                    </button>
-                    <button onclick="setCategoryFilter('OTC')" id="filter-cat-otc" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition text-slate-700 hover:text-slate-900 border border-slate-300 bg-white shadow-xs">
-                        🟢 OTC Wellness
-                    </button>
-                </div>
-            </div>
-
-            <!-- Tab Navigation & Main Content -->
+            <!-- 📌 Interactive Tab Navigation Bar -->
             <section class="space-y-6">
-                <div class="flex items-center justify-between border-b border-slate-300/80 pb-3 overflow-x-auto">
-                    <div class="flex items-center gap-3">
-                        <button onclick="switchTab('schedule')" id="nav-tab-schedule" class="px-5 py-2.5 rounded-2xl font-black text-sm transition bg-teal-600 text-white shadow-md shadow-teal-600/20 shrink-0 flex items-center gap-2">
-                            <i class="fa-solid fa-calendar-check mr-1 text-white"></i> Today's Dose Schedule
+                <div class="flex items-center justify-between border-b border-slate-200 pb-3 overflow-x-auto">
+                    <div class="flex items-center gap-2">
+                        <button onclick="switchTab('schedule')" id="nav-tab-schedule" class="nav-tab-btn nav-tab-btn-active">
+                            <i class="fa-solid fa-calendar-check text-xs"></i>
+                            <span>Today's Schedule</span>
                         </button>
-                        <button onclick="switchTab('cabinet')" id="nav-tab-cabinet" class="px-5 py-2.5 rounded-2xl font-bold text-sm transition text-slate-700 hover:text-slate-900 hover:bg-slate-200/70 shrink-0 flex items-center gap-2">
-                            <i class="fa-solid fa-box-archive mr-1 text-slate-500"></i> My Medicine Cabinet
+                        <button onclick="switchTab('cabinet')" id="nav-tab-cabinet" class="nav-tab-btn nav-tab-btn-inactive">
+                            <i class="fa-solid fa-box-archive text-xs"></i>
+                            <span>Medicine Cabinet</span>
                         </button>
-                        <button onclick="switchTab('orders')" id="nav-tab-orders" class="px-5 py-2.5 rounded-2xl font-bold text-sm transition text-slate-700 hover:text-slate-900 hover:bg-slate-200/70 shrink-0 flex items-center gap-2">
-                            <i class="fa-solid fa-truck-fast mr-1 text-amber-600"></i> Pharmacy Orders 
-                            <span id="orders-badge-count" class="ml-1.5 px-2.5 py-0.5 rounded-full bg-amber-500 text-white text-[11px] font-black shadow-sm">0</span>
+                        <button onclick="switchTab('analytics')" id="nav-tab-analytics" class="nav-tab-btn nav-tab-btn-inactive">
+                            <i class="fa-solid fa-chart-column text-xs"></i>
+                            <span>Health Analytics &amp; Vitals</span>
+                        </button>
+                        <button onclick="switchTab('orders')" id="nav-tab-orders" class="nav-tab-btn nav-tab-btn-inactive">
+                            <i class="fa-solid fa-truck-fast text-xs"></i>
+                            <span>Pharmacy Orders</span>
+                            <span id="orders-badge-count" class="ml-1 px-2 py-0.5 rounded-full bg-amber-500 text-white text-[10px] font-black">0</span>
                         </button>
                     </div>
                 </div>
 
-                <!-- Tab 1: Schedule View -->
+                <!-- Tab 1: Today's Schedule View -->
                 <div id="tab-content-schedule" class="space-y-6">
-                    <!-- 7-Day Interactive Date Bar -->
-                    <div class="glass-card p-4 shadow-xl space-y-3 border border-teal-200/80 bg-gradient-to-r from-teal-50/70 via-white to-slate-50 rounded-2xl">
-                        <div class="flex flex-wrap items-center justify-between gap-2">
-                            <div class="flex items-center gap-2.5">
-                                <div class="w-9 h-9 rounded-xl bg-teal-600 text-white flex items-center justify-center shadow-md shadow-teal-600/20">
-                                    <i class="fa-solid fa-calendar-days text-base"></i>
-                                </div>
-                                <div>
-                                    <h3 class="text-sm font-black text-slate-900 flex items-center gap-2">
-                                        7-Day Intake & Dose Tracker
-                                        <span id="selected-date-badge" class="px-2.5 py-0.5 rounded-lg bg-teal-600 text-white text-[11px] font-black tracking-wide shadow-xs uppercase">Today</span>
-                                    </h3>
-                                    <p class="text-xs text-slate-600 font-medium">Select any date below to mark doses as taken or missed for the past 7 days.</p>
-                                </div>
+                    <!-- 7-Day Interactive Date Selector -->
+                    <div class="glass-card p-4 shadow-sm border border-slate-200 bg-white rounded-2xl space-y-3">
+                        <div class="flex items-center justify-between gap-2">
+                            <div class="flex items-center gap-2">
+                                <i class="fa-solid fa-calendar-days text-teal-600 text-base"></i>
+                                <h3 class="text-xs font-black text-slate-900 flex items-center gap-2 uppercase tracking-wider">
+                                    7-Day Intake Tracker
+                                    <span id="selected-date-badge" class="px-2 py-0.5 rounded-md bg-teal-600 text-white text-[10px] font-extrabold uppercase">Today</span>
+                                </h3>
                             </div>
-                            <button onclick="selectScheduleDate(getTodayDateStr())" class="text-xs font-black text-teal-800 hover:text-teal-900 bg-white border border-teal-200 px-3.5 py-1.5 rounded-xl shadow-xs hover:shadow transition flex items-center gap-1.5">
-                                <i class="fa-solid fa-rotate-left text-teal-600"></i> Today's Schedule
+                            <button onclick="selectScheduleDate(getTodayDateStr())" class="text-xs font-bold text-teal-700 hover:text-teal-900 bg-teal-50 border border-teal-200 px-3 py-1 rounded-xl transition flex items-center gap-1">
+                                <i class="fa-solid fa-rotate-left text-xs"></i> Today
                             </button>
                         </div>
 
-                        <!-- 7-Day Buttons Bar (Dynamic JS) -->
-                        <div id="seven-day-bar" class="grid grid-cols-7 gap-1.5 sm:gap-2 pt-1">
-                            <!-- Populated dynamically by app.js -->
+                        <!-- 7-Day Date Bar (Dynamic JS) -->
+                        <div id="seven-day-bar" class="grid grid-cols-7 gap-1.5 sm:gap-2"></div>
+                    </div>
+
+                    <!-- Filter & Search Toolbar for Schedule -->
+                    <div class="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs">
+                        <div class="relative w-full sm:w-72">
+                            <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                            <input type="text" id="search-input" oninput="handleSearchInput(event)" placeholder="Search medicine, brand..." 
+                                class="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 font-semibold focus:border-teal-600 outline-none">
+                        </div>
+
+                        <div class="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto">
+                            <button onclick="setCategoryFilter('ALL')" id="filter-cat-all" class="px-3 py-1.5 rounded-xl text-xs font-black bg-teal-600 text-white">All</button>
+                            <button onclick="setCategoryFilter('RX')" id="filter-cat-rx" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200">Rx</button>
+                            <button onclick="setCategoryFilter('NRX')" id="filter-cat-nrx" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200">NRx</button>
+                            <button onclick="setCategoryFilter('TRX')" id="filter-cat-trx" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200">TRx</button>
+                            <button onclick="setCategoryFilter('OTC')" id="filter-cat-otc" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200">OTC</button>
                         </div>
                     </div>
 
                     <div id="schedule-cards-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
                 </div>
 
-                <!-- Tab 2: Cabinet View -->
+                <!-- Tab 2: Medicine Cabinet View -->
                 <div id="tab-content-cabinet" class="hidden space-y-6">
                     <div id="cabinet-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
                 </div>
 
-                <!-- Tab 3: Pharmacy Orders View -->
+                <!-- Tab 3: Health Analytics & Vitals View -->
+                <div id="tab-content-analytics" class="hidden space-y-6">
+                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                        <!-- 7-Day Adherence Visual Chart -->
+                        <div class="lg:col-span-8 glass-card p-6 shadow-xl space-y-4">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <h3 class="text-base font-black text-slate-900 flex items-center gap-2">
+                                        <i class="fa-solid fa-chart-column text-teal-600"></i>
+                                        7-Day Compliance &amp; Intake Adherence
+                                    </h3>
+                                    <p class="text-xs text-slate-500 font-medium">Daily medicine intake history across the past week</p>
+                                </div>
+                                <button onclick="openWhatsAppShareModal()" class="px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-800 text-xs font-black transition flex items-center gap-1.5 shadow-xs">
+                                    <i class="fa-brands fa-whatsapp text-emerald-600 text-sm"></i> Share
+                                </button>
+                            </div>
+                            <div id="adherence-chart-container" class="grid grid-cols-7 gap-2 pt-2 items-end h-44"></div>
+                        </div>
+
+                        <!-- 🩺 Vitals & Symptoms Tracker -->
+                        <div class="lg:col-span-4 glass-card p-6 shadow-xl space-y-4 flex flex-col justify-between">
+                            <div>
+                                <div class="flex items-center justify-between">
+                                    <h3 class="text-base font-black text-slate-900 flex items-center gap-2">
+                                        <i class="fa-solid fa-heart-pulse text-rose-600"></i>
+                                        Health Vitals Log
+                                    </h3>
+                                    <button onclick="openVitalsModal()" class="px-2.5 py-1 bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 rounded-lg text-xs font-black transition">
+                                        + Log Vitals
+                                    </button>
+                                </div>
+                                <p class="text-xs text-slate-500 font-medium mt-1">Track Blood Pressure, Sugar &amp; Symptoms</p>
+                                <div id="vitals-summary-widget" class="mt-4 space-y-2">
+                                    <div class="p-3 bg-slate-50 border border-slate-200 rounded-2xl text-center py-4">
+                                        <span class="text-xs text-slate-500 font-bold block">No vitals logged today</span>
+                                        <button onclick="openVitalsModal()" class="mt-2 px-3 py-1.5 bg-teal-600 text-white rounded-xl text-xs font-black shadow-sm">+ Record BP / Sugar</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <button onclick="openPrintableMedicalPassModal()" class="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-black flex items-center justify-center gap-2 shadow-md transition">
+                                <i class="fa-solid fa-print text-amber-400"></i> Print Official Medical Pass
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab 4: Pharmacy Orders View -->
                 <div id="tab-content-orders" class="hidden space-y-6">
                     <div class="flex flex-wrap items-center justify-between gap-3">
                         <div>
-                            <h2 class="text-lg font-black text-slate-900">Pharmacy Orders & Delivery Tracker</h2>
+                            <h2 class="text-lg font-black text-slate-900">Pharmacy Orders &amp; Refill Tracker</h2>
                             <p class="text-xs text-slate-600 font-medium">Track online medicine purchases and auto-stock cabinet upon delivery.</p>
                         </div>
                         <div class="flex items-center gap-2">
                             <button onclick="openOrderHistoryModal()" class="btn-glass px-4 py-2.5 rounded-xl font-extrabold text-xs flex items-center gap-1.5 shadow-md">
-                                <i class="fa-solid fa-clock-rotate-left text-amber-600"></i> View Order History Logs
+                                <i class="fa-solid fa-clock-rotate-left text-amber-600"></i> Order History
                             </button>
                         </div>
                     </div>
