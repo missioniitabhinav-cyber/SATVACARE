@@ -1719,43 +1719,6 @@ function renderOrdersList() {
     }).join('');
 }
 
-function switchTab(tab) {
-    state.activeTab = tab;
-    const btnSchedule = document.getElementById('nav-tab-schedule');
-    const btnCabinet = document.getElementById('nav-tab-cabinet');
-    const btnOrders = document.getElementById('nav-tab-orders');
-
-    const contentSchedule = document.getElementById('tab-content-schedule');
-    const contentCabinet = document.getElementById('tab-content-cabinet');
-    const contentOrders = document.getElementById('tab-content-orders');
-
-    const activeClass = 'px-5 py-2.5 rounded-2xl font-black text-sm transition bg-teal-600 text-white shadow-md shadow-teal-600/20 shrink-0 flex items-center gap-2';
-    const inactiveClass = 'px-5 py-2.5 rounded-2xl font-bold text-sm transition text-slate-700 hover:text-slate-900 hover:bg-slate-200/70 shrink-0 flex items-center gap-2';
-
-    if (tab === 'schedule') {
-        btnSchedule.className = activeClass;
-        if (btnCabinet) btnCabinet.className = inactiveClass;
-        if (btnOrders) btnOrders.className = inactiveClass;
-        contentSchedule.classList.remove('hidden');
-        if (contentCabinet) contentCabinet.classList.add('hidden');
-        if (contentOrders) contentOrders.classList.add('hidden');
-    } else if (tab === 'cabinet') {
-        btnCabinet.className = activeClass;
-        if (btnSchedule) btnSchedule.className = inactiveClass;
-        if (btnOrders) btnOrders.className = inactiveClass;
-        contentCabinet.classList.remove('hidden');
-        if (contentSchedule) contentSchedule.classList.add('hidden');
-        if (contentOrders) contentOrders.classList.add('hidden');
-    } else if (tab === 'orders') {
-        btnOrders.className = activeClass;
-        if (btnSchedule) btnSchedule.className = inactiveClass;
-        if (btnCabinet) btnCabinet.className = inactiveClass;
-        contentOrders.classList.remove('hidden');
-        if (contentSchedule) contentSchedule.classList.add('hidden');
-        if (contentCabinet) contentCabinet.classList.add('hidden');
-    }
-}
-
 // Add / Edit Prescription Modal Handlers
 function openAddPrescriptionModal() {
     document.getElementById('rx-modal-title').innerHTML = '<i class="fa-solid fa-pills text-teal-400"></i> Add Medicine Record & Schedule';
