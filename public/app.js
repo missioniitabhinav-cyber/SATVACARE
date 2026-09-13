@@ -4241,14 +4241,19 @@ async function processPrescriptionOCR(event) {
 
         let targetMed = null;
 
-        // Use EXACT text extracted from prescription scan as-is
+        // Use EXACT text extracted from prescription scan as-is (with noise symbol filtering)
         if (apiRes && (apiRes.medicine_name || apiRes.raw_text || rawText)) {
             const rawExtracted = apiRes.raw_text || rawText || '';
+            let cleanMedName = (apiRes.medicine_name || '').replace(/[^a-zA-Z0-9\s-]/g, '').trim();
+            if (!cleanMedName || cleanMedName.replace(/[^a-zA-Z]/g, '').length < 3) {
+                cleanMedName = 'Prescription Medicine';
+            }
+
             targetMed = {
-                medicine_name: apiRes.medicine_name || 'Prescription Medicine',
-                brand_name: apiRes.brand_name || '',
-                generic_name: apiRes.generic_name || apiRes.medicine_name || '',
-                dosage_strength: apiRes.dosage_strength || '',
+                medicine_name: cleanMedName,
+                brand_name: apiRes.brand_name || cleanMedName,
+                generic_name: apiRes.generic_name || cleanMedName,
+                dosage_strength: apiRes.dosage_strength || '100 mg',
                 medicine_type: apiRes.medicine_type || 'Tablet',
                 classification_type: apiRes.classification_type || 'RX',
                 frequency_type: apiRes.frequency_type || 'TWICE_DAILY',

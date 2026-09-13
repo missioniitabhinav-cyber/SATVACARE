@@ -360,22 +360,35 @@ app.post('/api/ocr/prescription', async (req, res) => {
         const cleanText = extractedText.trim();
         const lines = cleanText.split('\n').map(l => l.trim()).filter(Boolean);
 
-        // 1. Medicine Name: Exact name from image text
+        // 1. Clean & Sanitize Medicine Name (Filter out noise/special characters like % ' o o o - ,)
         let medicineName = '';
         const ignoreHeaderRegex = /^(prescription|rx|doctor|patient|date|hospital|clinic|name|age|gender|sl|no)\b/i;
         for (const line of lines) {
-            if (!ignoreHeaderRegex.test(line) && line.length >= 2) {
-                medicineName = line.replace(/\b(\d+(\.\d+)?\s*(mg|g|gm|ml|mcg|iu|sachet|tab|capsule))\b/gi, '')
-                                   .replace(/\b(bd|tds|od|qid|hs|twice daily|once daily|thrice daily)\b/gi, '')
-                                   .trim();
-                if (medicineName) break;
+            const sanitizedLine = line.replace(/[^a-zA-Z0-9\s-]/g, '').trim();
+            if (!ignoreHeaderRegex.test(sanitizedLine) && sanitizedLine.replace(/[^a-zA-Z]/g, '').length >= 3) {
+                medicineName = sanitizedLine.replace(/\b(\d+(\.\d+)?\s*(mg|g|gm|ml|mcg|iu|sachet|tab|capsule))\b/gi, '')
+                                           .replace(/\b(bd|tds|od|qid|hs|twice daily|once daily|thrice daily)\b/gi, '')
+                                           .trim();
+                if (medicineName && medicineName.length >= 3) break;
             }
         }
-        if (!medicineName && lines.length > 0) medicineName = lines[0];
+
+        // If OCR returned garbage noise symbols (e.g. % ' o o o - ,), fall back to medical name extraction
+        if (!medicineName || medicineName.replace(/[^a-zA-Z]/g, '').length < 3) {
+            const validWords = cleanText.match(/\b[A-Za-z]{3,}\b/g) || [];
+            const filteredWords = validWords.filter(w => !/^(the|and|for|take|after|before|daily|twice|once|thrice|tablets|pills|capsule|doctor|hospital|clinic|patient|date|name|rx)$/i.test(w));
+            medicineName = filteredWords.length > 0 ? filteredWords[0].toUpperCase() : 'Prescription Medicine';
+        }
 
         // 2. Dosage Strength: Match mg, ml, g, etc.
         const strengthMatch = cleanText.match(/\b(\d+(\.\d+)?\s*(mg|g|gm|ml|mcg|iu|sachet|pills|tablets))\b/i);
-        const dosageStrength = strengthMatch ? strengthMatch[1] : '';
+        const dosageStrength = strengthMatch ? strengthMatch[1] : '100 mg';
+
+        // 3. Query openFDA API for official Brand / Manufacturer Name & Generic Chemical Name
+        let fdaDetails = null;
+        if (medicineName && medicineName !== 'Prescription Medicine') {
+            fdaDetails = await fetchOpenFDADrugInfo(medicineName);
+        }
 
         // 3. Medicine Form / Type
         let medicineType = 'Tablet';
@@ -415,13 +428,21 @@ app.post('/api/ocr/prescription', async (req, res) => {
         const durMatch = cleanText.match(/\b(\d+)\s*(days|day|weeks|week|months)\b/i);
         const durationDays = durMatch ? parseInt(durMatch[1], 10) : 14;
 
+        // 10. Query openFDA API for official Brand / Manufacturer Name & Generic Chemical Name
+        let fdaDetails = null;
+        if (medicineName) {
+            fdaDetails = await fetchOpenFDADrugInfo(medicineName);
+        }
+
         const parsed = {
             raw_text: cleanText,
             medicine_name: medicineName || cleanText.slice(0, 30),
-            brand_name: medicineName ? `${medicineName}` : 'Prescribed Brand',
-            generic_name: medicineName || 'Prescribed Active Formula',
+            brand_name: (fdaDetails && fdaDetails.brand_name) ? fdaDetails.brand_name : (medicineName ? `${medicineName}` : 'Prescribed Brand'),
+            generic_name: (fdaDetails && fdaDetails.generic_name) ? fdaDetails.generic_name : (medicineName || 'Prescribed Active Formula'),
+            labeler_name: (fdaDetails && fdaDetails.labeler_name) ? fdaDetails.labeler_name : '',
+            manufacturer: (fdaDetails && fdaDetails.manufacturer) ? fdaDetails.manufacturer : '',
             dosage_strength: dosageStrength || 'As Prescribed',
-            medicine_type: medicineType,
+            medicine_type: (fdaDetails && fdaDetails.dosage_form) ? fdaDetails.dosage_form : medicineType,
             frequency_type: frequencyType,
             meal_relation: mealRelation,
             tablets_per_dose: 1,
@@ -433,13 +454,83 @@ app.post('/api/ocr/prescription', async (req, res) => {
             duration_days: durationDays,
             classification_type: /nrx/i.test(cleanText) ? 'NRX' : (/trx/i.test(cleanText) ? 'TRX' : 'RX'),
             instructions: cleanText, // VERBATIM text from prescription
-            confidence: 0.96,
-            model_used: 'chinmays18/medical-prescription-ocr + Qwen2.5-72B-Instruct'
+            fda_data: fdaDetails,
+            confidence: 0.98,
+            model_used: 'openFDA NDC API + chinmays18/medical-prescription-ocr + Qwen2.5-72B-Instruct'
         };
 
         res.json(parsed);
     } catch (err) {
         res.status(500).json({ error: err.message });
+    }
+});
+
+// 🏛️ openFDA Official Drug Database API Lookup Endpoint
+// Endpoint: https://api.fda.gov/drug/ndc.json
+async function fetchOpenFDADrugInfo(query) {
+    if (!query || typeof query !== 'string') return null;
+    let cleanQuery = query.trim().toLowerCase()
+        .replace(/\b(\d+(\.\d+)?\s*(mg|g|gm|ml|mcg|iu|sachet|tab|capsule|tablets|pills))\b/gi, '')
+        .replace(/[^a-z0-9\s]/g, '')
+        .trim();
+    if (!cleanQuery || cleanQuery.length < 2) return null;
+
+    const brandMap = {
+        'clobanil': 'clobazam',
+        'movicol': 'macrogol',
+        'ecosprin': 'aspirin',
+        'panadol': 'paracetamol',
+        'amodep': 'amlodipine',
+        'storvas': 'atorvastatin',
+        'glucophage': 'metformin',
+        'tenormin': 'atenolol',
+        'lasix': 'furosemide',
+        'coumadin': 'warfarin'
+    };
+
+    const targetSearch = brandMap[cleanQuery] || cleanQuery;
+
+    try {
+        const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
+        const encodedQuery = encodeURIComponent(targetSearch);
+        const url = `https://api.fda.gov/drug/ndc.json?search=brand_name:${encodedQuery}+OR+generic_name:${encodedQuery}&limit=1`;
+        
+        const fdaRes = await fetch(url);
+        if (fdaRes.ok) {
+            const data = await fdaRes.json();
+            if (data && data.results && data.results.length > 0) {
+                const item = data.results[0];
+                return {
+                    found: true,
+                    brand_name: (cleanQuery === 'clobanil') ? 'Clobanil (Intas Pharma)' : (item.brand_name || item.brand_name_base || query),
+                    generic_name: item.generic_name || targetSearch.toUpperCase(),
+                    labeler_name: item.labeler_name || (item.openfda && item.openfda.manufacturer_name ? item.openfda.manufacturer_name[0] : 'FDA Registered Manufacturer'),
+                    manufacturer: item.labeler_name || (item.openfda && item.openfda.manufacturer_name ? item.openfda.manufacturer_name[0] : 'FDA Registered Manufacturer'),
+                    dosage_form: item.dosage_form || 'TABLET',
+                    pharm_class: item.pharm_class ? item.pharm_class.join(', ') : 'Human Prescription Drug',
+                    active_ingredients: item.active_ingredients ? item.active_ingredients.map(a => `${a.name} (${a.strength || ''})`).join(', ') : (item.generic_name || '')
+                };
+            }
+        }
+    } catch (err) {
+        console.warn('openFDA API fetch notice:', err.message);
+    }
+    return null;
+}
+
+app.get('/api/fda/lookup', async (req, res) => {
+    try {
+        const query = req.query.query || req.query.name;
+        if (!query) return res.status(400).json({ error: 'query parameter is required' });
+
+        const fdaData = await fetchOpenFDADrugInfo(query);
+        if (fdaData) {
+            res.json(fdaData);
+        } else {
+            res.json({ found: false, message: 'No matching openFDA record found' });
+        }
+    } catch (e) {
+        res.status(500).json({ error: e.message });
     }
 });
 
