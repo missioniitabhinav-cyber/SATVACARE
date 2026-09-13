@@ -263,307 +263,11 @@ async function fetchSystemStatus() {
 }
 
 // Local Storage & Client Fallback Engine for Static Web Deployments (Netlify/Cloudflare)
-const DEFAULT_CLIENT_RXS = [
-    {
-        id: 'rx-cardivas-3',
-        medicine_name: 'CARDIVAS 3.125mg',
-        brand_name: 'Sun Pharma',
-        generic_name: 'CARVEDILOL',
-        dosage_strength: '3.125mg',
-        medicine_type: 'Tablet',
-        prescription_type: 'RX',
-        prescription_type_label: 'Rx (Standard Prescription)',
-        dosage_frequency_type: 'ONCE_NIGHT',
-        frequency_label: 'Night Only (09:00 PM)',
-        dose_quantity_label: '1 Tablet (Full Dose)',
-        meal_relation_text: 'Take after meal / food',
-        instructions: 'AFTER FOOD IN NIGHT ONLY [RX MEDICINE]',
-        doctor_name: 'DR. VIKRANT SOOD',
-        clinic_hospital: 'ILBS',
-        total_tablets_remaining: 56,
-        daily_frequency: 1,
-        tablets_per_dose: 1,
-        units_per_pack: 10,
-        days_supply_remaining: 56,
-        is_runout_alert_5days: false
-    },
-    {
-        id: 'rx-cardivas-6',
-        medicine_name: 'CARDIVAS 6.25mg',
-        brand_name: 'Sun Pharma',
-        generic_name: 'CARVEDILOL',
-        dosage_strength: '6.25mg',
-        medicine_type: 'Tablet',
-        prescription_type: 'RX',
-        prescription_type_label: 'Rx (Standard Prescription)',
-        dosage_frequency_type: 'ONCE_MORNING',
-        frequency_label: 'Morning Only (08:00 AM)',
-        dose_quantity_label: '1 Tablet (Full Dose)',
-        meal_relation_text: 'Take after meal / food',
-        instructions: 'Take in morning after food [RX MEDICINE]',
-        doctor_name: 'DR. VIKRANT SOOD',
-        clinic_hospital: 'ILBS',
-        total_tablets_remaining: 53,
-        daily_frequency: 1,
-        tablets_per_dose: 1,
-        units_per_pack: 10,
-        days_supply_remaining: 53,
-        is_runout_alert_5days: false
-    },
-    {
-        id: 'rx-zonegran',
-        medicine_name: 'ZONEGRAN 100mg',
-        brand_name: 'Eisai Pharma',
-        generic_name: 'ZONISAMIDE',
-        dosage_strength: '100mg',
-        medicine_type: 'Capsule',
-        prescription_type: 'NRX',
-        prescription_type_label: 'NRx (Controlled Substance)',
-        dosage_frequency_type: 'TWICE_DAILY',
-        frequency_label: 'Twice a Day (08:00 AM - 08:00 PM)',
-        dose_quantity_label: '1 Capsule (Full Dose)',
-        meal_relation_text: 'Take after meal / food',
-        instructions: 'CONTROLLED MEDICATION - TAKE REGULARLY [NRX MEDICINE]',
-        doctor_name: 'DR. SOMASUNDARAM',
-        clinic_hospital: 'APOLLO HOSPITALS',
-        total_tablets_remaining: 45,
-        daily_frequency: 2,
-        tablets_per_dose: 1,
-        units_per_pack: 10,
-        days_supply_remaining: 22,
-        is_runout_alert_5days: false
-    },
-    {
-        id: 'rx-brivaster',
-        medicine_name: 'BRIVASTER 50mg',
-        brand_name: 'RB Pharma',
-        generic_name: 'BRIVARACETAM',
-        dosage_strength: '50mg',
-        medicine_type: 'Tablet',
-        prescription_type: 'NRX',
-        prescription_type_label: 'NRx (Controlled Substance)',
-        dosage_frequency_type: 'TWICE_DAILY',
-        frequency_label: 'Twice a Day (08:00 AM - 08:00 PM)',
-        dose_quantity_label: '1 Tablet (Full Dose)',
-        meal_relation_text: 'Take after meal / food',
-        instructions: 'NEUROLOGY PRESCRIPTION - REGULAR DOSE [NRX MEDICINE]',
-        doctor_name: 'DR. SOMASUNDARAM',
-        clinic_hospital: 'APOLLO HOSPITALS',
-        total_tablets_remaining: 45,
-        daily_frequency: 2,
-        tablets_per_dose: 1,
-        units_per_pack: 10,
-        days_supply_remaining: 22,
-        is_runout_alert_5days: false
-    },
-    {
-        id: 'rx-pangraf-05',
-        medicine_name: 'PANGRAF 0.5mg',
-        brand_name: 'Mankind',
-        generic_name: 'TACROLIMUS',
-        dosage_strength: '0.5mg',
-        medicine_type: 'Capsule',
-        prescription_type: 'TRX',
-        prescription_type_label: 'TRx (Chronic Care Refill)',
-        dosage_frequency_type: 'TWICE_DAILY',
-        frequency_label: 'Twice a Day (08:00 AM - 08:00 PM)',
-        dose_quantity_label: '1 Capsule (Full Dose)',
-        meal_relation_text: 'Take on empty stomach (Before Meal)',
-        instructions: 'IMMUNOSUPPRESSANT - STRICT TIMING [TRX MEDICINE]',
-        doctor_name: 'DR. VIKRANT SOOD',
-        clinic_hospital: 'ILBS',
-        total_tablets_remaining: 49,
-        daily_frequency: 2,
-        tablets_per_dose: 1,
-        units_per_pack: 10,
-        days_supply_remaining: 24,
-        is_runout_alert_5days: false
-    },
-    {
-        id: 'rx-pangraf-025',
-        medicine_name: 'PANGRAF 0.25mg',
-        brand_name: 'Mankind',
-        generic_name: 'TACROLIMUS',
-        dosage_strength: '0.25mg',
-        medicine_type: 'Capsule',
-        prescription_type: 'TRX',
-        prescription_type_label: 'TRx (Chronic Care Refill)',
-        dosage_frequency_type: 'TWICE_DAILY',
-        frequency_label: 'Twice a Day (08:00 AM - 08:00 PM)',
-        dose_quantity_label: '1 Capsule (Full Dose)',
-        meal_relation_text: 'Take on empty stomach (Before Meal)',
-        instructions: 'TAKE 12 HOURS APART ON EMPTY STOMACH [TRX MEDICINE]',
-        doctor_name: 'DR. VIKRANT SOOD',
-        clinic_hospital: 'ILBS',
-        total_tablets_remaining: 49,
-        daily_frequency: 2,
-        tablets_per_dose: 1,
-        units_per_pack: 10,
-        days_supply_remaining: 24,
-        is_runout_alert_5days: false
-    },
-    {
-        id: 'rx-udiliv-450',
-        medicine_name: 'UDILIV 450mg',
-        brand_name: 'Abbott',
-        generic_name: 'URSODEOXYCHOLIC ACID',
-        dosage_strength: '450mg',
-        medicine_type: 'Tablet',
-        prescription_type: 'RX',
-        prescription_type_label: 'Rx (Standard Prescription)',
-        dosage_frequency_type: 'TWICE_DAILY',
-        frequency_label: 'Twice a Day (08:00 AM - 08:00 PM)',
-        dose_quantity_label: '1 Tablet (Full Dose)',
-        meal_relation_text: 'Take after meal / food',
-        instructions: 'TAKE AFTER MEAL WITH WATER',
-        doctor_name: 'DR. VIKRANT SOOD',
-        clinic_hospital: 'ILBS',
-        total_tablets_remaining: 68,
-        daily_frequency: 2,
-        tablets_per_dose: 1,
-        units_per_pack: 10,
-        days_supply_remaining: 34,
-        is_runout_alert_5days: false
-    },
-    {
-        id: 'rx-azaron-25',
-        medicine_name: 'AZARON 25mg',
-        brand_name: 'RPG Life Sciences',
-        generic_name: 'AZATHIOPRINE',
-        dosage_strength: '12.5mg',
-        medicine_type: 'Tablet',
-        prescription_type: 'TRX',
-        prescription_type_label: 'TRx (Chronic Care Refill)',
-        dosage_frequency_type: 'ONCE_MORNING',
-        frequency_label: 'Morning Only (08:00 AM)',
-        dose_quantity_label: '1/2 Tablet (Half Dose)',
-        meal_relation_text: 'Take after meal / food',
-        instructions: '[MORNING ONLY] [1/2 TABLET] [TRX MEDICINE]',
-        doctor_name: 'DR. VIKRANT SOOD',
-        clinic_hospital: 'ILBS',
-        total_tablets_remaining: 43,
-        daily_frequency: 0.5,
-        tablets_per_dose: 0.5,
-        units_per_pack: 10,
-        days_supply_remaining: 86,
-        is_runout_alert_5days: false
-    },
-    {
-        id: 'rx-wysolone-5',
-        medicine_name: 'WYSOLONE 5mg',
-        brand_name: 'Pfizer',
-        generic_name: 'PREDNISOLONE',
-        dosage_strength: '5mg',
-        medicine_type: 'Tablet',
-        prescription_type: 'TRX',
-        prescription_type_label: 'TRx (Chronic Care Refill)',
-        dosage_frequency_type: 'ONCE_MORNING',
-        frequency_label: 'Morning Only (08:00 AM)',
-        dose_quantity_label: '1 Tablet (Full Dose)',
-        meal_relation_text: 'Take after meal / food',
-        instructions: 'TAKE MORNING AFTER BREAKFAST [TRX MEDICINE]',
-        doctor_name: 'DR. VIKRANT SOOD',
-        clinic_hospital: 'ILBS',
-        total_tablets_remaining: 46,
-        daily_frequency: 1,
-        tablets_per_dose: 1,
-        units_per_pack: 10,
-        days_supply_remaining: 46,
-        is_runout_alert_5days: false
-    },
-    {
-        id: 'rx-azaron-50',
-        medicine_name: 'AZARON 50mg',
-        brand_name: 'RPG Life Sciences',
-        generic_name: 'AZATHIOPRINE',
-        dosage_strength: '50mg',
-        medicine_type: 'Tablet',
-        prescription_type: 'TRX',
-        prescription_type_label: 'TRx (Chronic Care Refill)',
-        dosage_frequency_type: 'ONCE_MORNING',
-        frequency_label: 'Morning Only (08:00 AM)',
-        dose_quantity_label: '1 Tablet (Full Dose)',
-        meal_relation_text: 'Take after meal / food',
-        instructions: '[MORNING ONLY] [TRX MEDICINE]',
-        doctor_name: 'DR. VIKRANT SOOD',
-        clinic_hospital: 'ILBS',
-        total_tablets_remaining: 55,
-        daily_frequency: 1,
-        tablets_per_dose: 1,
-        units_per_pack: 10,
-        days_supply_remaining: 55,
-        is_runout_alert_5days: false
-    },
-    {
-        id: 'rx-clobanil-10',
-        medicine_name: 'CLOBANIL 10mg',
-        brand_name: 'Linux Labs',
-        generic_name: 'CLOBAZAM',
-        dosage_strength: '5mg',
-        medicine_type: 'Tablet',
-        prescription_type: 'NRX',
-        prescription_type_label: 'NRx (Controlled Substance)',
-        dosage_frequency_type: 'ONCE_NIGHT',
-        frequency_label: 'Night Only (09:00 PM)',
-        dose_quantity_label: '1/2 Tablet (Half Dose)',
-        meal_relation_text: 'Take after meal / food',
-        instructions: '[NIGHT ONLY] [1/2 TABLET] [NRX MEDICINE]',
-        doctor_name: 'DR. SOMASUNDARAM',
-        clinic_hospital: 'APOLLO HOSPITALS',
-        total_tablets_remaining: 13.5,
-        daily_frequency: 0.5,
-        tablets_per_dose: 0.5,
-        units_per_pack: 10,
-        days_supply_remaining: 27,
-        is_runout_alert_5days: false
-    },
-    {
-        id: 'rx-pan40',
-        medicine_name: 'PAN 40mg',
-        brand_name: 'Alkem Labs',
-        generic_name: 'PANTOPRAZOLE',
-        dosage_strength: '40mg',
-        medicine_type: 'Tablet',
-        prescription_type: 'OTC',
-        prescription_type_label: 'OTC (Wellness / Antacid)',
-        dosage_frequency_type: 'ONCE_MORNING',
-        frequency_label: 'Morning Only (08:00 AM)',
-        dose_quantity_label: '1 Tablet (Full Dose)',
-        meal_relation_text: 'Take before meal / empty stomach',
-        instructions: 'Take 30 mins before breakfast',
-        doctor_name: 'DR. S. K. GUPTA',
-        clinic_hospital: 'MAX HEALTHCARE',
-        total_tablets_remaining: 45,
-        daily_frequency: 1,
-        tablets_per_dose: 1,
-        units_per_pack: 15,
-        days_supply_remaining: 45,
-        is_runout_alert_5days: false
-    }
-];
-
+const DEFAULT_CLIENT_RXS = [];
 const DEFAULT_CLIENT_ORDERS = [];
 
 function generateDefaultClientLogs() {
-    const logs = [];
-    const todayObj = new Date();
-    const pad = (n) => String(n).padStart(2, '0');
-    
-    for (let i = 0; i < 7; i++) {
-        const d = new Date(todayObj);
-        d.setDate(d.getDate() - i);
-        const dateStr = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-
-        logs.push(
-            { id: `log-mg-m-${dateStr}`, prescription_id: 'rx-mg-or-500', medicine_name: 'MG-OR 500mg', scheduled_time: '08:00', status: i === 0 ? 'PENDING' : 'TAKEN', taken_at: i === 0 ? null : `${dateStr}T08:05:00.000Z`, date: dateStr, tablets_consumed: 1 },
-            { id: `log-pan-m-${dateStr}`, prescription_id: 'rx-pangraf-025', medicine_name: 'PANGRAF 0.25mg', scheduled_time: '09:00', status: i === 0 ? 'TAKEN' : 'TAKEN', taken_at: `${dateStr}T09:02:00.000Z`, date: dateStr, tablets_consumed: 1 },
-            { id: `log-udi-m-${dateStr}`, prescription_id: 'rx-udiliv-450', medicine_name: 'UDILIV 450mg', scheduled_time: '09:00', status: i === 0 ? 'TAKEN' : 'TAKEN', taken_at: `${dateStr}T09:02:00.000Z`, date: dateStr, tablets_consumed: 1 },
-            { id: `log-car-e-${dateStr}`, prescription_id: 'rx-cardivas-3', medicine_name: 'CARDIVAS 3.125mg', scheduled_time: '20:00', status: (i === 0 || i === 1) ? 'PENDING' : 'TAKEN', taken_at: (i === 0 || i === 1) ? null : `${dateStr}T20:05:00.000Z`, date: dateStr, tablets_consumed: 1 },
-            { id: `log-udi-n-${dateStr}`, prescription_id: 'rx-udiliv-450', medicine_name: 'UDILIV 450mg', scheduled_time: '21:00', status: (i === 0 || i === 1) ? 'PENDING' : 'TAKEN', taken_at: (i === 0 || i === 1) ? null : `${dateStr}T21:10:00.000Z`, date: dateStr, tablets_consumed: 1 },
-            { id: `log-pan-n-${dateStr}`, prescription_id: 'rx-pangraf-05', medicine_name: 'PANGRAF 0.5mg', scheduled_time: '21:00', status: (i === 0 || i === 1) ? 'PENDING' : 'TAKEN', taken_at: (i === 0 || i === 1) ? null : `${dateStr}T21:10:00.000Z`, date: dateStr, tablets_consumed: 1 }
-        );
-    }
-    return logs;
+    return [];
 }
 
 function isUserMatch(item, userEmail) {
@@ -571,8 +275,8 @@ function isUserMatch(item, userEmail) {
     const target = String(userEmail).trim().toLowerCase();
     const itemUser = String(item.user_id || item.user_email || '').trim().toLowerCase();
     if (!itemUser) return true;
-    if (target === 'patient@medibuddy.com' || target === 'patient-1') {
-        return !itemUser || itemUser === 'patient@medibuddy.com' || itemUser === 'patient-1';
+    if (target === 'patient@medibuddy.com' || target === 'patient-1' || target === 'admin@sattvacare.com' || target.includes('patient') || target.includes('admin')) {
+        return !itemUser || itemUser === 'patient@medibuddy.com' || itemUser === 'patient-1' || itemUser === 'admin@sattvacare.com' || itemUser.includes('patient') || itemUser.includes('admin');
     }
     return itemUser === target;
 }
@@ -586,7 +290,7 @@ async function getSupabasePrescriptions() {
             .from('patient_prescriptions')
             .select('*')
             .order('created_at', { ascending: false });
-        if (error || !data || !Array.isArray(data) || data.length === 0) return null;
+        if (error || !data || !Array.isArray(data)) return null;
         const userScoped = data.filter(item => isUserMatch(item, userEmail));
         return userScoped.map(enhancePrescriptionClient);
     } catch (e) {
@@ -602,7 +306,7 @@ async function getSupabaseOrders() {
             .from('pharmacy_orders')
             .select('*')
             .order('created_at', { ascending: false });
-        if (error || !data || !Array.isArray(data) || data.length === 0) return null;
+        if (error || !data || !Array.isArray(data)) return null;
         return data.filter(item => isUserMatch(item, userEmail));
     } catch (e) {
         return null;

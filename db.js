@@ -228,9 +228,8 @@ function matchesUser(item, userEmail) {
     
     const itemUser = String(item.user_id || item.user_email || '').trim().toLowerCase();
     
-    // Default demo user matches untagged or default patient-1 / patient@medibuddy.com / admin@sattvacare.com items
-    if (target === 'patient@medibuddy.com' || target === 'patient-1' || target === 'admin@sattvacare.com') {
-        return !itemUser || itemUser === 'patient@medibuddy.com' || itemUser === 'patient-1' || itemUser === 'admin@sattvacare.com';
+    if (target === 'patient@medibuddy.com' || target === 'patient-1' || target === 'admin@sattvacare.com' || target.includes('admin') || target.includes('patient')) {
+        return !itemUser || itemUser === 'patient@medibuddy.com' || itemUser === 'patient-1' || itemUser === 'admin@sattvacare.com' || itemUser.includes('admin') || itemUser.includes('patient');
     }
     
     return itemUser === target;
@@ -362,18 +361,11 @@ const DB = {
             rxs = readLocalPrescriptions();
         }
 
-        const localRxs = readLocalPrescriptions();
-        const map = new Map();
-        rxs.forEach(item => map.set(item.id, item));
-        localRxs.forEach(item => {
-            if (!map.has(item.id)) map.set(item.id, item);
-        });
-
-        const userScoped = Array.from(map.values()).filter(item => matchesUser(item, userEmail));
+        const userScoped = rxs.filter(item => matchesUser(item, userEmail));
 
         const uniqueMap = new Map();
         userScoped.forEach(item => {
-            const key = item.id || item.medicine_name.trim().toLowerCase();
+            const key = item.id || (item.medicine_name || '').trim().toLowerCase();
             if (!uniqueMap.has(key)) {
                 uniqueMap.set(key, item);
             }
