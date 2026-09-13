@@ -1,1 +1,15 @@
-[]
+[
+  {
+    "id": "log-1789054868141",
+    "user_id": "admin@sattvacare.com",
+    "user_email": "admin@sattvacare.com",
+    "prescription_id": "rx-1788522041657",
+    "medicine_name": "UDILIV 450",
+    "brand_name": "Abbott Laboratories",
+    "scheduled_time": "MORNING",
+    "status": "TAKEN",
+    "tablets_consumed": 1,
+    "tablets_remaining_after": 78,
+    "taken_at": "2026-09-08T12:00:00.000Z"
+  }
+]

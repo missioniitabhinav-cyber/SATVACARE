@@ -1128,6 +1128,50 @@ function getRxCategoryBadgeHTML(rxType) {
     return `<span class="badge-rx px-2.5 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wider inline-flex items-center"><i class="fa-solid fa-prescription mr-1"></i> Rx Prescribed</span>`;
 }
 
+function getExpiryStatusBadgeHTML(expiryDate, batchNumber, batchStripCount) {
+    let batchInfo = '';
+    if (batchNumber) {
+        const stripsText = batchStripCount ? ` (${batchStripCount} Strip${batchStripCount > 1 ? 's' : ''})` : '';
+        batchInfo = `<span class="px-2.5 py-0.5 bg-slate-100 text-slate-800 border border-slate-300 rounded-lg text-[10px] font-extrabold shadow-xs inline-flex items-center gap-1"><i class="fa-solid fa-barcode text-teal-600"></i>Batch: ${escapeHtml(batchNumber)}${stripsText}</span>`;
+    }
+
+    if (!expiryDate) return batchInfo;
+    const expDate = new Date(expiryDate + 'T00:00:00');
+    if (isNaN(expDate.getTime())) return batchInfo;
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const diffTime = expDate - today;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const formattedDate = expDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric', day: 'numeric' });
+
+    let expBadge = '';
+    if (diffDays < 0) {
+        const ago = Math.abs(diffDays);
+        expBadge = `<span class="px-2.5 py-0.5 bg-rose-100 text-rose-800 border border-rose-300 rounded-lg text-[10px] font-black shadow-xs inline-flex items-center gap-1"><i class="fa-solid fa-triangle-exclamation text-rose-600"></i> EXPIRED (${ago}d ago)</span>`;
+    } else if (diffDays <= 60) {
+        expBadge = `<span class="px-2.5 py-0.5 bg-amber-100 text-amber-900 border border-amber-300 rounded-lg text-[10px] font-black shadow-xs inline-flex items-center gap-1"><i class="fa-solid fa-hourglass-half text-amber-600"></i> Expiring Soon (${diffDays}d left)</span>`;
+    } else {
+        expBadge = `<span class="px-2.5 py-0.5 bg-slate-100 text-slate-700 border border-slate-300 rounded-lg text-[10px] font-extrabold shadow-xs inline-flex items-center gap-1"><i class="fa-solid fa-calendar-xmark text-slate-500"></i> Exp: ${formattedDate}</span>`;
+    }
+
+    return `${batchInfo} ${expBadge}`.trim();
+}
+
+function autoCalcTotalPills() {
+    const stripsEl = document.getElementById('rx-batch-strip-count');
+    const pillsPerStripEl = document.getElementById('rx-units-per-pack');
+    const totalPillsEl = document.getElementById('rx-total-pills');
+    if (stripsEl && pillsPerStripEl && totalPillsEl) {
+        const strips = parseFloat(stripsEl.value) || 0;
+        const perStrip = parseFloat(pillsPerStripEl.value) || 0;
+        if (strips > 0 && perStrip > 0) {
+            totalPillsEl.value = parseFloat((strips * perStrip).toFixed(2));
+        }
+    }
+}
+
 // Date Schedule & 7-Day Tracker Functions
 function selectScheduleDate(dateStr) {
     state.selectedDate = dateStr;
@@ -1286,11 +1330,22 @@ function renderScheduleCards() {
                             <h3 class="text-lg font-black text-slate-900 mt-2.5 tracking-tight">${escapeHtml(s.medicine_name)}</h3>
                             ${brandDisplay}
                             <span class="text-xs text-slate-600 font-medium block mt-0.5">${escapeHtml(s.dosage_strength || 'Standard Dosage')} • ${escapeHtml(s.medicine_type || 'Tablet')}</span>
+                            
+                            <div class="flex flex-wrap items-center gap-1.5 mt-2">
+                                ${getExpiryStatusBadgeHTML(s.expiry_date, s.batch_number, s.batch_strip_count)}
+                            </div>
                         </div>
                         <button onclick="openEditPrescriptionModal('${s.id}')" title="Edit Record" class="btn-glass p-2.5 text-xs rounded-xl transition">
                             <i class="fa-solid fa-pen-to-square"></i>
                         </button>
                     </div>
+
+                    ${s.generic_name ? `
+                        <div class="mt-3 p-2.5 rounded-xl bg-teal-50/90 border border-teal-200/90 text-xs shadow-xs">
+                            <span class="text-[10px] font-black uppercase text-teal-800 tracking-widest block flex items-center gap-1"><i class="fa-solid fa-flask text-teal-600"></i> Generic Chemical Composition</span>
+                            <span class="text-slate-900 font-extrabold block break-words whitespace-normal leading-snug mt-0.5">${escapeHtml(s.generic_name)}</span>
+                        </div>
+                    ` : ''}
 
                     <!-- Medical Instructions & Stock Bar -->
                     <div class="mt-3 card-inner-box p-3.5 text-xs space-y-2">
@@ -1570,6 +1625,10 @@ function renderCabinetGrid() {
                             <h3 class="text-base font-black text-slate-900 mt-2.5 tracking-tight">${escapeHtml(p.medicine_name)}</h3>
                             ${p.brand_name ? `<span class="text-xs text-teal-700 font-bold block">Brand: ${escapeHtml(p.brand_name)}</span>` : ''}
                             <span class="text-xs text-slate-600 block font-medium mt-0.5">${escapeHtml(p.dosage_strength || 'Prescription')}</span>
+                            
+                            <div class="flex flex-wrap items-center gap-1.5 mt-2">
+                                ${getExpiryStatusBadgeHTML(p.expiry_date, p.batch_number, p.batch_strip_count)}
+                            </div>
                         </div>
                         <div class="flex items-center gap-1.5">
                             <button onclick="openEditPrescriptionModal('${p.id}')" title="Edit Record" class="btn-glass p-2 text-xs rounded-xl transition">
@@ -1580,6 +1639,13 @@ function renderCabinetGrid() {
                             </button>
                         </div>
                     </div>
+
+                    ${p.generic_name ? `
+                        <div class="mt-3 p-2.5 rounded-xl bg-teal-50/90 border border-teal-200/90 text-xs shadow-xs">
+                            <span class="text-[10px] font-black uppercase text-teal-800 tracking-widest block flex items-center gap-1"><i class="fa-solid fa-flask text-teal-600"></i> Generic Chemical Composition</span>
+                            <span class="text-slate-900 font-extrabold block break-words whitespace-normal leading-snug mt-0.5">${escapeHtml(p.generic_name)}</span>
+                        </div>
+                    ` : ''}
 
                     <div class="mt-3.5 grid grid-cols-2 gap-2 card-inner-box p-3.5 text-xs shadow-inner">
                         <div class="bg-teal-50/80 p-2.5 rounded-xl border border-teal-200/70">
@@ -1787,14 +1853,20 @@ function openAddPrescriptionModal() {
     if (doseSelect) doseSelect.value = '1';
     const rxTypeSelect = document.getElementById('rx-classification-type');
     if (rxTypeSelect) rxTypeSelect.value = 'RX';
+    if (document.getElementById('rx-batch-number')) document.getElementById('rx-batch-number').value = '';
+    if (document.getElementById('rx-batch-strip-count')) document.getElementById('rx-batch-strip-count').value = '3';
+    if (document.getElementById('rx-expiry-date')) document.getElementById('rx-expiry-date').value = '';
     showModal('rx-modal');
 }
 
 async function openEditPrescriptionModal(id) {
     try {
-        const res = await fetch(`/api/patient/prescriptions/${id}?t=${Date.now()}`, { headers: getUserHeaders() });
-        if (!res.ok) throw new Error('Prescription not found');
-        const rx = await res.json();
+        let rx = state.prescriptions.find(p => p.id === id);
+        if (!rx) {
+            const res = await fetch(`/api/patient/prescriptions/${id}?t=${Date.now()}`, { headers: getUserHeaders() });
+            if (!res.ok) throw new Error('Prescription not found');
+            rx = await res.json();
+        }
 
         document.getElementById('rx-modal-title').innerHTML = '<i class="fa-solid fa-pen-to-square text-teal-400"></i> Edit Medicine & Dosage Plan';
         document.getElementById('rx-id').value = rx.id;
@@ -1814,6 +1886,9 @@ async function openEditPrescriptionModal(id) {
         document.getElementById('rx-meal-relation').value = String(rx.meal_relation || 'AFTER_MEAL').toUpperCase();
         document.getElementById('rx-total-pills').value = rx.total_tablets_remaining || 30;
         document.getElementById('rx-units-per-pack').value = rx.units_per_pack || 10;
+        if (document.getElementById('rx-batch-number')) document.getElementById('rx-batch-number').value = rx.batch_number || '';
+        if (document.getElementById('rx-batch-strip-count')) document.getElementById('rx-batch-strip-count').value = rx.batch_strip_count || Math.ceil((rx.total_tablets_remaining || 30) / (rx.units_per_pack || 10));
+        if (document.getElementById('rx-expiry-date')) document.getElementById('rx-expiry-date').value = rx.expiry_date || '';
         document.getElementById('rx-doctor').value = rx.doctor_name || '';
         document.getElementById('rx-hospital').value = rx.clinic_hospital || '';
         document.getElementById('rx-number').value = rx.prescription_number || '';
@@ -1847,6 +1922,9 @@ async function handleRxSubmit(e) {
         meal_relation: document.getElementById('rx-meal-relation').value,
         total_tablets_remaining: parseFloat(document.getElementById('rx-total-pills').value) || 30,
         units_per_pack: parseInt(document.getElementById('rx-units-per-pack').value, 10) || 10,
+        batch_number: document.getElementById('rx-batch-number') ? document.getElementById('rx-batch-number').value : '',
+        batch_strip_count: document.getElementById('rx-batch-strip-count') ? (parseInt(document.getElementById('rx-batch-strip-count').value, 10) || 1) : 1,
+        expiry_date: document.getElementById('rx-expiry-date') ? (document.getElementById('rx-expiry-date').value || null) : null,
         doctor_name: document.getElementById('rx-doctor').value,
         clinic_hospital: document.getElementById('rx-hospital').value,
         prescription_number: document.getElementById('rx-number').value,
@@ -1867,20 +1945,35 @@ async function handleRxSubmit(e) {
 
         if (!res && state.supabaseClient) {
             const userEmail = (state.currentUser && state.currentUser.email) ? state.currentUser.email : 'patient-1';
+            let err = null;
             if (id) {
-                await state.supabaseClient.from('patient_prescriptions').update({
+                const res1 = await state.supabaseClient.from('patient_prescriptions').update({
                     ...payload,
                     updated_at: new Date().toISOString()
                 }).eq('id', id);
+                err = res1.error;
             } else {
                 const newId = 'rx-' + Date.now();
-                await state.supabaseClient.from('patient_prescriptions').insert([{
+                const res2 = await state.supabaseClient.from('patient_prescriptions').insert([{
                     id: newId,
                     user_id: userEmail,
                     ...payload,
                     created_at: new Date().toISOString(),
                     updated_at: new Date().toISOString()
                 }]);
+                err = res2.error;
+            }
+
+            if (err && err.message && (err.message.includes('batch_number') || err.message.includes('expiry_date') || err.message.includes('batch_strip_count'))) {
+                const cleanPayload = { ...payload };
+                delete cleanPayload.batch_number;
+                delete cleanPayload.batch_strip_count;
+                delete cleanPayload.expiry_date;
+                if (id) {
+                    await state.supabaseClient.from('patient_prescriptions').update({ ...cleanPayload, updated_at: new Date().toISOString() }).eq('id', id);
+                } else {
+                    await state.supabaseClient.from('patient_prescriptions').insert([{ id: 'rx-' + Date.now(), user_id: userEmail, ...cleanPayload, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }]);
+                }
             }
         }
 

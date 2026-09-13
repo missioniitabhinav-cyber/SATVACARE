@@ -27,7 +27,10 @@
     "storage_condition": "ROOM_TEMP",
     "prescription_type": "RX",
     "tablets_per_dose": 1,
-    "units_per_pack": 10
+    "units_per_pack": 10,
+    "batch_number": "BATCH-2026-X1",
+    "batch_strip_count": 6,
+    "expiry_date": "2027-10-31"
   },
   {
     "id": "rx-1788510623626",
@@ -57,7 +60,10 @@
     "storage_condition": "ROOM_TEMP",
     "prescription_type": "RX",
     "tablets_per_dose": 1,
-    "units_per_pack": 10
+    "units_per_pack": 10,
+    "batch_number": "BATCH-2026-B4",
+    "batch_strip_count": 6,
+    "expiry_date": "2027-12-15"
   },
   {
     "id": "rx-1788510898027",
@@ -87,7 +93,10 @@
     "storage_condition": "ROOM_TEMP",
     "prescription_type": "NRX",
     "tablets_per_dose": 1,
-    "units_per_pack": 10
+    "units_per_pack": 10,
+    "batch_number": "BATCH-2025-M9",
+    "batch_strip_count": 6,
+    "expiry_date": "2026-11-10"
   },
   {
     "id": "rx-1788511056204",
@@ -117,7 +126,10 @@
     "storage_condition": "ROOM_TEMP",
     "prescription_type": "TRX",
     "tablets_per_dose": 1,
-    "units_per_pack": 10
+    "units_per_pack": 10,
+    "batch_number": "BATCH-2026-Z7",
+    "batch_strip_count": 8,
+    "expiry_date": "2027-06-30"
   },
   {
     "id": "rx-1788513043079",
@@ -147,7 +159,10 @@
     "storage_condition": "PROTECT_LIGHT",
     "prescription_type": "TRX",
     "tablets_per_dose": 0.5,
-    "units_per_pack": 10
+    "units_per_pack": 10,
+    "batch_number": "BATCH-2026-K3",
+    "batch_strip_count": 2,
+    "expiry_date": "2028-03-31"
   },
   {
     "id": "rx-1788513998926",
@@ -177,7 +192,10 @@
     "storage_condition": "PROTECT_LIGHT",
     "prescription_type": "NRX",
     "tablets_per_dose": 1,
-    "units_per_pack": 10
+    "units_per_pack": 10,
+    "batch_number": "BATCH-2026-X1",
+    "batch_strip_count": 5,
+    "expiry_date": "2027-10-31"
   },
   {
     "id": "rx-1788514150897",
@@ -207,7 +225,10 @@
     "storage_condition": "PROTECT_LIGHT",
     "prescription_type": "TRX",
     "tablets_per_dose": 1,
-    "units_per_pack": 10
+    "units_per_pack": 10,
+    "batch_number": "BATCH-2026-B4",
+    "batch_strip_count": 7,
+    "expiry_date": "2027-12-15"
   },
   {
     "id": "rx-1788514253289",
@@ -237,7 +258,10 @@
     "storage_condition": "REFRIGERATE",
     "prescription_type": "NRX",
     "tablets_per_dose": 1,
-    "units_per_pack": 10
+    "units_per_pack": 10,
+    "batch_number": "BATCH-2025-M9",
+    "batch_strip_count": 2,
+    "expiry_date": "2026-11-10"
   },
   {
     "id": "rx-1788514357766",
@@ -267,7 +291,10 @@
     "storage_condition": "REFRIGERATE",
     "prescription_type": "TRX",
     "tablets_per_dose": 1,
-    "units_per_pack": 10
+    "units_per_pack": 10,
+    "batch_number": "BATCH-2026-Z7",
+    "batch_strip_count": 1,
+    "expiry_date": "2027-06-30"
   },
   {
     "id": "rx-1788514496864",
@@ -297,7 +324,10 @@
     "storage_condition": "PROTECT_LIGHT",
     "prescription_type": "RX",
     "tablets_per_dose": 1,
-    "units_per_pack": 10
+    "units_per_pack": 10,
+    "batch_number": "BATCH-2026-K3",
+    "batch_strip_count": 8,
+    "expiry_date": "2028-03-31"
   },
   {
     "id": "rx-1788514628284",
@@ -327,7 +357,10 @@
     "storage_condition": "PROTECT_LIGHT",
     "prescription_type": "RX",
     "tablets_per_dose": 1,
-    "units_per_pack": 10
+    "units_per_pack": 10,
+    "batch_number": "BATCH-2026-X1",
+    "batch_strip_count": 6,
+    "expiry_date": "2027-10-31"
   },
   {
     "id": "rx-1788515506301",
@@ -357,7 +390,10 @@
     "storage_condition": "PROTECT_LIGHT",
     "prescription_type": "NRX",
     "tablets_per_dose": 0.5,
-    "units_per_pack": 10
+    "units_per_pack": 10,
+    "batch_number": "BATCH-2026-B4",
+    "batch_strip_count": 2,
+    "expiry_date": "2027-12-15"
   },
   {
     "id": "rx-1788521369579",
@@ -387,7 +423,10 @@
     "storage_condition": "PROTECT_LIGHT",
     "prescription_type": "RX",
     "tablets_per_dose": 1,
-    "units_per_pack": 10
+    "units_per_pack": 10,
+    "batch_number": "BATCH-2025-M9",
+    "batch_strip_count": 6,
+    "expiry_date": "2026-11-10"
   },
   {
     "id": "rx-1788521519308",
@@ -417,7 +456,10 @@
     "storage_condition": "PROTECT_LIGHT",
     "prescription_type": "RX",
     "tablets_per_dose": 1,
-    "units_per_pack": 10
+    "units_per_pack": 10,
+    "batch_number": "BATCH-2026-Z7",
+    "batch_strip_count": 5,
+    "expiry_date": "2027-06-30"
   },
   {
     "id": "rx-1788521640546",
@@ -447,7 +489,10 @@
     "storage_condition": "PROTECT_LIGHT",
     "prescription_type": "NRX",
     "tablets_per_dose": 1,
-    "units_per_pack": 10
+    "units_per_pack": 10,
+    "batch_number": "BATCH-2026-K3",
+    "batch_strip_count": 4,
+    "expiry_date": "2028-03-31"
   },
   {
     "id": "rx-1788521747634",
@@ -477,7 +522,10 @@
     "storage_condition": "PROTECT_LIGHT",
     "prescription_type": "NRX",
     "tablets_per_dose": 1,
-    "units_per_pack": 10
+    "units_per_pack": 10,
+    "batch_number": "BATCH-2026-X1",
+    "batch_strip_count": 4,
+    "expiry_date": "2027-10-31"
   },
   {
     "id": "rx-1788521831415",
@@ -507,7 +555,10 @@
     "storage_condition": "REFRIGERATE",
     "prescription_type": "TRX",
     "tablets_per_dose": 1,
-    "units_per_pack": 10
+    "units_per_pack": 10,
+    "batch_number": "BATCH-2026-B4",
+    "batch_strip_count": 4,
+    "expiry_date": "2027-12-15"
   },
   {
     "id": "rx-1788521897455",
@@ -537,7 +588,10 @@
     "storage_condition": "PROTECT_LIGHT",
     "prescription_type": "TRX",
     "tablets_per_dose": 1,
-    "units_per_pack": 10
+    "units_per_pack": 10,
+    "batch_number": "BATCH-2025-M9",
+    "batch_strip_count": 4,
+    "expiry_date": "2026-11-10"
   },
   {
     "id": "rx-1788522041657",
@@ -548,7 +602,7 @@
     "instructions": "",
     "daily_frequency": 2,
     "dose_times": null,
-    "total_tablets_remaining": 79,
+    "total_tablets_remaining": 78,
     "refill_threshold_days": 5,
     "unit_price": 0,
     "doctor_name": "DR.VIKRANT SOOD",
@@ -557,7 +611,7 @@
     "start_date": "2026-09-04",
     "end_date": null,
     "created_at": "2026-09-04T11:40:41.657+00:00",
-    "updated_at": "2026-09-08T06:14:08.895+00:00",
+    "updated_at": "2026-09-10T15:41:08.477Z",
     "brand_name": "Abbott Laboratories",
     "generic_name": "URSODEOXYCHOLIC ACID",
     "dosage_frequency_type": "TWICE_DAILY",
@@ -567,7 +621,18 @@
     "storage_condition": "ROOM_TEMP",
     "prescription_type": "RX",
     "tablets_per_dose": 1,
-    "units_per_pack": 10
+    "units_per_pack": 10,
+    "days_supply_remaining": 39,
+    "is_runout_alert_5days": false,
+    "is_out_of_stock": false,
+    "frequency_label": "Twice a Day (08:00 AM - 08:00 PM)",
+    "prescription_type_label": "Rx (Standard Prescription)",
+    "dose_quantity_label": "1 Tablet (Full Dose)",
+    "meal_relation_text": "Take after meal / food",
+    "user_email": "admin@sattvacare.com",
+    "batch_number": "BATCH-2026-Z7",
+    "batch_strip_count": 8,
+    "expiry_date": "2027-06-30"
   },
   {
     "id": "rx-1788522143013",
@@ -597,7 +662,10 @@
     "storage_condition": "PROTECT_LIGHT",
     "prescription_type": "TRX",
     "tablets_per_dose": 0.5,
-    "units_per_pack": 10
+    "units_per_pack": 10,
+    "batch_number": "BATCH-2026-K3",
+    "batch_strip_count": 5,
+    "expiry_date": "2028-03-31"
   },
   {
     "id": "rx-1788522223009",
@@ -627,7 +695,10 @@
     "storage_condition": "PROTECT_LIGHT",
     "prescription_type": "TRX",
     "tablets_per_dose": 1,
-    "units_per_pack": 10
+    "units_per_pack": 10,
+    "batch_number": "BATCH-2026-X1",
+    "batch_strip_count": 5,
+    "expiry_date": "2027-10-31"
   },
   {
     "id": "rx-1788522314356",
@@ -657,7 +728,10 @@
     "storage_condition": "PROTECT_LIGHT",
     "prescription_type": "TRX",
     "tablets_per_dose": 1,
-    "units_per_pack": 10
+    "units_per_pack": 10,
+    "batch_number": "BATCH-2026-B4",
+    "batch_strip_count": 6,
+    "expiry_date": "2027-12-15"
   },
   {
     "id": "rx-1788522916922",
@@ -687,7 +761,10 @@
     "storage_condition": "PROTECT_LIGHT",
     "prescription_type": "NRX",
     "tablets_per_dose": 0.5,
-    "units_per_pack": 10
+    "units_per_pack": 10,
+    "batch_number": "BATCH-2025-M9",
+    "batch_strip_count": 1,
+    "expiry_date": "2026-11-10"
   },
   {
     "id": "rx-1788522989084",
@@ -725,6 +802,9 @@
     "prescription_type_label": "Rx (Standard Prescription)",
     "dose_quantity_label": "1 Tablet (Full Dose)",
     "meal_relation_text": "Take after meal / food",
-    "user_email": "admin@sattvacare.com"
+    "user_email": "admin@sattvacare.com",
+    "batch_number": "BATCH-2026-Z7",
+    "batch_strip_count": 2,
+    "expiry_date": "2027-06-30"
   }
 ]

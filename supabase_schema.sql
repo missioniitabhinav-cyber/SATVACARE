@@ -102,6 +102,9 @@ ALTER TABLE public.patient_prescriptions ADD COLUMN IF NOT EXISTS clinic_hospita
 ALTER TABLE public.patient_prescriptions ADD COLUMN IF NOT EXISTS duration_days INTEGER;
 ALTER TABLE public.patient_prescriptions ADD COLUMN IF NOT EXISTS storage_condition TEXT DEFAULT 'ROOM_TEMP';
 ALTER TABLE public.patient_prescriptions ADD COLUMN IF NOT EXISTS units_per_pack INTEGER DEFAULT 10;
+ALTER TABLE public.patient_prescriptions ADD COLUMN IF NOT EXISTS batch_number TEXT;
+ALTER TABLE public.patient_prescriptions ADD COLUMN IF NOT EXISTS batch_strip_count INTEGER DEFAULT 1;
+ALTER TABLE public.patient_prescriptions ADD COLUMN IF NOT EXISTS expiry_date DATE;
 
 ALTER TABLE public.patient_prescriptions ALTER COLUMN total_tablets_remaining TYPE NUMERIC USING total_tablets_remaining::NUMERIC;
 ALTER TABLE public.patient_prescriptions ALTER COLUMN daily_frequency TYPE NUMERIC USING daily_frequency::NUMERIC;

@@ -260,6 +260,9 @@ function sanitizeDbPayload(rx, userEmail = 'patient@medibuddy.com') {
         prescription_number: rx.prescription_number || '',
         duration_days: rx.duration_days ? parseInt(rx.duration_days, 10) : null,
         storage_condition: rx.storage_condition || 'ROOM_TEMP',
+        batch_number: rx.batch_number || '',
+        batch_strip_count: rx.batch_strip_count ? parseInt(rx.batch_strip_count, 10) : 1,
+        expiry_date: rx.expiry_date || null,
         created_at: rx.created_at || new Date().toISOString(),
         updated_at: new Date().toISOString()
     };
