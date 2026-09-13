@@ -3363,6 +3363,7 @@ function openSymptomModal() {
         select.innerHTML = `<option value="">-- General / Unlinked Symptom --</option>` +
             (state.schedule || []).map(s => `<option value="${escapeHtml(s.medicine_name)}">${escapeHtml(s.medicine_name)} (${escapeHtml(s.dosage_strength || 'Tablet')})</option>`).join('');
     }
+    renderSymptomHistory();
     showModal('symptom-modal');
 }
 
@@ -3370,9 +3371,71 @@ function closeSymptomModal() {
     hideModal('symptom-modal');
 }
 
+function renderSymptomHistory() {
+    const container = document.getElementById('symptom-history-list');
+    const badge = document.getElementById('symptom-count-badge');
+    if (!container) return;
+
+    const logKey = getClientStorageKey('symptoms');
+    const symptoms = JSON.parse(localStorage.getItem(logKey) || '[]');
+
+    if (badge) badge.innerText = `${symptoms.length} Logged`;
+
+    if (symptoms.length === 0) {
+        container.innerHTML = `
+            <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl text-center text-slate-500 font-bold text-[11px]">
+                No side-effects or symptoms logged yet.
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = symptoms.map((item, idx) => {
+        let sevClass = 'bg-emerald-50 text-emerald-800 border-emerald-200';
+        let sevIcon = '🟢';
+        if (item.severity === 'MODERATE') {
+            sevClass = 'bg-amber-50 text-amber-800 border-amber-200';
+            sevIcon = '🟡';
+        } else if (item.severity === 'SEVERE') {
+            sevClass = 'bg-rose-50 text-rose-800 border-rose-200';
+            sevIcon = '🔴';
+        }
+
+        const dateStr = item.logged_at ? new Date(item.logged_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Recently';
+
+        return `
+            <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-xs">
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span class="font-extrabold text-slate-900">${escapeHtml(item.symptom_name)}</span>
+                        <span class="px-2 py-0.5 rounded-md border text-[10px] font-black ${sevClass}">${sevIcon} ${item.severity || 'MILD'}</span>
+                    </div>
+                    <div class="text-[11px] text-slate-500 font-medium mt-0.5">
+                        ${item.linked_medicine ? `💊 Linked: <strong>${escapeHtml(item.linked_medicine)}</strong> • ` : ''}${dateStr}
+                    </div>
+                </div>
+                <button onclick="deleteSymptomLog(${idx})" class="text-slate-400 hover:text-rose-600 transition p-1" title="Delete symptom entry">
+                    <i class="fa-solid fa-trash text-xs"></i>
+                </button>
+            </div>
+        `;
+    }).join('');
+}
+
+function deleteSymptomLog(index) {
+    const logKey = getClientStorageKey('symptoms');
+    let symptoms = JSON.parse(localStorage.getItem(logKey) || '[]');
+    symptoms.splice(index, 1);
+    localStorage.setItem(logKey, JSON.stringify(symptoms));
+    renderSymptomHistory();
+    renderVitalsWidget();
+    showToast('Symptom entry deleted.', 'info');
+}
+
 function handleSymptomSubmit(e) {
     e.preventDefault();
-    const name = document.getElementById('symptom-name').value.trim();
+    const nameInput = document.getElementById('symptom-name');
+    const name = nameInput.value.trim();
     const rx = document.getElementById('symptom-linked-rx').value;
     const severity = document.getElementById('symptom-severity').value;
 
@@ -3389,6 +3452,8 @@ function handleSymptomSubmit(e) {
     });
     localStorage.setItem(logKey, JSON.stringify(symptoms));
 
+    nameInput.value = '';
     showToast(`🩺 Symptom logged successfully (${severity})`, 'success');
-    closeSymptomModal();
+    renderSymptomHistory();
+    renderVitalsWidget();
 }
