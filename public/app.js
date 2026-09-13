@@ -3179,23 +3179,88 @@ async function deleteVaultDocument(id) {
     fetchVaultDocuments();
 }
 
-// 🚨 Emergency Caregiver SOS Handlers
+// 🚨 Emergency Caregiver SOS & Rapid Hospital Finder Engine
+let currentSosGpsLocation = null;
+
 function triggerEmergencySOS() {
     const modal = document.getElementById('emergency-sos-modal');
     const preview = document.getElementById('sos-message-preview');
+    const statusEl = document.getElementById('sos-location-status');
+    const badgeEl = document.getElementById('sos-gps-accuracy-badge');
+    const hospitalLink = document.getElementById('sos-nearby-hospitals-link');
+    
     const userEmail = (state.currentUser && state.currentUser.email) ? state.currentUser.email : 'patient@medibuddy.com';
     const activeMeds = (state.schedule || []).map(s => `${s.medicine_name} (${s.dosage_strength || 'Tablet'})`).join(', ');
+    const timeStr = new Date().toLocaleString();
 
-    let text = `🚨 *EMERGENCY MEDICAL SOS ALERT*\n`;
-    text += `👤 *Patient:* ${userEmail}\n`;
-    text += `🕒 *Time:* ${new Date().toLocaleString()}\n`;
-    text += `💊 *Current Medications:* ${activeMeds || 'None registered'}\n`;
-    text += `⚠️ *Urgent Action Required:* Patient triggered emergency medical assistance alert. Please contact or check on patient immediately.`;
-
-    if (preview) preview.innerText = text;
+    // 1. Open modal INSTANTLY (0 sec latency)
     if (modal) {
         modal.classList.remove('hidden');
         setTimeout(() => modal.classList.remove('opacity-0'), 10);
+    }
+
+    // Helper to build real-time emergency dispatch message
+    function buildSosText(locationUrl, accuracyText) {
+        let text = `🚨 *URGENT MEDICAL EMERGENCY SOS*\n`;
+        text += `👤 *Patient:* ${userEmail}\n`;
+        text += `🕒 *Time:* ${timeStr}\n`;
+        if (locationUrl) {
+            text += `📍 *Live GPS Location:* ${locationUrl}\n`;
+        } else {
+            text += `📍 *Live Location:* (Fetching GPS / Permission Pending)\n`;
+        }
+        if (accuracyText) text += `🎯 *GPS Accuracy:* ${accuracyText}\n`;
+        text += `💊 *Current Medications:* ${activeMeds || 'None registered'}\n`;
+        text += `⚠️ *URGENT:* Patient requires immediate emergency medical care! Check on patient or dispatch ambulance now.`;
+        return text;
+    }
+
+    // 2. Initial instant message (0 sec)
+    if (preview) preview.innerText = buildSosText(null, null);
+
+    // 3. Fast High-Accuracy Geolocation Detection (1-3 seconds)
+    if ('geolocation' in navigator) {
+        if (statusEl) statusEl.innerHTML = `<i class="fa-solid fa-satellite-dish text-amber-500 animate-pulse"></i> Locating patient live GPS (1-3s)...`;
+        if (badgeEl) badgeEl.innerText = 'Locating GPS...';
+
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                const lat = pos.coords.latitude.toFixed(6);
+                const lng = pos.coords.longitude.toFixed(6);
+                const acc = Math.round(pos.coords.accuracy);
+                const mapsUrl = `https://maps.google.com/?q=${lat},${lng}`;
+                currentSosGpsLocation = mapsUrl;
+
+                if (statusEl) statusEl.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-600"></i> Live GPS Acquired (${lat}, ${lng})`;
+                if (badgeEl) {
+                    badgeEl.innerText = `GPS Acc: ~${acc}m`;
+                    badgeEl.className = 'text-[9px] font-bold px-2 py-0.5 bg-emerald-100 text-emerald-900 rounded-md';
+                }
+                if (hospitalLink) {
+                    hospitalLink.href = `https://www.google.com/maps/search/hospitals+near+me/@${lat},${lng},15z`;
+                }
+                if (preview) {
+                    preview.innerText = buildSosText(mapsUrl, `Within ~${acc} meters`);
+                }
+            },
+            (err) => {
+                if (statusEl) statusEl.innerHTML = `<i class="fa-solid fa-location-dot text-amber-600"></i> General Location Active`;
+                if (badgeEl) {
+                    badgeEl.innerText = 'GPS Off / General';
+                    badgeEl.className = 'text-[9px] font-bold px-2 py-0.5 bg-amber-100 text-amber-900 rounded-md';
+                }
+                if (hospitalLink) {
+                    hospitalLink.href = `https://www.google.com/maps/search/hospitals+near+me`;
+                }
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 4000,
+                maximumAge: 0
+            }
+        );
+    } else {
+        if (statusEl) statusEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-amber-600"></i> GPS Not Supported`;
     }
 }
 

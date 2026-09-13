@@ -1272,15 +1272,17 @@
 
     <!-- 🚨 Emergency Caregiver SOS & Doctor Quick Dial Modal -->
     <div id="emergency-sos-modal" class="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md hidden opacity-0 transition-all duration-300">
-        <div class="modal-content bg-white border border-rose-300 rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl space-y-6 text-slate-900">
+        <div class="modal-content bg-white border border-rose-300 rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl space-y-5 text-slate-900">
             <div class="flex items-center justify-between border-b border-rose-200 pb-4">
                 <div class="flex items-center gap-3">
-                    <div class="w-11 h-11 rounded-2xl bg-rose-100 border border-rose-300 text-rose-700 flex items-center justify-center text-xl shadow-sm">
+                    <div class="w-11 h-11 rounded-2xl bg-rose-600 text-white flex items-center justify-center text-xl shadow-md animate-pulse">
                         <i class="fa-solid fa-truck-medical"></i>
                     </div>
                     <div>
-                        <h3 class="text-xl font-black text-rose-950">Emergency Caregiver SOS</h3>
-                        <p class="text-xs text-slate-600 font-medium">Instant medical alert dispatch &amp; physician dialer</p>
+                        <h3 class="text-xl font-black text-rose-950">1-TAP EMERGENCY SOS</h3>
+                        <p class="text-xs text-rose-700 font-bold flex items-center gap-1" id="sos-location-status">
+                            <i class="fa-solid fa-location-crosshairs animate-spin"></i> Detecting Live GPS Location (1-2s)...
+                        </p>
                     </div>
                 </div>
                 <button onclick="closeEmergencySOSModal()" class="text-slate-400 hover:text-slate-700 text-lg transition p-1">
@@ -1288,26 +1290,46 @@
                 </button>
             </div>
 
+            <!-- Rapid Action Buttons Grid -->
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                <a href="tel:108" class="p-3 bg-rose-600 hover:bg-rose-700 text-white rounded-2xl text-center shadow-md transition flex flex-col items-center justify-center">
+                    <i class="fa-solid fa-phone-volume text-lg mb-1"></i>
+                    <strong class="text-xs block font-black">Call 108</strong>
+                    <span class="text-[9px] opacity-90 block">Ambulance</span>
+                </a>
+                <a href="tel:112" class="p-3 bg-red-800 hover:bg-red-900 text-white rounded-2xl text-center shadow-md transition flex flex-col items-center justify-center">
+                    <i class="fa-solid fa-shield-cat text-lg mb-1"></i>
+                    <strong class="text-xs block font-black">Call 112</strong>
+                    <span class="text-[9px] opacity-90 block">Emergency</span>
+                </a>
+                <a id="sos-nearby-hospitals-link" href="https://www.google.com/maps/search/hospitals+near+me" target="_blank" class="p-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-center shadow-md transition flex flex-col items-center justify-center col-span-2 sm:col-span-1">
+                    <i class="fa-solid fa-hospital-user text-lg mb-1"></i>
+                    <strong class="text-xs block font-black">Nearby Hospitals</strong>
+                    <span class="text-[9px] opacity-90 block">Open Map</span>
+                </a>
+            </div>
+
             <div class="p-4 bg-rose-50 border border-rose-200 rounded-2xl space-y-2">
-                <span class="text-[10px] font-black text-rose-800 uppercase tracking-widest block">Emergency Message Preview</span>
-                <p id="sos-message-preview" class="text-xs font-mono bg-white p-3 rounded-xl border border-rose-200 text-slate-900 whitespace-pre-wrap leading-relaxed">
-                    Loading emergency medical dispatch message...
+                <div class="flex items-center justify-between">
+                    <span class="text-[10px] font-black text-rose-800 uppercase tracking-widest block">Emergency Dispatch Text</span>
+                    <span id="sos-gps-accuracy-badge" class="text-[9px] font-bold px-2 py-0.5 bg-rose-200 text-rose-900 rounded-md">GPS Fetching...</span>
+                </div>
+                <p id="sos-message-preview" class="text-xs font-mono bg-white p-3 rounded-xl border border-rose-200 text-slate-900 whitespace-pre-wrap leading-relaxed max-h-36 overflow-y-auto">
+                    Loading emergency dispatch text with live location...
                 </p>
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <button onclick="dispatchWhatsAppSOS()" class="py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black shadow-md transition flex items-center justify-center gap-2">
-                    <i class="fa-brands fa-whatsapp text-base"></i> Send WhatsApp SOS
+                <button onclick="dispatchWhatsAppSOS()" class="py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black shadow-lg transition flex items-center justify-center gap-2">
+                    <i class="fa-brands fa-whatsapp text-lg"></i> 1-Tap WhatsApp SOS
                 </button>
-                <button onclick="copySOSText()" class="py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-black shadow-md transition flex items-center justify-center gap-2">
-                    <i class="fa-solid fa-copy text-amber-400"></i> Copy Emergency SMS
+                <button onclick="copySOSText()" class="py-3.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-black shadow-lg transition flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-copy text-amber-400 text-base"></i> Copy Emergency SMS
                 </button>
             </div>
 
-            <div class="pt-3 border-t border-slate-200 flex items-center justify-between">
-                <a href="tel:108" class="text-xs font-black text-rose-700 hover:text-rose-900 flex items-center gap-1.5">
-                    <i class="fa-solid fa-phone-volume text-rose-600"></i> Call Ambulance (108)
-                </a>
+            <div class="pt-2 border-t border-slate-200 flex items-center justify-between text-xs">
+                <span class="text-slate-500 font-semibold text-[11px]"><i class="fa-solid fa-bolt text-amber-500 mr-1"></i>Ultra-Fast 1-5s Dispatch Engine</span>
                 <button onclick="closeEmergencySOSModal()" class="btn-glass px-4 py-2 rounded-xl text-xs font-bold">Close</button>
             </div>
         </div>
