@@ -461,6 +461,25 @@
                             </button>
                         </div>
                     </div>
+
+                    <!-- 🩺 Logged Medicine Symptoms & Side-Effects Log Card -->
+                    <div class="glass-card p-6 shadow-xl space-y-4">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="text-base font-black text-slate-900 flex items-center gap-2">
+                                    <i class="fa-solid fa-stethoscope text-purple-600"></i>
+                                    Logged Medicine Side-Effects &amp; Symptoms
+                                </h3>
+                                <p class="text-xs text-slate-500 font-medium">Recorded medicine side-effects, severity levels &amp; linked prescriptions</p>
+                            </div>
+                            <button onclick="openSymptomModal()" class="px-3.5 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-black shadow-md transition flex items-center gap-1.5">
+                                <i class="fa-solid fa-plus"></i> Record Side-Effect
+                            </button>
+                        </div>
+                        <div id="analytics-symptoms-widget-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                            <!-- Populated dynamically via JS -->
+                        </div>
+                    </div>
                 </div>
 
 

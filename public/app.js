@@ -628,6 +628,8 @@ function switchTab(tabName) {
 
     if (state.activeTab === 'analytics') {
         renderAdherenceAnalyticsChart();
+        renderAnalyticsSymptomCard();
+        fetchVitals();
     } else if (state.activeTab === 'cabinet') {
         renderCabinetGrid(state.prescriptions);
     } else if (state.activeTab === 'orders') {
@@ -3428,6 +3430,7 @@ function deleteSymptomLog(index) {
     symptoms.splice(index, 1);
     localStorage.setItem(logKey, JSON.stringify(symptoms));
     renderSymptomHistory();
+    renderAnalyticsSymptomCard();
     renderVitalsWidget();
     showToast('Symptom entry deleted.', 'info');
 }
@@ -3455,5 +3458,60 @@ function handleSymptomSubmit(e) {
     nameInput.value = '';
     showToast(`🩺 Symptom logged successfully (${severity})`, 'success');
     renderSymptomHistory();
+    renderAnalyticsSymptomCard();
     renderVitalsWidget();
+}
+
+function renderAnalyticsSymptomCard() {
+    const container = document.getElementById('analytics-symptoms-widget-list');
+    if (!container) return;
+
+    const logKey = getClientStorageKey('symptoms');
+    const symptoms = JSON.parse(localStorage.getItem(logKey) || '[]');
+
+    if (symptoms.length === 0) {
+        container.innerHTML = `
+            <div class="col-span-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-center py-6">
+                <i class="fa-solid fa-notes-medical text-purple-400 text-2xl mb-2"></i>
+                <span class="text-xs text-slate-600 font-bold block">No medicine side-effects recorded yet</span>
+                <p class="text-[11px] text-slate-400 font-medium mt-0.5">Use "+ Record Side-Effect" to track any discomfort or reactions.</p>
+                <button onclick="openSymptomModal()" class="mt-3 px-3.5 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-black shadow-sm transition">+ Record Side-Effect</button>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = symptoms.map((item, idx) => {
+        let sevClass = 'bg-emerald-50 text-emerald-800 border-emerald-200';
+        let sevIcon = '🟢';
+        if (item.severity === 'MODERATE') {
+            sevClass = 'bg-amber-50 text-amber-800 border-amber-200';
+            sevIcon = '🟡';
+        } else if (item.severity === 'SEVERE') {
+            sevClass = 'bg-rose-50 text-rose-800 border-rose-200';
+            sevIcon = '🔴';
+        }
+
+        const dateStr = item.logged_at ? new Date(item.logged_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Recently';
+
+        return `
+            <div class="p-3.5 bg-slate-50/90 border border-slate-200 rounded-2xl space-y-2 flex flex-col justify-between">
+                <div class="flex items-start justify-between gap-2">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h5 class="text-xs font-extrabold text-slate-900">${escapeHtml(item.symptom_name)}</h5>
+                            <span class="px-2 py-0.5 rounded-md border text-[9px] font-black shrink-0 ${sevClass}">${sevIcon} ${item.severity || 'MILD'}</span>
+                        </div>
+                        ${item.linked_medicine ? `<span class="text-[11px] text-purple-700 font-bold block mt-0.5"><i class="fa-solid fa-pills text-purple-500 mr-1"></i> ${escapeHtml(item.linked_medicine)}</span>` : '<span class="text-[10px] text-slate-400 font-semibold block mt-0.5">General Symptom</span>'}
+                    </div>
+                    <button onclick="deleteSymptomLog(${idx})" class="text-slate-400 hover:text-rose-600 transition p-1" title="Delete symptom entry">
+                        <i class="fa-solid fa-trash text-xs"></i>
+                    </button>
+                </div>
+                <div class="text-[10px] text-slate-400 font-semibold border-t border-slate-200/80 pt-1.5 flex items-center justify-between">
+                    <span>Logged: ${dateStr}</span>
+                </div>
+            </div>
+        `;
+    }).join('');
 }
