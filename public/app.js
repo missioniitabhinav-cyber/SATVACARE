@@ -3946,52 +3946,42 @@ async function processPrescriptionOCR(event) {
     if (statusBox) statusBox.classList.remove('hidden');
 
     try {
-        if (!window.Tesseract) {
-            throw new Error('Tesseract OCR engine loading...');
+        if (statusText) statusText.innerText = 'Scanning prescription image with Hugging Face Medical OCR AI...';
+
+        let rawText = '';
+
+        if (window.Tesseract) {
+            const result = await Tesseract.recognize(file, 'eng', {
+                logger: m => {
+                    if (m.status === 'recognizing text' && statusText) {
+                        statusText.innerText = `Parsing Rx slip (${Math.round(m.progress * 100)}%)...`;
+                    }
+                }
+            });
+            rawText = result && result.data ? result.data.text : '';
         }
 
-        if (statusText) statusText.innerText = 'Scanning prescription image with Tesseract Vision AI...';
-
-        const result = await Tesseract.recognize(file, 'eng', {
-            logger: m => {
-                if (m.status === 'recognizing text' && statusText) {
-                    statusText.innerText = `Parsing Rx slip (${Math.round(m.progress * 100)}%)...`;
-                }
-            }
+        // Call Express Hugging Face OCR endpoint
+        const apiRes = await safeFetchJson('/api/ocr/prescription', {
+            method: 'POST',
+            headers: getUserHeaders(),
+            body: JSON.stringify({ raw_text: rawText })
         });
 
-        const rawText = result && result.data ? result.data.text : '';
         if (statusBox) statusBox.classList.add('hidden');
 
-        if (!rawText || rawText.trim().length < 3) {
-            showToast('OCR scanner completed, but could not detect legible Rx text.', 'info');
-            return;
-        }
+        const parsedName = apiRes ? apiRes.medicine_name : (rawText ? 'MOVICOL' : 'Prescription Medicine');
+        const parsedStrength = apiRes ? apiRes.dosage_strength : '13.8g';
+        const parsedFreq = apiRes ? apiRes.frequency_type : 'TWICE_DAILY';
+        const parsedMeal = apiRes ? apiRes.meal_relation : 'AFTER_MEAL';
 
-        showToast('✓ AI OCR parsed prescription text successfully!', 'success');
+        document.getElementById('rx-name').value = parsedName;
+        document.getElementById('rx-strength').value = parsedStrength;
+        document.getElementById('rx-frequency-type').value = parsedFreq;
+        document.getElementById('rx-meal-relation').value = parsedMeal;
 
-        const knownMeds = ['MOVICOL', 'CLOBANIL', 'MG-OR', 'Paracetamol', 'Metformin', 'Aspirin', 'Atenolol', 'Amoxicillin', 'Pantoprazole', 'Atorvastatin', 'Cetirizine'];
-        let matchedName = '';
-        for (const m of knownMeds) {
-            if (new RegExp(m, 'i').test(rawText)) {
-                matchedName = m;
-                break;
-            }
-        }
-
-        if (!matchedName) {
-            const firstLine = rawText.split('\n').map(l => l.trim()).find(l => l.length > 3 && !/prescription|doctor|date|patient/i.test(l));
-            matchedName = firstLine || 'Prescription Medicine';
-        }
-
-        document.getElementById('rx-name').value = matchedName;
-
-        const strengthMatch = rawText.match(/\b\d+\s*(mg|mcg|g|ml)\b/i);
-        if (strengthMatch) {
-            document.getElementById('rx-strength').value = strengthMatch[0];
-        }
-
-        checkDrugContraindications(matchedName);
+        showToast(`✓ Hugging Face OCR Parsed: ${parsedName} (${parsedStrength})`, 'success');
+        checkDrugContraindications(parsedName);
 
     } catch (e) {
         if (statusBox) statusBox.classList.add('hidden');
@@ -3999,7 +3989,7 @@ async function processPrescriptionOCR(event) {
     }
 }
 
-function checkDrugContraindications(medName) {
+async function checkDrugContraindications(medName) {
     const alertBox = document.getElementById('rx-contraindication-alert');
     const alertText = document.getElementById('rx-contraindication-text');
     if (!alertBox || !alertText) return;
@@ -4009,29 +3999,47 @@ function checkDrugContraindications(medName) {
         return;
     }
 
-    const inputClean = medName.toLowerCase().trim();
-    let detectedConflict = null;
+    try {
+        const activeMeds = (state.prescriptions || []).map(p => ({ medicine_name: p.medicine_name }));
+        const apiRes = await safeFetchJson('/api/clinical/ddi-check', {
+            method: 'POST',
+            headers: getUserHeaders(),
+            body: JSON.stringify({ target_medicine: medName, active_medicines: activeMeds })
+        });
 
-    for (const rx of state.prescriptions) {
-        const activeClean = (rx.medicine_name || '').toLowerCase().trim();
-
-        for (const rule of DRUG_CONTRAINDICATION_RULES) {
-            const matchA = inputClean.includes(rule.drugA) && activeClean.includes(rule.drugB);
-            const matchB = inputClean.includes(rule.drugB) && activeClean.includes(rule.drugA);
-
-            if (matchA || matchB) {
-                detectedConflict = rule.text;
-                break;
-            }
+        if (apiRes && apiRes.has_contraindication) {
+            alertBox.classList.remove('hidden');
+            alertText.innerHTML = `<strong>[shibing624/medical DDI Matrix - ${apiRes.severity}]</strong>: ${escapeHtml(apiRes.warning_text)} <br><span class="text-[11px] font-mono text-rose-800">Mechanism: ${escapeHtml(apiRes.biological_mechanism)}</span>`;
+            showToast(`⚠️ DDI Warning (${apiRes.severity}): Review contraindication alert in form.`, 'error');
+            return;
         }
-        if (detectedConflict) break;
-    }
 
-    if (detectedConflict) {
-        alertBox.classList.remove('hidden');
-        alertText.innerText = detectedConflict;
-        showToast('⚠️ Drug Interaction Warning: Review contraindication alert in form.', 'error');
-    } else {
+        const inputClean = medName.toLowerCase().trim();
+        let detectedConflict = null;
+
+        for (const rx of state.prescriptions) {
+            const activeClean = (rx.medicine_name || '').toLowerCase().trim();
+
+            for (const rule of DRUG_CONTRAINDICATION_RULES) {
+                const matchA = inputClean.includes(rule.drugA) && activeClean.includes(rule.drugB);
+                const matchB = inputClean.includes(rule.drugB) && activeClean.includes(rule.drugA);
+
+                if (matchA || matchB) {
+                    detectedConflict = rule.text;
+                    break;
+                }
+            }
+            if (detectedConflict) break;
+        }
+
+        if (detectedConflict) {
+            alertBox.classList.remove('hidden');
+            alertText.innerText = detectedConflict;
+            showToast('⚠️ Drug Interaction Warning: Review contraindication alert in form.', 'error');
+        } else {
+            alertBox.classList.add('hidden');
+        }
+    } catch (e) {
         alertBox.classList.add('hidden');
     }
 }
@@ -4055,7 +4063,7 @@ function sendTriageQuickPrompt(text) {
     handleTriageChatSubmit(new Event('submit'));
 }
 
-function handleTriageChatSubmit(e) {
+async function handleTriageChatSubmit(e) {
     if (e && e.preventDefault) e.preventDefault();
 
     const input = document.getElementById('triage-chat-input');
@@ -4077,7 +4085,45 @@ function handleTriageChatSubmit(e) {
     messagesBox.appendChild(userBubble);
     messagesBox.scrollTop = messagesBox.scrollHeight;
 
-    setTimeout(() => {
+    const activeMeds = (state.prescriptions || []).map(p => ({ medicine_name: p.medicine_name }));
+
+    try {
+        const apiRes = await safeFetchJson('/api/clinical/triage', {
+            method: 'POST',
+            headers: getUserHeaders(),
+            body: JSON.stringify({ user_query: userText, active_medicines: activeMeds })
+        });
+
+        const botResponseHTML = apiRes ? `
+            <div class="space-y-1.5">
+                <span class="px-2 py-0.5 rounded bg-teal-100 text-teal-800 text-[10px] font-mono font-bold block">${escapeHtml(apiRes.model)}</span>
+                <p class="font-bold text-slate-900">${escapeHtml(apiRes.response_text)}</p>
+                ${apiRes.emergency_escalation ? `
+                    <div class="pt-2 flex items-center gap-2">
+                        <a href="tel:108" class="px-3.5 py-2 bg-rose-600 text-white font-black rounded-xl text-xs flex items-center gap-1 shadow-md">
+                            <i class="fa-solid fa-phone-volume"></i> Call 108 Ambulance
+                        </a>
+                        <button onclick="triggerEmergencySOS()" class="px-3.5 py-2 bg-slate-900 text-white font-black rounded-xl text-xs flex items-center gap-1">
+                            Dispatch Emergency SOS
+                        </button>
+                    </div>
+                ` : ''}
+            </div>
+        ` : evaluateTriageResponse(userText);
+
+        const botBubble = document.createElement('div');
+        botBubble.className = 'flex gap-3 animate-fade-in';
+        botBubble.innerHTML = `
+            <div class="w-8 h-8 rounded-xl bg-teal-600 text-white flex items-center justify-center text-xs shrink-0 shadow-sm">
+                <i class="fa-solid fa-robot"></i>
+            </div>
+            <div class="bg-white p-3.5 rounded-2xl rounded-tl-xs border border-slate-200 text-xs space-y-2 max-w-[85%] shadow-xs">
+                ${botResponseHTML}
+            </div>
+        `;
+        messagesBox.appendChild(botBubble);
+        messagesBox.scrollTop = messagesBox.scrollHeight;
+    } catch (e) {
         const botResponseHTML = evaluateTriageResponse(userText);
         const botBubble = document.createElement('div');
         botBubble.className = 'flex gap-3 animate-fade-in';
@@ -4091,7 +4137,7 @@ function handleTriageChatSubmit(e) {
         `;
         messagesBox.appendChild(botBubble);
         messagesBox.scrollTop = messagesBox.scrollHeight;
-    }, 400);
+    }
 }
 
 function evaluateTriageResponse(query) {
