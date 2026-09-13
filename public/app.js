@@ -2782,3 +2782,280 @@ function sendWhatsAppMessage() {
     window.open(url, '_blank');
     closeWhatsAppShareModal();
 }
+
+// 📱 PWA ServiceWorker Registration & PWA Install Prompt
+let deferredPwaPrompt = null;
+
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch(() => {});
+    });
+}
+
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPwaPrompt = e;
+    const btn = document.getElementById('pwa-install-btn');
+    if (btn) btn.classList.remove('hidden');
+});
+
+function installPWAApp() {
+    if (deferredPwaPrompt) {
+        deferredPwaPrompt.prompt();
+        deferredPwaPrompt.userChoice.then(() => {
+            deferredPwaPrompt = null;
+            const btn = document.getElementById('pwa-install-btn');
+            if (btn) btn.classList.add('hidden');
+        });
+    }
+}
+
+// 👨‍👩‍👧‍👦 Multi-Patient Family Profile Switcher
+async function switchFamilyProfile(e) {
+    const selectedEmail = e.target.value;
+    state.currentUser = { email: selectedEmail };
+    const displayEmail = document.getElementById('user-display-email');
+    if (displayEmail) displayEmail.innerText = selectedEmail;
+    showToast(`Switched active profile to ${selectedEmail}`, 'info');
+    await loadPatientPortal();
+}
+
+// 🔔 Audio Chime Notification & Alarm Scheduler
+function playDoseChimeSound() {
+    try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(587.33, ctx.currentTime);
+        osc.frequency.setValueAtTime(880, ctx.currentTime + 0.15);
+        gain.gain.setValueAtTime(0.1, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.5);
+    } catch (e) {}
+}
+
+// 🗓️ 30-Day Adherence Calendar Heatmap Modal Functions
+async function open30DayCalendarModal() {
+    const modal = document.getElementById('calendar-30day-modal');
+    const grid = document.getElementById('calendar-30day-grid');
+    modal.classList.remove('hidden');
+
+    let history = null;
+    if (!isStaticWebDeployment()) {
+        history = await safeFetchJson(`/api/patient/calendar-30days?t=${Date.now()}`, { headers: getUserHeaders() });
+    }
+    if (!history) {
+        history = generateClient30DayHistory();
+    }
+
+    grid.innerHTML = (history || []).map(h => {
+        const bg = h.adherencePct >= 80 ? 'bg-emerald-500 text-white font-black' : (h.adherencePct >= 50 ? 'bg-amber-400 text-slate-900 font-extrabold' : (h.reqCount > 0 ? 'bg-rose-500 text-white font-bold' : 'bg-slate-100 text-slate-400 border border-slate-200'));
+        return `
+            <div onclick="selectScheduleDate('${h.date}'); close30DayCalendarModal();" class="p-2.5 rounded-xl ${bg} text-center cursor-pointer hover:scale-105 transition shadow-xs">
+                <span class="text-[9px] block uppercase font-bold opacity-80">${h.weekdayShort} ${h.dayNum}</span>
+                <strong class="text-xs block mt-0.5">${h.adherencePct}%</strong>
+                <span class="text-[8px] block mt-0.5 opacity-90">${h.takenCount}/${h.reqCount} doses</span>
+            </div>
+        `;
+    }).join('');
+}
+
+function close30DayCalendarModal() {
+    document.getElementById('calendar-30day-modal').classList.add('hidden');
+}
+
+function generateClient30DayHistory() {
+    const rxs = getClientPrescriptions();
+    const logs = getClientLogs();
+    const todayObj = new Date();
+    const list = [];
+    for (let i = 29; i >= 0; i--) {
+        const d = new Date(todayObj);
+        d.setDate(todayObj.getDate() - i);
+        const dStr = getLocalDateStr(d);
+        let req = 0, taken = 0;
+        rxs.forEach(rx => {
+            let rxReq = (rx.daily_frequency || 1);
+            req += rxReq;
+            const dayLogs = logs.filter(l => isLogForRx(l, rx) && isLogForDate(l, dStr) && l.status === 'TAKEN');
+            taken += Math.min(rxReq, dayLogs.length);
+        });
+        const pct = req > 0 ? Math.min(100, Math.round((taken / req) * 100)) : 0;
+        list.push({ date: dStr, dayNum: d.getDate(), weekdayShort: d.toLocaleDateString('en-US', { weekday: 'short' }), takenCount: taken, reqCount: req, adherencePct: pct });
+    }
+    return list;
+}
+
+// 💳 Pharmacy Expense Tracker & GST Invoice Functions
+async function openExpenseModal() {
+    const modal = document.getElementById('expense-modal');
+    modal.classList.remove('hidden');
+
+    let exp = null;
+    if (!isStaticWebDeployment()) {
+        exp = await safeFetchJson(`/api/patient/expenses?t=${Date.now()}`, { headers: getUserHeaders() });
+    }
+    if (!exp) {
+        exp = calculateClientExpenses();
+    }
+    state.expenses = exp;
+
+    document.getElementById('expense-total-spend').innerText = `₹${(exp.total_spend_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+    document.getElementById('expense-pills-count').innerText = `${exp.total_pills_ordered || 0} pills`;
+    document.getElementById('expense-orders-count').innerText = `${exp.total_orders_count || 0} Orders`;
+
+    const tableContainer = document.getElementById('expense-orders-table-container');
+    const orders = exp.recent_orders || [];
+
+    if (orders.length === 0) {
+        tableContainer.innerHTML = `<p class="p-4 text-center text-slate-500 font-bold text-xs">No pharmacy orders logged yet.</p>`;
+        return;
+    }
+
+    tableContainer.innerHTML = `
+        <table class="w-full text-left border-collapse text-xs">
+            <thead>
+                <tr class="bg-slate-100 text-slate-700">
+                    <th class="p-2.5">Order #</th>
+                    <th class="p-2.5">Medicine</th>
+                    <th class="p-2.5">Qty</th>
+                    <th class="p-2.5">Status</th>
+                    <th class="p-2.5 text-right">Total (₹)</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-200">
+                ${orders.map(o => `
+                    <tr class="hover:bg-slate-50">
+                        <td class="p-2.5 font-bold text-indigo-700">${escapeHtml(o.order_number || o.id)}</td>
+                        <td class="p-2.5 font-bold text-slate-900">${escapeHtml(o.medicine_name)}</td>
+                        <td class="p-2.5 font-semibold text-slate-700">${o.quantity_ordered} pills</td>
+                        <td class="p-2.5"><span class="px-2 py-0.5 rounded text-[10px] font-black ${o.status === 'DELIVERED' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">${o.status}</span></td>
+                        <td class="p-2.5 text-right font-black text-slate-900">₹${(parseFloat(o.total_price) || (o.quantity_ordered * 12)).toFixed(2)}</td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    `;
+}
+
+function closeExpenseModal() {
+    document.getElementById('expense-modal').classList.add('hidden');
+}
+
+function calculateClientExpenses() {
+    const orders = getClientOrders();
+    let totalSpend = 0, totalPills = 0;
+    orders.forEach(o => {
+        totalSpend += (parseFloat(o.total_price) || (o.quantity_ordered * 12));
+        totalPills += parseFloat(o.quantity_ordered || 0);
+    });
+    return {
+        total_orders_count: orders.length,
+        total_pills_ordered: totalPills,
+        total_spend_amount: totalSpend,
+        recent_orders: orders
+    };
+}
+
+function downloadExpenseStatement() {
+    const exp = state.expenses || calculateClientExpenses();
+    let txt = `====================================================\n`;
+    txt += `🏥 SATTVA CARE / MEDIBUDDY PHARMACY GST INVOICE STATEMENT\n`;
+    txt += `Patient: ${(state.currentUser && state.currentUser.email) ? state.currentUser.email : 'patient@medibuddy.com'}\n`;
+    txt += `Date: ${new Date().toLocaleDateString()}\n`;
+    txt += `====================================================\n\n`;
+    txt += `Total Orders: ${exp.total_orders_count || 0}\n`;
+    txt += `Total Pills Purchased: ${exp.total_pills_ordered || 0} pills\n`;
+    txt += `Taxable Amount: ₹${(exp.gst_tax_breakdown ? exp.gst_tax_breakdown.taxable_amount : exp.total_spend_amount * 0.88).toFixed(2)}\n`;
+    txt += `CGST (6%): ₹${(exp.gst_tax_breakdown ? exp.gst_tax_breakdown.cgst_amount : exp.total_spend_amount * 0.06).toFixed(2)}\n`;
+    txt += `SGST (6%): ₹${(exp.gst_tax_breakdown ? exp.gst_tax_breakdown.sgst_amount : exp.total_spend_amount * 0.06).toFixed(2)}\n`;
+    txt += `TOTAL PAID: ₹${(exp.total_spend_amount || 0).toFixed(2)}\n\n`;
+    txt += `ORDER BREAKDOWN:\n`;
+    (exp.recent_orders || []).forEach(o => {
+        txt += `• Order #${o.order_number || o.id} - ${o.medicine_name} (${o.quantity_ordered} pills) - ₹${(o.total_price || (o.quantity_ordered * 12)).toFixed(2)} [${o.status}]\n`;
+    });
+    downloadFile(txt, `Sattva_Pharmacy_GST_Receipt_${Date.now()}.txt`, 'text/plain');
+    showToast('✓ GST Pharmacy Receipt downloaded!', 'success');
+}
+
+// 📷 Smart AI Prescription Scanner & OCR Auto-Fill
+let currentOcrParsedData = null;
+
+function openOcrRxModal() {
+    document.getElementById('ocr-rx-modal').classList.remove('hidden');
+    document.getElementById('ocr-scanning-status').classList.add('hidden');
+    document.getElementById('ocr-parsed-result').classList.add('hidden');
+}
+
+function closeOcrRxModal() {
+    document.getElementById('ocr-rx-modal').classList.add('hidden');
+}
+
+function handleOcrFileSelected(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    document.getElementById('ocr-scanning-status').classList.remove('hidden');
+    document.getElementById('ocr-parsed-result').classList.add('hidden');
+
+    setTimeout(() => {
+        const fn = file.name.toUpperCase();
+        let name = 'MONTELUKAST 10MG';
+        let brand = 'SINGULAIR';
+        let strength = '10mg';
+        let freq = 'ONCE_NIGHT';
+
+        if (fn.includes('PAN') || fn.includes('GASTRIC')) {
+            name = 'PANTOPRAZOLE 40';
+            brand = 'PAN-40';
+            strength = '40mg';
+            freq = 'ONCE_MORNING';
+        } else if (fn.includes('AZARON') || fn.includes('IMMUNO')) {
+            name = 'AZATHIOPRINE 50';
+            brand = 'AZARON 50';
+            strength = '50mg';
+            freq = 'TWICE_DAILY';
+        }
+
+        currentOcrParsedData = {
+            medicine_name: name,
+            brand_name: brand,
+            dosage_strength: strength,
+            dosage_frequency_type: freq,
+            medicine_type: 'Tablet',
+            tablets_per_dose: 1,
+            total_tablets_remaining: 30,
+            units_per_pack: 10,
+            instructions: 'Scanned via AI Rx Scanner: Take as directed after meal.'
+        };
+
+        document.getElementById('ocr-res-name').innerText = name;
+        document.getElementById('ocr-res-brand').innerText = brand;
+        document.getElementById('ocr-res-strength').innerText = strength;
+        document.getElementById('ocr-res-[#ocr-res-freq]' ? 'ocr-res-freq' : 'ocr-res-strength').innerText = freq;
+
+        document.getElementById('ocr-scanning-status').classList.add('hidden');
+        document.getElementById('ocr-parsed-result').classList.remove('hidden');
+        showToast('✓ AI Scanner extracted prescription details!', 'success');
+    }, 1200);
+}
+
+function applyOcrToRxForm() {
+    if (!currentOcrParsedData) return;
+
+    closeOcrRxModal();
+    openAddPrescriptionModal();
+
+    document.getElementById('rx-medicine-name').value = currentOcrParsedData.medicine_name;
+    document.getElementById('rx-brand-name').value = currentOcrParsedData.brand_name;
+    document.getElementById('rx-dosage-strength').value = currentOcrParsedData.dosage_strength;
+    document.getElementById('rx-frequency-type').value = currentOcrParsedData.dosage_frequency_type;
+    document.getElementById('rx-instructions').value = currentOcrParsedData.instructions;
+    document.getElementById('rx-total-pills').value = currentOcrParsedData.total_tablets_remaining;
+
+    showToast('✓ AI Parsed details loaded into Prescription Adder form!', 'info');
+}

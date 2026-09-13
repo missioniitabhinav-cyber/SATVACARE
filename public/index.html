@@ -134,6 +134,40 @@
                         <span id="db-text" class="text-[10px] font-extrabold text-teal-700 bg-teal-50 border border-teal-200 px-2 py-0.5 rounded-md ml-1">Supabase Connected</span>
                     </div>
 
+                    <!-- Family Profile Selector Dropdown -->
+                    <div class="relative">
+                        <select id="family-profile-select" onchange="switchFamilyProfile(event)" class="py-2 px-3 rounded-2xl bg-teal-50 border border-teal-300 text-xs font-black text-teal-900 focus:border-teal-600 outline-none shadow-xs">
+                            <option value="patient@medibuddy.com">👤 Self (Main Patient)</option>
+                            <option value="father@medibuddy.com">👔 Father (Elder Care)</option>
+                            <option value="mother@medibuddy.com">👗 Mother (Elder Care)</option>
+                            <option value="child@medibuddy.com">👶 Child (Dependent)</option>
+                        </select>
+                    </div>
+
+                    <!-- PWA Install Button -->
+                    <button id="pwa-install-btn" onclick="installPWAApp()" class="hidden px-3.5 py-2.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black flex items-center gap-1.5 shadow-md transition">
+                        <i class="fa-solid fa-mobile-screen-button text-amber-300"></i>
+                        <span class="hidden md:inline">Install App</span>
+                    </button>
+
+                    <!-- 30-Day Heatmap Button -->
+                    <button onclick="open30DayCalendarModal()" class="px-3.5 py-2.5 rounded-2xl bg-white hover:bg-slate-100 border border-slate-300 text-slate-800 text-xs font-black flex items-center gap-1.5 shadow-xs transition">
+                        <i class="fa-solid fa-calendar-days text-teal-600"></i>
+                        <span class="hidden lg:inline">30-Day Matrix</span>
+                    </button>
+
+                    <!-- Pharmacy Expense Tracker Button -->
+                    <button onclick="openExpenseModal()" class="px-3.5 py-2.5 rounded-2xl bg-white hover:bg-slate-100 border border-slate-300 text-slate-800 text-xs font-black flex items-center gap-1.5 shadow-xs transition">
+                        <i class="fa-solid fa-receipt text-indigo-600"></i>
+                        <span class="hidden lg:inline">Expenses</span>
+                    </button>
+
+                    <!-- Smart AI Prescription Adder & OCR Scanner Button -->
+                    <button onclick="openOcrRxModal()" class="px-3.5 py-2.5 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-xs font-black flex items-center gap-1.5 shadow-md transition">
+                        <i class="fa-solid fa-camera text-white"></i>
+                        <span class="hidden sm:inline">📷 AI Rx Scanner</span>
+                    </button>
+
                     <button onclick="openPrintableMedicalPassModal()" class="px-3.5 py-2.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-black flex items-center gap-2 shadow-sm transition">
                         <i class="fa-solid fa-print text-amber-400"></i>
                         <span class="hidden md:inline">Medical Pass</span>
@@ -1065,6 +1099,143 @@
                 <button type="button" onclick="sendWhatsAppMessage()" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black shadow-md transition flex items-center gap-2">
                     <i class="fa-brands fa-whatsapp text-white text-base"></i> Send on WhatsApp
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 🗓️ 30-Day Adherence Calendar Heatmap Modal -->
+    <div id="calendar-30day-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-fade-in">
+        <div class="glass-card max-w-2xl w-full p-6 sm:p-8 rounded-3xl shadow-2xl space-y-6 max-h-[92vh] overflow-y-auto">
+            <div class="flex items-center justify-between border-b border-slate-200 pb-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-teal-100 border border-teal-300 text-teal-700 flex items-center justify-center text-lg">
+                        <i class="fa-solid fa-calendar-days"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-black text-slate-900">30-Day Adherence Matrix</h3>
+                        <p class="text-xs text-slate-500 font-medium">Monthly compliance heatmap over the last 30 days</p>
+                    </div>
+                </div>
+                <button onclick="close30DayCalendarModal()" class="btn-glass p-2 rounded-xl text-slate-400 hover:text-slate-600">
+                    <i class="fa-solid fa-xmark text-base"></i>
+                </button>
+            </div>
+
+            <div class="space-y-3">
+                <div class="flex items-center justify-between text-xs font-bold text-slate-600">
+                    <span>🟢 80-100% (High Compliance)</span>
+                    <span>🟡 50-79% (Partial)</span>
+                    <span>🔴 &lt;50% (Missed)</span>
+                </div>
+                <div id="calendar-30day-grid" class="grid grid-cols-5 sm:grid-cols-6 gap-2"></div>
+            </div>
+
+            <div class="flex items-center justify-end border-t border-slate-200 pt-4">
+                <button onclick="close30DayCalendarModal()" class="btn-glass px-5 py-2.5 rounded-xl text-xs font-bold">Close Matrix</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 💳 Monthly Pharmacy Expense Tracker & GST Invoice Modal -->
+    <div id="expense-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-fade-in">
+        <div class="glass-card max-w-3xl w-full p-6 sm:p-8 rounded-3xl shadow-2xl space-y-6 max-h-[92vh] overflow-y-auto">
+            <div class="flex items-center justify-between border-b border-slate-200 pb-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-indigo-100 border border-indigo-300 text-indigo-700 flex items-center justify-center text-lg">
+                        <i class="fa-solid fa-receipt"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-black text-slate-900">Pharmacy Expense Tracker</h3>
+                        <p class="text-xs text-slate-500 font-medium">Healthcare spend summary &amp; tax receipts</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="downloadExpenseStatement()" class="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-black shadow-md transition flex items-center gap-1">
+                        <i class="fa-solid fa-file-invoice"></i> Download GST Receipt
+                    </button>
+                    <button onclick="closeExpenseModal()" class="btn-glass p-2 rounded-xl text-slate-400 hover:text-slate-600">
+                        <i class="fa-solid fa-xmark text-base"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div class="p-4 bg-slate-50 border border-slate-200 rounded-2xl">
+                    <span class="text-[10px] font-black text-slate-500 uppercase block">Total Spend</span>
+                    <strong id="expense-total-spend" class="text-2xl font-black text-slate-900">₹0.00</strong>
+                </div>
+                <div class="p-4 bg-teal-50 border border-teal-200 rounded-2xl">
+                    <span class="text-[10px] font-black text-teal-800 uppercase block">Total Pills Ordered</span>
+                    <strong id="expense-pills-count" class="text-2xl font-black text-teal-900">0 pills</strong>
+                </div>
+                <div class="p-4 bg-indigo-50 border border-indigo-200 rounded-2xl">
+                    <span class="text-[10px] font-black text-indigo-800 uppercase block">Total Orders</span>
+                    <strong id="expense-orders-count" class="text-2xl font-black text-indigo-900">0 Orders</strong>
+                </div>
+            </div>
+
+            <div class="space-y-2">
+                <h4 class="text-xs font-black text-slate-800 uppercase">Pharmacy Purchase History</h4>
+                <div id="expense-orders-table-container" class="overflow-x-auto"></div>
+            </div>
+
+            <div class="flex items-center justify-end border-t border-slate-200 pt-4">
+                <button onclick="closeExpenseModal()" class="btn-glass px-5 py-2.5 rounded-xl text-xs font-bold">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 📷 Smart AI Prescription Adder & Bottle OCR Scanner Modal -->
+    <div id="ocr-rx-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-fade-in">
+        <div class="glass-card max-w-lg w-full p-6 sm:p-8 rounded-3xl shadow-2xl space-y-6 max-h-[92vh] overflow-y-auto">
+            <div class="flex items-center justify-between border-b border-slate-200 pb-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-amber-100 border border-amber-300 text-amber-700 flex items-center justify-center text-lg">
+                        <i class="fa-solid fa-camera"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-black text-slate-900">Smart AI Prescription Scanner</h3>
+                        <p class="text-xs text-slate-500 font-medium">Upload photo of medicine bottle / rx sheet to auto-fill</p>
+                    </div>
+                </div>
+                <button onclick="closeOcrRxModal()" class="btn-glass p-2 rounded-xl text-slate-400 hover:text-slate-600">
+                    <i class="fa-solid fa-xmark text-base"></i>
+                </button>
+            </div>
+
+            <div class="border-2 border-dashed border-amber-300 bg-amber-50/50 rounded-2xl p-6 text-center space-y-3 cursor-pointer hover:bg-amber-50 transition" onclick="document.getElementById('ocr-file-input').click()">
+                <div class="w-12 h-12 rounded-xl bg-amber-500 text-white flex items-center justify-center mx-auto text-xl shadow-md">
+                    <i class="fa-solid fa-cloud-arrow-up"></i>
+                </div>
+                <div>
+                    <strong class="text-sm font-black text-amber-950 block">Click or Drag &amp; Drop Prescription Image</strong>
+                    <span class="text-xs text-amber-800 font-medium">Supports JPG, PNG medicine labels &amp; prescriptions</span>
+                </div>
+                <input type="file" id="ocr-file-input" accept="image/*" class="hidden" onchange="handleOcrFileSelected(event)">
+            </div>
+
+            <div id="ocr-scanning-status" class="hidden p-4 bg-teal-50 border border-teal-200 rounded-xl text-center space-y-2">
+                <div class="inline-block w-6 h-6 border-3 border-teal-600 border-t-transparent rounded-full animate-spin"></div>
+                <p class="text-xs font-black text-teal-900">AI Scanner extracting medicine details...</p>
+            </div>
+
+            <div id="ocr-parsed-result" class="hidden space-y-3 p-4 bg-white border border-slate-300 rounded-2xl shadow-sm">
+                <h4 class="text-xs font-black text-slate-900 uppercase flex items-center gap-1.5">
+                    <i class="fa-solid fa-square-check text-emerald-600"></i> AI Parsed Medicine Details
+                </h4>
+                <div class="grid grid-cols-2 gap-2 text-xs">
+                    <div class="p-2 bg-slate-50 rounded-xl border"><span class="text-[9px] text-slate-500 block">Medicine Name</span><strong id="ocr-res-name" class="text-slate-900 font-black">-</strong></div>
+                    <div class="p-2 bg-slate-50 rounded-xl border"><span class="text-[9px] text-slate-500 block">Brand Name</span><strong id="ocr-res-brand" class="text-slate-900 font-black">-</strong></div>
+                    <div class="p-2 bg-slate-50 rounded-xl border"><span class="text-[9px] text-slate-500 block">Strength</span><strong id="ocr-res-strength" class="text-slate-900 font-black">-</strong></div>
+                    <div class="p-2 bg-slate-50 rounded-xl border"><span class="text-[9px] text-slate-500 block">Schedule</span><strong id="ocr-res-freq" class="text-teal-800 font-black">-</strong></div>
+                </div>
+                <button onclick="applyOcrToRxForm()" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black shadow-md transition flex items-center justify-center gap-1.5">
+                    <i class="fa-solid fa-file-import"></i> Auto-Fill into Prescription Adder Form
+                </button>
+            </div>
+
+            <div class="flex items-center justify-end gap-3 pt-2">
+                <button type="button" onclick="closeOcrRxModal()" class="btn-glass px-4 py-2.5 rounded-xl text-xs font-bold">Cancel</button>
             </div>
         </div>
     </div>

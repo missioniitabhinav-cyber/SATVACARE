@@ -1065,6 +1065,90 @@ const DB = {
         writeLocalVitals(vitals);
 
         return newLog;
+    },
+
+    // Family Profiles List
+    async getFamilyProfiles() {
+        return [
+            { id: 'patient@medibuddy.com', name: 'Self (Main Patient)', relation: 'Self', avatar: 'fa-user-circle' },
+            { id: 'father@medibuddy.com', name: 'Father (Elder Care)', relation: 'Parent', avatar: 'fa-user-tie' },
+            { id: 'mother@medibuddy.com', name: 'Mother (Elder Care)', relation: 'Parent', avatar: 'fa-person-dress' },
+            { id: 'child@medibuddy.com', name: 'Child (Dependent)', relation: 'Child', avatar: 'fa-child' }
+        ];
+    },
+
+    // Pharmacy Expense Tracker & GST Invoices
+    async getMonthlyExpenses(userEmail = 'patient@medibuddy.com') {
+        const orders = await this.getOrders(userEmail);
+        let totalSpend = 0;
+        let totalPillsOrdered = 0;
+
+        orders.forEach(o => {
+            totalSpend += (parseFloat(o.total_price) || (parseFloat(o.quantity_ordered) * (parseFloat(o.unit_price) || 12)));
+            totalPillsOrdered += (parseFloat(o.quantity_ordered) || 0);
+        });
+
+        return {
+            total_orders_count: orders.length,
+            total_pills_ordered: totalPillsOrdered,
+            total_spend_amount: parseFloat(totalSpend.toFixed(2)),
+            currency: 'INR (₹)',
+            gst_tax_breakdown: {
+                cgst_amount: parseFloat((totalSpend * 0.06).toFixed(2)),
+                sgst_amount: parseFloat((totalSpend * 0.06).toFixed(2)),
+                taxable_amount: parseFloat((totalSpend * 0.88).toFixed(2))
+            },
+            recent_orders: orders
+        };
+    },
+
+    // 30-Day Adherence Calendar Heatmap Data
+    async get30DayCalendarHistory(userEmail = 'patient@medibuddy.com') {
+        const rxs = await this.getPrescriptions(userEmail);
+        const logs = await this.getLogs(userEmail);
+        const todayObj = new Date();
+        const history30Days = [];
+
+        for (let i = 29; i >= 0; i--) {
+            const d = new Date(todayObj);
+            d.setDate(todayObj.getDate() - i);
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            const dateStr = `${year}-${month}-${day}`;
+
+            let reqCount = 0;
+            let takenCount = 0;
+
+            rxs.forEach(rx => {
+                let rxReq = 2;
+                if (rx.dosage_frequency_type === 'ONCE_MORNING' || rx.dosage_frequency_type === 'ONCE_NIGHT') rxReq = 1;
+                else if (rx.dosage_frequency_type === 'THRICE_DAILY') rxReq = 3;
+                else if (rx.dosage_frequency_type === 'FOUR_TIMES_DAILY') rxReq = 4;
+                else if (rx.dosage_frequency_type === 'AS_NEEDED') rxReq = 1;
+
+                reqCount += rxReq;
+
+                const dayLogs = logs.filter(l => isLogForRx(l, rx) && isLogForDate(l, dateStr) && l.status === 'TAKEN');
+                takenCount += Math.min(rxReq, dayLogs.length);
+            });
+
+            const pct = reqCount > 0 ? Math.min(100, Math.round((takenCount / reqCount) * 100)) : 0;
+
+            history30Days.push({
+                date: dateStr,
+                dayNum: d.getDate(),
+                monthShort: d.toLocaleDateString('en-US', { month: 'short' }),
+                weekdayShort: d.toLocaleDateString('en-US', { weekday: 'short' }),
+                takenCount,
+                reqCount,
+                adherencePct: pct,
+                isToday: i === 0,
+                status: pct >= 80 ? 'EXCELLENT' : (pct >= 50 ? 'PARTIAL' : (reqCount > 0 ? 'MISSED' : 'NO_MEDS'))
+            });
+        }
+
+        return history30Days;
     }
 };
 

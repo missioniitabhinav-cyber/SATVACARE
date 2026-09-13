@@ -251,6 +251,40 @@ app.post('/api/patient/vitals', async (req, res) => {
     }
 });
 
+// Family Profiles List Endpoint
+app.get('/api/patient/profiles', async (req, res) => {
+    try {
+        const profiles = await DB.getFamilyProfiles();
+        res.json(profiles);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Pharmacy Monthly Expenses & GST Invoice Endpoint
+app.get('/api/patient/expenses', async (req, res) => {
+    try {
+        const email = getUserEmail(req);
+        if (!email) return res.status(401).json({ error: 'Unauthorized. Login required.' });
+        const expenses = await DB.getMonthlyExpenses(email);
+        res.json(expenses);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// 30-Day Calendar Heatmap Adherence Endpoint
+app.get('/api/patient/calendar-30days', async (req, res) => {
+    try {
+        const email = getUserEmail(req);
+        if (!email) return res.status(401).json({ error: 'Unauthorized. Login required.' });
+        const history = await DB.get30DayCalendarHistory(email);
+        res.json(history);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // SPA Index Fallback
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
