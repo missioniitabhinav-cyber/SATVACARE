@@ -420,6 +420,17 @@ function isLogForRx(l, rx) {
     return false;
 }
 
+function formatIntakeTime(isoStr) {
+    if (!isoStr) return '';
+    try {
+        const d = new Date(isoStr);
+        if (isNaN(d)) return '';
+        return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+    } catch (e) {
+        return '';
+    }
+}
+
 function buildScheduleFromData(rxs, logs, targetDate) {
     const dateStr = targetDate || getTodayDateStr();
     const todayObj = new Date();
@@ -458,9 +469,13 @@ function buildScheduleFromData(rxs, logs, targetDate) {
             days_supply_remaining: daysRemaining,
             is_runout_alert_5days: isRunout,
             morning_taken: Boolean(morningLog && morningLog.status === 'TAKEN'),
+            morning_taken_time: (morningLog && morningLog.taken_at) ? formatIntakeTime(morningLog.taken_at) : '',
             afternoon_taken: Boolean(afternoonLog && afternoonLog.status === 'TAKEN'),
+            afternoon_taken_time: (afternoonLog && afternoonLog.taken_at) ? formatIntakeTime(afternoonLog.taken_at) : '',
             evening_taken: Boolean(eveningLog && eveningLog.status === 'TAKEN'),
+            evening_taken_time: (eveningLog && eveningLog.taken_at) ? formatIntakeTime(eveningLog.taken_at) : '',
             night_taken: Boolean(nightLog && nightLog.status === 'TAKEN'),
+            night_taken_time: (nightLog && nightLog.taken_at) ? formatIntakeTime(nightLog.taken_at) : '',
             history_7days: history7Days
         };
     });
@@ -1289,8 +1304,25 @@ async function toggleDoseSlot(prescriptionId, slotName) {
         let isNowTaken = false;
         let doseQty = 1;
 
-        // 1. Execute direct Supabase PostgreSQL DB Toggle
-        if (state.supabaseClient) {
+        if (!isStaticWebDeployment()) {
+            // Express Backend API Mediator handles single authoritative toggle
+            const apiRes = await safeFetchJson('/api/patient/toggle-slot', {
+                method: 'POST',
+                headers: getUserHeaders(),
+                body: JSON.stringify({
+                    prescription_id: prescriptionId,
+                    slot_name: slotName,
+                    target_date: selDate
+                })
+            });
+            if (apiRes) {
+                isNowTaken = apiRes.is_taken;
+                doseQty = apiRes.tablets_consumed || doseQty;
+            } else {
+                throw new Error('Backend API toggle failed');
+            }
+        } else if (state.supabaseClient) {
+            // Direct Supabase PostgreSQL DB Toggle for static edge hosting
             const rx = (state.prescriptions || []).find(r => r.id === prescriptionId);
             const medName = rx ? rx.medicine_name : '';
             doseQty = rx ? (parseFloat(rx.tablets_per_dose) || 1) : 1;
@@ -1300,11 +1332,9 @@ async function toggleDoseSlot(prescriptionId, slotName) {
             const existingLog = existingLogs ? existingLogs.find(l => isLogForRx(l, { id: prescriptionId, medicine_name: medName }) && isLogForSlot(l, slotName) && isLogForDate(l, selDate)) : null;
 
             if (existingLog) {
-                // Delete log from Supabase
                 const { error: delErr } = await state.supabaseClient.from('medication_logs').delete().eq('id', existingLog.id);
                 if (delErr) console.error('Supabase delete log error:', delErr);
 
-                // Restore pill stock in Supabase
                 const restoredStock = parseFloat((currentStock + doseQty).toFixed(2));
                 if (rx && rx.id) {
                     await state.supabaseClient.from('patient_prescriptions').update({
@@ -1314,8 +1344,8 @@ async function toggleDoseSlot(prescriptionId, slotName) {
                 }
                 isNowTaken = false;
             } else {
-                // Insert log into Supabase
                 const newRemaining = Math.max(0, parseFloat((currentStock - doseQty).toFixed(2)));
+                const takenAtIso = (selDate === getTodayDateStr()) ? new Date().toISOString() : `${selDate}T12:00:00.000Z`;
                 const cleanLog = {
                     id: 'log-' + Date.now(),
                     prescription_id: prescriptionId,
@@ -1324,7 +1354,7 @@ async function toggleDoseSlot(prescriptionId, slotName) {
                     status: 'TAKEN',
                     tablets_consumed: doseQty,
                     tablets_remaining_after: newRemaining,
-                    taken_at: `${selDate}T12:00:00.000Z`
+                    taken_at: takenAtIso
                 };
 
                 let { error: insErr } = await state.supabaseClient.from('medication_logs').insert([{ user_id: userEmail, ...cleanLog }]);
@@ -1343,7 +1373,6 @@ async function toggleDoseSlot(prescriptionId, slotName) {
                     }
                 }
 
-                // Deduct pill stock in Supabase
                 if (rx && rx.id) {
                     await state.supabaseClient.from('patient_prescriptions').update({
                         total_tablets_remaining: newRemaining,
@@ -1352,23 +1381,10 @@ async function toggleDoseSlot(prescriptionId, slotName) {
                 }
                 isNowTaken = true;
             }
-        }
-
-        // 2. Also send to Node Server API if backend available
-        if (!isStaticWebDeployment()) {
-            const apiRes = await safeFetchJson('/api/patient/toggle-slot', {
-                method: 'POST',
-                headers: getUserHeaders(),
-                body: JSON.stringify({
-                    prescription_id: prescriptionId,
-                    slot_name: slotName,
-                    target_date: selDate
-                })
-            });
-            if (apiRes) {
-                isNowTaken = apiRes.is_taken;
-                doseQty = apiRes.tablets_consumed || doseQty;
-            }
+        } else {
+            const res = toggleDoseSlotClient(prescriptionId, slotName, selDate);
+            isNowTaken = res.is_taken;
+            doseQty = res.tablets_consumed;
         }
 
         if (isNowTaken) {
@@ -1378,7 +1394,7 @@ async function toggleDoseSlot(prescriptionId, slotName) {
             showToast(`${slotName.charAt(0) + slotName.slice(1).toLowerCase()} dose reset in Supabase (${selDate}).`, 'info');
         }
 
-        loadPatientPortal();
+        await loadPatientPortal();
     } catch (e) {
         showToast(e.message || 'Failed to toggle dose slot in Supabase DB.', 'error');
     }

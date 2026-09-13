@@ -680,7 +680,8 @@ const DB = {
             ? target_date 
             : new Date().toISOString().split('T')[0];
 
-        const takenAtTimestamp = `${dateStr}T12:00:00.000Z`;
+        const todayStr = new Date().toISOString().split('T')[0];
+        const takenAtTimestamp = (dateStr === todayStr) ? new Date().toISOString() : `${dateStr}T12:00:00.000Z`;
 
         const existingLogIndex = logs.findIndex(l => isLogForRx(l, rx) && isLogForSlot(l, slot_name) && isLogForDate(l, dateStr));
 
