@@ -203,6 +203,25 @@
                 </div>
             </div>
 
+            <!-- ⚠️ 1-Month (30-Day) Expiry Notification Alert Banner -->
+            <div id="expiry-30day-banner" class="hidden rounded-3xl bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/10 border border-amber-300 p-6 shadow-xl relative overflow-hidden backdrop-blur-md">
+                <div class="flex items-start gap-4">
+                    <div class="w-12 h-12 rounded-2xl bg-amber-100 border border-amber-300 flex items-center justify-center shrink-0">
+                        <i class="fa-solid fa-calendar-xmark text-amber-700 text-2xl animate-pulse"></i>
+                    </div>
+                    <div class="space-y-2">
+                        <h3 class="text-base font-black text-amber-950 flex items-center gap-2 tracking-wide">
+                            <span>⚠️ 1-MONTH MEDICINE EXPIRY WARNING</span>
+                            <span id="expiry-banner-count" class="px-2.5 py-0.5 text-xs bg-amber-600 text-white rounded-full font-black">0 items</span>
+                        </h3>
+                        <p class="text-xs text-slate-700 font-medium">
+                            The following medicines or batch strips in your cabinet are expiring within <strong class="underline decoration-amber-600">1 month (30 days)</strong> or have already expired. Please check and replace expired stock.
+                        </p>
+                        <div id="expiry-banner-list" class="flex flex-wrap gap-2 pt-1"></div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Health Stats Dashboard -->
             <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 

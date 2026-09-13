@@ -1,124 +1,83 @@
 -- ====================================================================
--- MEDIBUDDY PATIENT MEDICINE MANAGEMENT PORTAL - FULL POSTGRESQL SCHEMA
--- Project ID: rksrrkkqqivvcdeiljax
--- Run in SQL Editor: https://supabase.com/dashboard/project/rksrrkkqqivvcdeiljax/sql/new
+-- SATTVA CARE / MEDIBUDDY PATIENT PORTAL - FULL SUPABASE POSTGRESQL SCHEMA
+-- Project URL: https://rksrrkkqqivvcdeiljax.supabase.co
+-- Run in Supabase SQL Editor: https://supabase.com/dashboard/project/rksrrkkqqivvcdeiljax/sql/new
 -- ====================================================================
 
--- Create Patient Prescriptions Table with Rich Medical Fields
+-- 1. Create Patient Prescriptions Table with Rich Medical & Batch Fields
 CREATE TABLE IF NOT EXISTS public.patient_prescriptions (
     id TEXT PRIMARY KEY,
     user_id TEXT DEFAULT 'patient-1',
+    user_email TEXT DEFAULT 'patient@medibuddy.com',
     medicine_name TEXT NOT NULL,
-    brand_name TEXT, -- Brand / Manufacturer (e.g. Panadol, GSK, Lipitor)
-    generic_name TEXT, -- Generic chemical name
-    dosage_strength TEXT, -- e.g. 500mg, 10ml, 250mcg
-    medicine_type TEXT NOT NULL DEFAULT 'Tablet', -- Tablet, Capsule, Syrup, Injection, Eye Drops, Inhaler, Ointment
+    brand_name TEXT,
+    generic_name TEXT,
+    dosage_strength TEXT,
+    medicine_type TEXT NOT NULL DEFAULT 'Tablet',
     
     -- Prescription Classification & Dose Amount
     prescription_type TEXT NOT NULL DEFAULT 'RX', -- 'RX', 'NRX', 'TRX', 'OTC'
     tablets_per_dose NUMERIC NOT NULL DEFAULT 1.0, -- 1.0 (Full), 0.5 (1/2 Tablet), 0.25 (1/4 Tablet), 1.5, 2.0
     
     -- Frequency & Timing Options
-    dosage_frequency_type TEXT NOT NULL DEFAULT 'TWICE_DAILY', -- 'ONCE_MORNING', 'ONCE_NIGHT', 'TWICE_DAILY', 'THRICE_DAILY', 'FOUR_TIMES_DAILY', 'AS_NEEDED'
-    daily_frequency NUMERIC NOT NULL DEFAULT 2.0, -- Pills per day
-    dose_times TEXT[], -- Array of scheduled times e.g. ['08:00 AM', '08:00 PM']
+    dosage_frequency_type TEXT NOT NULL DEFAULT 'TWICE_DAILY',
+    daily_frequency NUMERIC NOT NULL DEFAULT 2.0,
+    dose_times TEXT[],
     
     -- Meal & Food Instructions
-    meal_relation TEXT DEFAULT 'AFTER_MEAL', -- 'BEFORE_MEAL', 'AFTER_MEAL', 'WITH_FOOD', 'BEDTIME'
-    instructions TEXT, -- Specific instructions from doctor
+    meal_relation TEXT DEFAULT 'AFTER_MEAL',
+    instructions TEXT,
     
-    -- Inventory & Cabinet Details (NUMERIC to support half/quarter tablets)
-    total_tablets_remaining NUMERIC NOT NULL DEFAULT 30, -- Total pills in cabinet
+    -- Inventory & Multi-Batch Details
+    total_tablets_remaining NUMERIC NOT NULL DEFAULT 30,
     units_per_pack INTEGER DEFAULT 10,
-    refill_threshold_days INTEGER NOT NULL DEFAULT 5, -- 5-Day Run-Out Alert trigger
+    refill_threshold_days INTEGER NOT NULL DEFAULT 5,
     unit_price NUMERIC DEFAULT 0.0,
     
+    -- Multi-Batch Strip Breakdown & Expiry Date
+    batch_number TEXT,
+    batch_strip_count INTEGER DEFAULT 1,
+    expiry_date DATE,
+    batch_details JSONB DEFAULT '[]'::jsonb,
+    batches JSONB DEFAULT '[]'::jsonb,
+    
     -- Doctor & Medical Records
-    doctor_name TEXT, -- Doctor Name & Specialty
-    clinic_hospital TEXT, -- Hospital / Clinic Name
-    pharmacy_name TEXT, -- Pharmacy Name
-    prescription_number TEXT, -- Rx ID
-    duration_days INTEGER, -- e.g. 7 days course, 30 days
+    doctor_name TEXT,
+    clinic_hospital TEXT,
+    pharmacy_name TEXT,
+    prescription_number TEXT,
+    duration_days INTEGER,
     start_date DATE DEFAULT CURRENT_DATE,
     end_date DATE,
-    storage_condition TEXT DEFAULT 'ROOM_TEMP', -- 'ROOM_TEMP', 'REFRIGERATE', 'PROTECT_LIGHT'
+    storage_condition TEXT DEFAULT 'ROOM_TEMP',
     
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Medication Intake History Log Table
+-- 2. Medication Intake History Log Table
 CREATE TABLE IF NOT EXISTS public.medication_logs (
     id TEXT PRIMARY KEY,
     user_id TEXT DEFAULT 'patient-1',
+    user_email TEXT DEFAULT 'patient@medibuddy.com',
     prescription_id TEXT REFERENCES public.patient_prescriptions(id) ON DELETE CASCADE,
     medicine_name TEXT NOT NULL,
     brand_name TEXT,
-    scheduled_time TEXT NOT NULL, -- e.g. 'MORNING', 'NIGHT'
-    status TEXT NOT NULL, -- 'TAKEN', 'SKIPPED', 'MISSED'
+    scheduled_time TEXT NOT NULL, -- 'MORNING', 'AFTERNOON', 'EVENING', 'NIGHT', '08:00'
+    status TEXT NOT NULL DEFAULT 'TAKEN', -- 'TAKEN', 'SKIPPED', 'MISSED'
     tablets_consumed NUMERIC DEFAULT 1.0,
-    tablets_remaining_after NUMERIC NOT NULL,
+    tablets_remaining_after NUMERIC DEFAULT 0.0,
     taken_at TIMESTAMPTZ DEFAULT NOW(),
-    notes TEXT
-);
-
--- Patient Profile Table
-CREATE TABLE IF NOT EXISTS public.patient_profile (
-    id TEXT PRIMARY KEY,
-    full_name TEXT NOT NULL DEFAULT 'Patient',
-    age INTEGER,
-    blood_group TEXT,
-    allergies TEXT,
-    primary_doctor TEXT,
-    emergency_contact TEXT,
+    date TEXT,
+    notes TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Enable Row Level Security (RLS)
-ALTER TABLE public.patient_prescriptions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.medication_logs ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.patient_profile ENABLE ROW LEVEL SECURITY;
-
--- Create Permissive Access Policies
-DROP POLICY IF EXISTS "Allow access patient_prescriptions" ON public.patient_prescriptions;
-CREATE POLICY "Allow access patient_prescriptions" ON public.patient_prescriptions FOR ALL USING (true) WITH CHECK (true);
-
-DROP POLICY IF EXISTS "Allow access medication_logs" ON public.medication_logs;
-CREATE POLICY "Allow access medication_logs" ON public.medication_logs FOR ALL USING (true) WITH CHECK (true);
-
-DROP POLICY IF EXISTS "Allow access patient_profile" ON public.patient_profile;
-CREATE POLICY "Allow access patient_profile" ON public.patient_profile FOR ALL USING (true) WITH CHECK (true);
-
--- ====================================================================
--- MIGRATION ALTER TABLE STATEMENTS FOR EXISTING SUPABASE TABLES
--- ====================================================================
-ALTER TABLE public.patient_prescriptions ADD COLUMN IF NOT EXISTS prescription_type TEXT DEFAULT 'RX';
-ALTER TABLE public.patient_prescriptions ADD COLUMN IF NOT EXISTS tablets_per_dose NUMERIC DEFAULT 1.0;
-ALTER TABLE public.patient_prescriptions ADD COLUMN IF NOT EXISTS brand_name TEXT;
-ALTER TABLE public.patient_prescriptions ADD COLUMN IF NOT EXISTS generic_name TEXT;
-ALTER TABLE public.patient_prescriptions ADD COLUMN IF NOT EXISTS dosage_frequency_type TEXT DEFAULT 'TWICE_DAILY';
-ALTER TABLE public.patient_prescriptions ADD COLUMN IF NOT EXISTS meal_relation TEXT DEFAULT 'AFTER_MEAL';
-ALTER TABLE public.patient_prescriptions ADD COLUMN IF NOT EXISTS clinic_hospital TEXT;
-ALTER TABLE public.patient_prescriptions ADD COLUMN IF NOT EXISTS duration_days INTEGER;
-ALTER TABLE public.patient_prescriptions ADD COLUMN IF NOT EXISTS storage_condition TEXT DEFAULT 'ROOM_TEMP';
-ALTER TABLE public.patient_prescriptions ADD COLUMN IF NOT EXISTS units_per_pack INTEGER DEFAULT 10;
-ALTER TABLE public.patient_prescriptions ADD COLUMN IF NOT EXISTS batch_number TEXT;
-ALTER TABLE public.patient_prescriptions ADD COLUMN IF NOT EXISTS batch_strip_count INTEGER DEFAULT 1;
-ALTER TABLE public.patient_prescriptions ADD COLUMN IF NOT EXISTS expiry_date DATE;
-ALTER TABLE public.patient_prescriptions ADD COLUMN IF NOT EXISTS batch_details JSONB;
-ALTER TABLE public.patient_prescriptions ADD COLUMN IF NOT EXISTS batches JSONB;
-
-ALTER TABLE public.patient_prescriptions ALTER COLUMN total_tablets_remaining TYPE NUMERIC USING total_tablets_remaining::NUMERIC;
-ALTER TABLE public.patient_prescriptions ALTER COLUMN daily_frequency TYPE NUMERIC USING daily_frequency::NUMERIC;
-
-ALTER TABLE public.medication_logs ADD COLUMN IF NOT EXISTS user_id TEXT DEFAULT 'patient-1';
-ALTER TABLE public.medication_logs ALTER COLUMN tablets_consumed TYPE NUMERIC USING tablets_consumed::NUMERIC;
-ALTER TABLE public.medication_logs ALTER COLUMN tablets_remaining_after TYPE NUMERIC USING tablets_remaining_after::NUMERIC;
-
--- 5. Create Pharmacy Orders Table
+-- 3. Pharmacy Orders Table
 CREATE TABLE IF NOT EXISTS public.pharmacy_orders (
     id TEXT PRIMARY KEY,
     user_id TEXT DEFAULT 'patient-1',
+    user_email TEXT DEFAULT 'patient@medibuddy.com',
     prescription_id TEXT REFERENCES public.patient_prescriptions(id) ON DELETE SET NULL,
     medicine_name TEXT NOT NULL,
     brand_name TEXT,
@@ -136,6 +95,49 @@ CREATE TABLE IF NOT EXISTS public.pharmacy_orders (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- 4. Safe Column Migrations for Existing Tables
+ALTER TABLE public.patient_prescriptions ADD COLUMN IF NOT EXISTS user_id TEXT DEFAULT 'patient-1';
+ALTER TABLE public.patient_prescriptions ADD COLUMN IF NOT EXISTS user_email TEXT DEFAULT 'patient@medibuddy.com';
+ALTER TABLE public.patient_prescriptions ADD COLUMN IF NOT EXISTS prescription_type TEXT DEFAULT 'RX';
+ALTER TABLE public.patient_prescriptions ADD COLUMN IF NOT EXISTS tablets_per_dose NUMERIC DEFAULT 1.0;
+ALTER TABLE public.patient_prescriptions ADD COLUMN IF NOT EXISTS brand_name TEXT;
+ALTER TABLE public.patient_prescriptions ADD COLUMN IF NOT EXISTS generic_name TEXT;
+ALTER TABLE public.patient_prescriptions ADD COLUMN IF NOT EXISTS dosage_frequency_type TEXT DEFAULT 'TWICE_DAILY';
+ALTER TABLE public.patient_prescriptions ADD COLUMN IF NOT EXISTS meal_relation TEXT DEFAULT 'AFTER_MEAL';
+ALTER TABLE public.patient_prescriptions ADD COLUMN IF NOT EXISTS clinic_hospital TEXT;
+ALTER TABLE public.patient_prescriptions ADD COLUMN IF NOT EXISTS duration_days INTEGER;
+ALTER TABLE public.patient_prescriptions ADD COLUMN IF NOT EXISTS storage_condition TEXT DEFAULT 'ROOM_TEMP';
+ALTER TABLE public.patient_prescriptions ADD COLUMN IF NOT EXISTS units_per_pack INTEGER DEFAULT 10;
+ALTER TABLE public.patient_prescriptions ADD COLUMN IF NOT EXISTS batch_number TEXT;
+ALTER TABLE public.patient_prescriptions ADD COLUMN IF NOT EXISTS batch_strip_count INTEGER DEFAULT 1;
+ALTER TABLE public.patient_prescriptions ADD COLUMN IF NOT EXISTS expiry_date DATE;
+ALTER TABLE public.patient_prescriptions ADD COLUMN IF NOT EXISTS batch_details JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE public.patient_prescriptions ADD COLUMN IF NOT EXISTS batches JSONB DEFAULT '[]'::jsonb;
+
+ALTER TABLE public.medication_logs ADD COLUMN IF NOT EXISTS user_id TEXT DEFAULT 'patient-1';
+ALTER TABLE public.medication_logs ADD COLUMN IF NOT EXISTS user_email TEXT DEFAULT 'patient@medibuddy.com';
+ALTER TABLE public.medication_logs ADD COLUMN IF NOT EXISTS date TEXT;
+ALTER TABLE public.medication_logs ADD COLUMN IF NOT EXISTS taken_at TIMESTAMPTZ DEFAULT NOW();
+
+ALTER TABLE public.pharmacy_orders ADD COLUMN IF NOT EXISTS user_id TEXT DEFAULT 'patient-1';
+ALTER TABLE public.pharmacy_orders ADD COLUMN IF NOT EXISTS user_email TEXT DEFAULT 'patient@medibuddy.com';
+
+-- 5. Row Level Security (RLS) & Permissive Policies
+ALTER TABLE public.patient_prescriptions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.medication_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.pharmacy_orders ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Allow access patient_prescriptions" ON public.patient_prescriptions;
+CREATE POLICY "Allow access patient_prescriptions" ON public.patient_prescriptions FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow access medication_logs" ON public.medication_logs;
+CREATE POLICY "Allow access medication_logs" ON public.medication_logs FOR ALL USING (true) WITH CHECK (true);
+
 DROP POLICY IF EXISTS "Allow access pharmacy_orders" ON public.pharmacy_orders;
 CREATE POLICY "Allow access pharmacy_orders" ON public.pharmacy_orders FOR ALL USING (true) WITH CHECK (true);
+
+-- 6. Indexes for Maximum Performance
+CREATE INDEX IF NOT EXISTS idx_rx_user_id ON public.patient_prescriptions(user_id);
+CREATE INDEX IF NOT EXISTS idx_logs_prescription_id ON public.medication_logs(prescription_id);
+CREATE INDEX IF NOT EXISTS idx_logs_taken_at ON public.medication_logs(taken_at);
+CREATE INDEX IF NOT EXISTS idx_orders_user_id ON public.pharmacy_orders(user_id);

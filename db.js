@@ -335,10 +335,20 @@ function sanitizeLogDbPayload(log, userEmail = 'patient@medibuddy.com') {
         scheduled_time: log.scheduled_time,
         status: log.status || 'TAKEN',
         tablets_consumed: parseFloat(log.tablets_consumed) || 1.0,
-        tablets_remaining_after: parseFloat(log.tablets_remaining_after) || 0.0,
         taken_at: log.taken_at || new Date().toISOString(),
         notes: log.notes || ''
     };
+}
+
+function formatIntakeTime(isoStr) {
+    if (!isoStr) return '';
+    try {
+        const d = new Date(isoStr);
+        if (isNaN(d)) return '';
+        return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+    } catch (e) {
+        return '';
+    }
 }
 
 const DB = {
@@ -648,9 +658,13 @@ const DB = {
                 ...rx,
                 target_date: dateStr,
                 morning_taken: Boolean(morningLog && morningLog.status === 'TAKEN'),
+                morning_taken_time: (morningLog && morningLog.taken_at) ? formatIntakeTime(morningLog.taken_at) : '',
                 afternoon_taken: Boolean(afternoonLog && afternoonLog.status === 'TAKEN'),
+                afternoon_taken_time: (afternoonLog && afternoonLog.taken_at) ? formatIntakeTime(afternoonLog.taken_at) : '',
                 evening_taken: Boolean(eveningLog && eveningLog.status === 'TAKEN'),
+                evening_taken_time: (eveningLog && eveningLog.taken_at) ? formatIntakeTime(eveningLog.taken_at) : '',
                 night_taken: Boolean(nightLog && nightLog.status === 'TAKEN'),
+                night_taken_time: (nightLog && nightLog.taken_at) ? formatIntakeTime(nightLog.taken_at) : '',
                 history_7days: history7Days
             };
         });

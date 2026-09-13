@@ -651,6 +651,7 @@ async function fetchPatientStats() {
         document.getElementById('stat-runout-count').innerText = state.stats.runout_5days_count || 0;
 
         renderStockoutBanner(state.stats.critical_runout_alerts || []);
+        render30DayExpiryBanner(state.prescriptions || []);
     } catch (e) {}
 }
 
@@ -679,6 +680,75 @@ function renderStockoutBanner(alerts) {
             </button>
             <button onclick="openOrderModal('${a.id}', '${escapeHtml(a.medicine_name)}')" class="px-2.5 py-1 bg-amber-500 hover:bg-amber-600 text-white text-[11px] font-black rounded-lg transition flex items-center gap-1 shadow-sm">
                 <i class="fa-solid fa-cart-shopping text-white"></i> Order Pills
+            </button>
+        </div>
+    `).join('');
+}
+
+// ⚠️ 1-Month (30-Day) Expiry Notification Alert Engine
+function render30DayExpiryBanner(prescriptions) {
+    const banner = document.getElementById('expiry-30day-banner');
+    const alertList = document.getElementById('expiry-banner-list');
+    const alertCount = document.getElementById('expiry-banner-count');
+    if (!banner || !alertList || !alertCount) return;
+
+    const targetRxs = prescriptions || state.prescriptions || [];
+    if (!targetRxs || !Array.isArray(targetRxs) || targetRxs.length === 0) {
+        banner.classList.add('hidden');
+        return;
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const expiryAlerts = [];
+
+    targetRxs.forEach(rx => {
+        const batchList = (rx.batches && Array.isArray(rx.batches) && rx.batches.length > 0) 
+            ? rx.batches 
+            : [{ batch_number: rx.batch_number || '', expiry_date: rx.expiry_date || null }];
+
+        batchList.forEach(b => {
+            if (b.expiry_date) {
+                const expDate = new Date(b.expiry_date + 'T00:00:00');
+                if (!isNaN(expDate.getTime())) {
+                    expDate.setHours(0, 0, 0, 0);
+                    const diffTime = expDate - today;
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    
+                    if (diffDays <= 30) {
+                        expiryAlerts.push({
+                            rx_id: rx.id,
+                            medicine_name: rx.medicine_name,
+                            brand_name: rx.brand_name || '',
+                            batch_number: b.batch_number || 'Default Batch',
+                            expiry_date: b.expiry_date,
+                            days_left: diffDays,
+                            is_expired: diffDays <= 0
+                        });
+                    }
+                }
+            }
+        });
+    });
+
+    if (expiryAlerts.length === 0) {
+        banner.classList.add('hidden');
+        return;
+    }
+
+    banner.classList.remove('hidden');
+    alertCount.innerText = `${expiryAlerts.length} item${expiryAlerts.length > 1 ? 's' : ''}`;
+
+    alertList.innerHTML = expiryAlerts.map(a => `
+        <div class="px-3 py-1.5 rounded-xl ${a.is_expired ? 'bg-rose-100 border-rose-300 text-rose-950' : 'bg-amber-100 border-amber-300 text-amber-950'} border flex flex-wrap items-center gap-2 text-xs font-bold shadow-xs">
+            <i class="${a.is_expired ? 'fa-solid fa-triangle-exclamation text-rose-600' : 'fa-solid fa-hourglass-half text-amber-600'}"></i>
+            <span>${escapeHtml(a.medicine_name)} (${escapeHtml(a.batch_number)})</span>
+            <span class="px-2 py-0.5 rounded ${a.is_expired ? 'bg-rose-600 text-white' : 'bg-amber-600 text-white'} text-[10px] font-black">
+                ${a.is_expired ? `EXPIRED (${Math.abs(a.days_left)}d ago)` : `Expiring in ${a.days_left}d (${a.expiry_date})`}
+            </span>
+            <button onclick="openEditPrescriptionModal('${a.rx_id}')" class="text-teal-800 hover:text-teal-950 underline text-[11px] font-black">
+                Update Batch / Expiry
             </button>
         </div>
     `).join('');
@@ -1112,30 +1182,42 @@ function renderScheduleCards() {
 
                     <div class="grid grid-cols-2 gap-2">
                         ${showMorning ? `
-                            <button onclick="toggleDoseSlot('${s.id}', 'MORNING')" class="dose-btn-check py-2.5 px-3 rounded-xl border text-xs font-black flex items-center justify-center gap-1.5 ${s.morning_taken ? 'dose-btn-taken text-white' : 'btn-glass text-slate-700'}">
-                                ${s.morning_taken ? '<i class="fa-solid fa-circle-check text-white text-sm"></i>' : '<i class="fa-solid fa-sun text-amber-500"></i>'}
-                                <span>Morning ${s.morning_taken ? '✓' : ''}</span>
+                            <button onclick="toggleDoseSlot('${s.id}', 'MORNING')" class="dose-btn-check py-2 px-3 rounded-xl border text-xs font-black flex flex-col items-center justify-center ${s.morning_taken ? 'dose-btn-taken text-white' : 'btn-glass text-slate-700'}">
+                                <div class="flex items-center gap-1.5">
+                                    ${s.morning_taken ? '<i class="fa-solid fa-circle-check text-white text-sm"></i>' : '<i class="fa-solid fa-sun text-amber-500"></i>'}
+                                    <span>Morning ${s.morning_taken ? '✓' : ''}</span>
+                                </div>
+                                ${s.morning_taken && s.morning_taken_time ? `<span class="text-[9px] text-teal-100 font-extrabold flex items-center gap-0.5 mt-0.5"><i class="fa-solid fa-clock text-[8px]"></i> ${escapeHtml(s.morning_taken_time)}</span>` : ''}
                             </button>
                         ` : ''}
 
                         ${showAfternoon ? `
-                            <button onclick="toggleDoseSlot('${s.id}', 'AFTERNOON')" class="dose-btn-check py-2.5 px-3 rounded-xl border text-xs font-black flex items-center justify-center gap-1.5 ${s.afternoon_taken ? 'dose-btn-taken text-white' : 'btn-glass text-slate-700'}">
-                                ${s.afternoon_taken ? '<i class="fa-solid fa-circle-check text-white text-sm"></i>' : '<i class="fa-solid fa-cloud-sun text-sky-500"></i>'}
-                                <span>Afternoon ${s.afternoon_taken ? '✓' : ''}</span>
+                            <button onclick="toggleDoseSlot('${s.id}', 'AFTERNOON')" class="dose-btn-check py-2 px-3 rounded-xl border text-xs font-black flex flex-col items-center justify-center ${s.afternoon_taken ? 'dose-btn-taken text-white' : 'btn-glass text-slate-700'}">
+                                <div class="flex items-center gap-1.5">
+                                    ${s.afternoon_taken ? '<i class="fa-solid fa-circle-check text-white text-sm"></i>' : '<i class="fa-solid fa-cloud-sun text-sky-500"></i>'}
+                                    <span>Afternoon ${s.afternoon_taken ? '✓' : ''}</span>
+                                </div>
+                                ${s.afternoon_taken && s.afternoon_taken_time ? `<span class="text-[9px] text-teal-100 font-extrabold flex items-center gap-0.5 mt-0.5"><i class="fa-solid fa-clock text-[8px]"></i> ${escapeHtml(s.afternoon_taken_time)}</span>` : ''}
                             </button>
                         ` : ''}
 
                         ${showEvening ? `
-                            <button onclick="toggleDoseSlot('${s.id}', 'EVENING')" class="dose-btn-check py-2.5 px-3 rounded-xl border text-xs font-black flex items-center justify-center gap-1.5 ${s.evening_taken ? 'dose-btn-taken text-white' : 'btn-glass text-slate-700'}">
-                                ${s.evening_taken ? '<i class="fa-solid fa-circle-check text-white text-sm"></i>' : '<i class="fa-solid fa-sunset text-orange-500"></i>'}
-                                <span>Evening ${s.evening_taken ? '✓' : ''}</span>
+                            <button onclick="toggleDoseSlot('${s.id}', 'EVENING')" class="dose-btn-check py-2 px-3 rounded-xl border text-xs font-black flex flex-col items-center justify-center ${s.evening_taken ? 'dose-btn-taken text-white' : 'btn-glass text-slate-700'}">
+                                <div class="flex items-center gap-1.5">
+                                    ${s.evening_taken ? '<i class="fa-solid fa-circle-check text-white text-sm"></i>' : '<i class="fa-solid fa-sunset text-orange-500"></i>'}
+                                    <span>Evening ${s.evening_taken ? '✓' : ''}</span>
+                                </div>
+                                ${s.evening_taken && s.evening_taken_time ? `<span class="text-[9px] text-teal-100 font-extrabold flex items-center gap-0.5 mt-0.5"><i class="fa-solid fa-clock text-[8px]"></i> ${escapeHtml(s.evening_taken_time)}</span>` : ''}
                             </button>
                         ` : ''}
 
                         ${showNight ? `
-                            <button onclick="toggleDoseSlot('${s.id}', 'NIGHT')" class="dose-btn-check py-2.5 px-3 rounded-xl border text-xs font-black flex items-center justify-center gap-1.5 ${s.night_taken ? 'dose-btn-taken text-white' : 'btn-glass text-slate-700'}">
-                                ${s.night_taken ? '<i class="fa-solid fa-circle-check text-white text-sm"></i>' : '<i class="fa-solid fa-moon text-indigo-500"></i>'}
-                                <span>Night ${s.night_taken ? '✓' : ''}</span>
+                            <button onclick="toggleDoseSlot('${s.id}', 'NIGHT')" class="dose-btn-check py-2 px-3 rounded-xl border text-xs font-black flex flex-col items-center justify-center ${s.night_taken ? 'dose-btn-taken text-white' : 'btn-glass text-slate-700'}">
+                                <div class="flex items-center gap-1.5">
+                                    ${s.night_taken ? '<i class="fa-solid fa-circle-check text-white text-sm"></i>' : '<i class="fa-solid fa-moon text-indigo-500"></i>'}
+                                    <span>Night ${s.night_taken ? '✓' : ''}</span>
+                                </div>
+                                ${s.night_taken && s.night_taken_time ? `<span class="text-[9px] text-teal-100 font-extrabold flex items-center gap-0.5 mt-0.5"><i class="fa-solid fa-clock text-[8px]"></i> ${escapeHtml(s.night_taken_time)}</span>` : ''}
                             </button>
                         ` : ''}
                     </div>
