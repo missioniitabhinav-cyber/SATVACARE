@@ -646,6 +646,8 @@ function switchTab(tabName) {
         renderAdherenceAnalyticsChart();
         renderAnalyticsSymptomCard();
         fetchVitals();
+        renderPredictiveRiskRadar();
+        if (!dtIsAnimating) init3DDigitalTwin();
     } else if (state.activeTab === 'cabinet') {
         renderCabinetGrid(state.prescriptions);
     } else if (state.activeTab === 'orders') {
@@ -667,6 +669,7 @@ async function loadPatientPortal() {
         fetchVitals()
     ]);
     renderAdherenceAnalyticsChart();
+    renderPredictiveRiskRadar();
 }
 
 async function fetchPatientStats() {
@@ -3703,3 +3706,923 @@ function initSupabaseRealtimeSubscriptions() {
         console.error('Realtime subscription error:', e);
     }
 }
+
+
+// ====================================================================
+// 🌐 1. PREDICTIVE VITALS RISK SCORING & 48-HOUR TRAJECTORY ENGINE
+// ====================================================================
+
+let predictiveChartInstance = null;
+
+async function fetchVitalsLogs() {
+    try {
+        if (!isStaticWebDeployment()) {
+            const res = await safeFetchJson(`/api/patient/vitals?t=${Date.now()}`, { headers: getUserHeaders() });
+            if (res && Array.isArray(res)) return res;
+        }
+        if (state.supabaseClient) {
+            const { data } = await state.supabaseClient.from('vitals_logs').select('*').order('created_at', { ascending: false });
+            if (data && Array.isArray(data)) return data;
+        }
+        const key = getClientStorageKey('vitals');
+        const local = localStorage.getItem(key);
+        return local ? JSON.parse(local) : [];
+    } catch (e) {
+        return [];
+    }
+}
+
+async function renderPredictiveRiskRadar() {
+    const logs = await fetchVitalsLogs();
+    state.vitals = logs;
+
+    const latest = (logs && logs.length > 0) ? logs[0] : {
+        systolic_bp: 120,
+        diastolic_bp: 80,
+        blood_sugar: 95,
+        pulse: 72,
+        spo2: 98
+    };
+
+    const sys = parseFloat(latest.systolic_bp) || 120;
+    const dia = parseFloat(latest.diastolic_bp) || 80;
+    const sugar = parseFloat(latest.blood_sugar) || 95;
+    const pulse = parseFloat(latest.pulse) || 72;
+    const spo2 = parseFloat(latest.spo2) || 98;
+
+    let riskScore = 10;
+    const warnings = [];
+
+    // BP Risk Evaluation
+    if (sys >= 160 || dia >= 100) {
+        riskScore += 65;
+        warnings.push({ type: 'danger', text: `Stage 2 Hypertension Warning (BP ${sys}/${dia} mmHg)` });
+    } else if (sys >= 140 || dia >= 90) {
+        riskScore += 40;
+        warnings.push({ type: 'warning', text: `Stage 1 Hypertension Trajectory (${sys}/${dia} mmHg)` });
+    } else if (sys >= 130 || dia >= 85) {
+        riskScore += 15;
+        warnings.push({ type: 'info', text: `Prehypertension Level (${sys}/${dia} mmHg)` });
+    }
+
+    // Sugar Risk Evaluation
+    if (sugar >= 200) {
+        riskScore += 45;
+        warnings.push({ type: 'danger', text: `Severe Glycemic Spike (${sugar} mg/dL)` });
+    } else if (sugar >= 140) {
+        riskScore += 25;
+        warnings.push({ type: 'warning', text: `Elevated Blood Glucose (${sugar} mg/dL)` });
+    }
+
+    // SpO2 Risk Evaluation
+    if (spo2 < 92) {
+        riskScore += 70;
+        warnings.push({ type: 'danger', text: `Critical Hypoxia Flag (SpO2 ${spo2}%)` });
+    } else if (spo2 < 95) {
+        riskScore += 30;
+        warnings.push({ type: 'warning', text: `Sub-optimal Oxygen Level (SpO2 ${spo2}%)` });
+    }
+
+    // Pulse Risk Evaluation
+    if (pulse > 110 || pulse < 50) {
+        riskScore += 20;
+        warnings.push({ type: 'warning', text: `Cardiac Rate Anomaly (${pulse} bpm)` });
+    }
+
+    riskScore = Math.min(98, Math.max(5, riskScore));
+
+    // Update Score Badge
+    const badgeEl = document.getElementById('predictive-risk-score-badge');
+    if (badgeEl) {
+        if (riskScore >= 60) {
+            badgeEl.className = 'px-3 py-1.5 rounded-xl bg-rose-100 text-rose-800 border border-rose-300 font-black text-xs flex items-center gap-1.5 animate-pulse';
+            badgeEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-rose-600"></i> Risk Level: CRITICAL (${riskScore}%)`;
+        } else if (riskScore >= 30) {
+            badgeEl.className = 'px-3 py-1.5 rounded-xl bg-amber-100 text-amber-800 border border-amber-300 font-black text-xs flex items-center gap-1.5';
+            badgeEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-amber-600"></i> Risk Level: MODERATE (${riskScore}%)`;
+        } else {
+            badgeEl.className = 'px-3 py-1.5 rounded-xl bg-emerald-100 text-emerald-800 border border-emerald-300 font-black text-xs flex items-center gap-1.5';
+            badgeEl.innerHTML = `<i class="fa-solid fa-shield-heart text-emerald-600"></i> Risk Level: LOW (${riskScore}%)`;
+        }
+    }
+
+    // Render Warning Flags Chips
+    const warningContainer = document.getElementById('predictive-warning-flags-container');
+    if (warningContainer) {
+        if (warnings.length === 0) {
+            warningContainer.innerHTML = `
+                <div class="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs font-bold text-emerald-800 flex items-center gap-2">
+                    <i class="fa-solid fa-circle-check text-emerald-600 text-sm"></i> All vitals within optimal parameters.
+                </div>
+            `;
+        } else {
+            warningContainer.innerHTML = warnings.map(w => {
+                const bg = w.type === 'danger' ? 'bg-rose-50 text-rose-900 border-rose-200' : (w.type === 'warning' ? 'bg-amber-50 text-amber-900 border-amber-200' : 'bg-sky-50 text-sky-900 border-sky-200');
+                const icon = w.type === 'danger' ? 'fa-circle-xmark text-rose-600' : 'fa-triangle-exclamation text-amber-600';
+                return `
+                    <div class="p-2.5 rounded-xl border text-xs font-bold flex items-center gap-2 ${bg}">
+                        <i class="fa-solid ${icon}"></i> <span>${escapeHtml(w.text)}</span>
+                    </div>
+                `;
+            }).join('');
+        }
+    }
+
+    // Update Recommendations Text
+    const recEl = document.getElementById('predictive-mitigation-text');
+    if (recEl) {
+        if (riskScore >= 60) {
+            recEl.innerText = "🚨 Urgent: High BP or SpO2 trajectory detected. Rest immediately, avoid high sodium food, take prescribed medications on schedule, and consult doctor or trigger Emergency SOS if symptoms worsen.";
+        } else if (riskScore >= 30) {
+            recEl.innerText = "⚠️ Moderate Trajectory: Mild blood pressure or glucose elevation predicted. Maintain hydration (8 glasses water daily), avoid stress, and review upcoming dose times.";
+        } else {
+            recEl.innerText = "✓ Vitals within optimal ranges. Maintain your regular morning and night intake schedule to keep compliance at 100%.";
+        }
+    }
+
+    // Render 48-Hour Forward Risk Trajectory Chart
+    renderPredictiveRiskChart(sys, sugar, riskScore);
+    
+    // Also sync digital twin organ highlight
+    updateDigitalTwinOrgans(sys, dia, sugar, pulse, spo2);
+}
+
+function renderPredictiveRiskChart(currentSys, currentSugar, currentRisk) {
+    const canvas = document.getElementById('predictive-risk-chart');
+    if (!canvas || !window.Chart) return;
+
+    if (predictiveChartInstance) {
+        predictiveChartInstance.destroy();
+    }
+
+    // Generate 48h trend projections (8 data points, 6h intervals)
+    const labels = ['Now', '+6h', '+12h', '+18h', '+24h', '+30h', '+36h', '+48h'];
+
+    // Projected trends based on current risk
+    const sysTrend = [
+        currentSys,
+        currentSys + (currentRisk > 40 ? 3 : -1),
+        currentSys + (currentRisk > 40 ? 5 : -2),
+        currentSys + (currentRisk > 40 ? 4 : -3),
+        currentSys + (currentRisk > 40 ? 6 : -4),
+        currentSys + (currentRisk > 40 ? 5 : -4),
+        currentSys + (currentRisk > 40 ? 3 : -5),
+        currentSys + (currentRisk > 40 ? 2 : -5)
+    ];
+
+    const sugarTrend = [
+        currentSugar,
+        currentSugar + (currentRisk > 40 ? 8 : -3),
+        currentSugar + (currentRisk > 40 ? 12 : -5),
+        currentSugar + (currentRisk > 40 ? 10 : -8),
+        currentSugar + (currentRisk > 40 ? 15 : -10),
+        currentSugar + (currentRisk > 40 ? 12 : -10),
+        currentSugar + (currentRisk > 40 ? 8 : -12),
+        currentSugar + (currentRisk > 40 ? 5 : -12)
+    ];
+
+    const ctx = canvas.getContext('2d');
+    predictiveChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Systolic BP (mmHg)',
+                    data: sysTrend,
+                    borderColor: '#f43f5e',
+                    backgroundColor: 'rgba(244, 63, 94, 0.1)',
+                    tension: 0.4,
+                    fill: true,
+                    borderWidth: 3,
+                    pointRadius: 4
+                },
+                {
+                    label: 'Blood Sugar (mg/dL)',
+                    data: sugarTrend,
+                    borderColor: '#0d9488',
+                    backgroundColor: 'rgba(13, 148, 136, 0.1)',
+                    tension: 0.4,
+                    fill: true,
+                    borderWidth: 3,
+                    pointRadius: 4
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'top', labels: { font: { family: 'Plus Jakarta Sans', weight: '800', size: 11 } } },
+                tooltip: { mode: 'index', intersect: false }
+            },
+            scales: {
+                x: { grid: { display: false } },
+                y: { beginAtZero: false, grid: { color: '#e2e8f0' } }
+            }
+        }
+    });
+}
+
+
+// ====================================================================
+// 📸 2. AI PRESCRIPTION OCR & DRUG CONTRAINDICATION ENGINE
+// ====================================================================
+
+const DRUG_CONTRAINDICATION_RULES = [
+    { drugA: 'warfarin', drugB: 'aspirin', severity: 'SEVERE', text: 'High Risk: Combining Warfarin with Aspirin/NSAIDs dramatically increases severe internal bleeding risks.' },
+    { drugA: 'atenolol', drugB: 'salbutamol', severity: 'MODERATE', text: 'Contraindication: Beta-blockers like Atenolol can inhibit Asthma inhalers (Salbutamol).' },
+    { drugA: 'movicol', drugB: 'furosemide', severity: 'MODERATE', text: 'Electrolyte Alert: Osmotic laxatives like MOVICOL with diuretics (Furosemide) require monitoring.' },
+    { drugA: 'metformin', drugB: 'alcohol', severity: 'SEVERE', text: 'Toxic Alert: Metformin with high alcohol increases Lactic Acidosis risk.' },
+    { drugA: 'paracetamol', drugB: 'panadol', severity: 'DUPLICATE', text: 'Duplicate Active Ingredient: Paracetamol and Panadol both contain Acetaminophen (max 4000mg/day).' }
+];
+
+async function processPrescriptionOCR(event) {
+    const file = event.target.files ? event.target.files[0] : null;
+    if (!file) return;
+
+    const statusBox = document.getElementById('rx-ocr-status');
+    const statusText = document.getElementById('rx-ocr-status-text');
+    if (statusBox) statusBox.classList.remove('hidden');
+
+    try {
+        if (!window.Tesseract) {
+            throw new Error('Tesseract OCR engine loading...');
+        }
+
+        if (statusText) statusText.innerText = 'Scanning prescription image with Tesseract Vision AI...';
+
+        const result = await Tesseract.recognize(file, 'eng', {
+            logger: m => {
+                if (m.status === 'recognizing text' && statusText) {
+                    statusText.innerText = `Parsing Rx slip (${Math.round(m.progress * 100)}%)...`;
+                }
+            }
+        });
+
+        const rawText = result && result.data ? result.data.text : '';
+        if (statusBox) statusBox.classList.add('hidden');
+
+        if (!rawText || rawText.trim().length < 3) {
+            showToast('OCR scanner completed, but could not detect legible Rx text.', 'info');
+            return;
+        }
+
+        showToast('✓ AI OCR parsed prescription text successfully!', 'success');
+
+        const knownMeds = ['MOVICOL', 'CLOBANIL', 'MG-OR', 'Paracetamol', 'Metformin', 'Aspirin', 'Atenolol', 'Amoxicillin', 'Pantoprazole', 'Atorvastatin', 'Cetirizine'];
+        let matchedName = '';
+        for (const m of knownMeds) {
+            if (new RegExp(m, 'i').test(rawText)) {
+                matchedName = m;
+                break;
+            }
+        }
+
+        if (!matchedName) {
+            const firstLine = rawText.split('\n').map(l => l.trim()).find(l => l.length > 3 && !/prescription|doctor|date|patient/i.test(l));
+            matchedName = firstLine || 'Prescription Medicine';
+        }
+
+        document.getElementById('rx-name').value = matchedName;
+
+        const strengthMatch = rawText.match(/\b\d+\s*(mg|mcg|g|ml)\b/i);
+        if (strengthMatch) {
+            document.getElementById('rx-strength').value = strengthMatch[0];
+        }
+
+        checkDrugContraindications(matchedName);
+
+    } catch (e) {
+        if (statusBox) statusBox.classList.add('hidden');
+        showToast('OCR scan finished. Please verify medicine details in form.', 'info');
+    }
+}
+
+function checkDrugContraindications(medName) {
+    const alertBox = document.getElementById('rx-contraindication-alert');
+    const alertText = document.getElementById('rx-contraindication-text');
+    if (!alertBox || !alertText) return;
+
+    if (!medName || !state.prescriptions) {
+        alertBox.classList.add('hidden');
+        return;
+    }
+
+    const inputClean = medName.toLowerCase().trim();
+    let detectedConflict = null;
+
+    for (const rx of state.prescriptions) {
+        const activeClean = (rx.medicine_name || '').toLowerCase().trim();
+
+        for (const rule of DRUG_CONTRAINDICATION_RULES) {
+            const matchA = inputClean.includes(rule.drugA) && activeClean.includes(rule.drugB);
+            const matchB = inputClean.includes(rule.drugB) && activeClean.includes(rule.drugA);
+
+            if (matchA || matchB) {
+                detectedConflict = rule.text;
+                break;
+            }
+        }
+        if (detectedConflict) break;
+    }
+
+    if (detectedConflict) {
+        alertBox.classList.remove('hidden');
+        alertText.innerText = detectedConflict;
+        showToast('⚠️ Drug Interaction Warning: Review contraindication alert in form.', 'error');
+    } else {
+        alertBox.classList.add('hidden');
+    }
+}
+
+
+// ====================================================================
+// 🤖 3. CONVERSATIONAL CLINICAL TRIAGE CHATBOT
+// ====================================================================
+
+function openTriageChatbotModal() {
+    showModal('triage-chatbot-modal');
+}
+
+function closeTriageChatbotModal() {
+    hideModal('triage-chatbot-modal');
+}
+
+function sendTriageQuickPrompt(text) {
+    const input = document.getElementById('triage-chat-input');
+    if (input) input.value = text;
+    handleTriageChatSubmit(new Event('submit'));
+}
+
+function handleTriageChatSubmit(e) {
+    if (e && e.preventDefault) e.preventDefault();
+
+    const input = document.getElementById('triage-chat-input');
+    if (!input || !input.value.trim()) return;
+
+    const userText = input.value.trim();
+    input.value = '';
+
+    const messagesBox = document.getElementById('triage-chat-messages');
+    if (!messagesBox) return;
+
+    const userBubble = document.createElement('div');
+    userBubble.className = 'flex justify-end gap-3';
+    userBubble.innerHTML = `
+        <div class="bg-teal-600 text-white p-3.5 rounded-2xl rounded-tr-xs text-xs font-semibold max-w-[85%] shadow-xs">
+            ${escapeHtml(userText)}
+        </div>
+    `;
+    messagesBox.appendChild(userBubble);
+    messagesBox.scrollTop = messagesBox.scrollHeight;
+
+    setTimeout(() => {
+        const botResponseHTML = evaluateTriageResponse(userText);
+        const botBubble = document.createElement('div');
+        botBubble.className = 'flex gap-3 animate-fade-in';
+        botBubble.innerHTML = `
+            <div class="w-8 h-8 rounded-xl bg-teal-600 text-white flex items-center justify-center text-xs shrink-0 shadow-sm">
+                <i class="fa-solid fa-robot"></i>
+            </div>
+            <div class="bg-white p-3.5 rounded-2xl rounded-tl-xs border border-slate-200 text-xs space-y-2 max-w-[85%] shadow-xs">
+                ${botResponseHTML}
+            </div>
+        `;
+        messagesBox.appendChild(botBubble);
+        messagesBox.scrollTop = messagesBox.scrollHeight;
+    }, 400);
+}
+
+function evaluateTriageResponse(query) {
+    const q = query.toLowerCase();
+
+    if (q.includes('chest pain') || q.includes('shortness of breath') || q.includes('cannot breathe') || q.includes('unconscious') || q.includes('bp 180') || q.includes('stroke')) {
+        return `
+            <div class="p-3 bg-rose-50 border border-rose-300 rounded-xl space-y-2">
+                <strong class="text-rose-950 font-black uppercase text-xs flex items-center gap-1.5">
+                    <i class="fa-solid fa-truck-medical text-rose-600 text-sm"></i> RED ALERT: CRITICAL CLINICAL EMERGENCY
+                </strong>
+                <p class="text-rose-900 font-bold leading-relaxed">
+                    Your symptoms indicate a potential high-risk cardiac or respiratory emergency. Do not wait!
+                </p>
+                <div class="pt-1 flex items-center gap-2">
+                    <a href="tel:108" class="px-3.5 py-2 bg-rose-600 text-white font-black rounded-xl text-xs flex items-center gap-1 shadow-md">
+                        <i class="fa-solid fa-phone-volume"></i> Call 108 Ambulance
+                    </a>
+                    <button onclick="triggerEmergencySOS()" class="px-3.5 py-2 bg-slate-900 text-white font-black rounded-xl text-xs flex items-center gap-1">
+                        Dispatch Emergency SOS
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+
+    if (q.includes('dizziness') || q.includes('high bp') || q.includes('nausea') || q.includes('stomach ache') || q.includes('headache')) {
+        const activeMeds = (state.prescriptions || []).map(p => p.medicine_name).join(', ');
+
+        return `
+            <div class="space-y-1.5">
+                <p class="font-bold text-slate-900">
+                    <i class="fa-solid fa-triangle-exclamation text-amber-500 mr-1"></i> Symptom Triage Assessment: Moderate
+                </p>
+                <p class="text-slate-700 font-medium">
+                    You mentioned experiencing symptoms. Your current active cabinet medications are: <strong class="text-teal-700">${activeMeds || 'MOVICOL, CLOBANIL, MG-OR'}</strong>.
+                </p>
+                <p class="text-slate-600">
+                    <strong>Advice:</strong> Rest in a cool room, drink 1-2 glasses of water, and ensure your morning/night doses were taken as scheduled. If symptoms persist beyond 2 hours, contact your physician.
+                </p>
+            </div>
+        `;
+    }
+
+    return `
+        <div class="space-y-1.5">
+            <p class="font-bold text-slate-900">
+                <i class="fa-solid fa-circle-check text-emerald-500 mr-1"></i> Sattva Care Guidance
+            </p>
+            <p class="text-slate-700 font-medium">
+                For general wellness: ensure regular hydration (8 glasses/day). For mild aches, Paracetamol 500mg may be used as directed if not contraindicated.
+            </p>
+            <p class="text-xs text-slate-500 font-medium">
+                Always consult your prescribing doctor before adding new over-the-counter supplements.
+            </p>
+        </div>
+    `;
+}
+
+
+// ====================================================================
+// 🌐 4. 3D PATIENT DIGITAL TWIN (THREE.JS & WebGL ENGINE)
+// ====================================================================
+
+let dtScene, dtCamera, dtRenderer;
+let organNodes = {};
+let dtIsAnimating = false;
+
+function init3DDigitalTwin() {
+    const canvas = document.getElementById('digital-twin-canvas');
+    if (!canvas || !window.THREE) return;
+
+    const THREE = window.THREE;
+    const container = canvas.parentElement;
+    const width = container.clientWidth || 400;
+    const height = container.clientHeight || 350;
+
+    dtScene = new THREE.Scene();
+    dtScene.background = new THREE.Color(0x090d16);
+
+    dtCamera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
+    dtCamera.position.set(0, 1.2, 7);
+
+    dtRenderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
+    dtRenderer.setSize(width, height);
+    dtRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+    dtScene.add(ambientLight);
+
+    const dirLight1 = new THREE.DirectionalLight(0x14b8a6, 1.2);
+    dirLight1.position.set(5, 10, 7);
+    dtScene.add(dirLight1);
+
+    const dirLight2 = new THREE.DirectionalLight(0x6366f1, 0.8);
+    dirLight2.position.set(-5, -5, -5);
+    dtScene.add(dirLight2);
+
+    const bodyGroup = new THREE.Group();
+
+    const headGeo = new THREE.SphereGeometry(0.55, 24, 24);
+    const headMat = new THREE.MeshPhongMaterial({ color: 0x1e293b, transparent: true, opacity: 0.85 });
+    const headMesh = new THREE.Mesh(headGeo, headMat);
+    headMesh.position.set(0, 2.2, 0);
+    bodyGroup.add(headMesh);
+
+    const torsoGeo = new THREE.CylinderGeometry(0.75, 0.6, 1.8, 16);
+    const torsoMat = new THREE.MeshPhongMaterial({ color: 0x1e293b, transparent: true, opacity: 0.75 });
+    const torsoMesh = new THREE.Mesh(torsoGeo, torsoMat);
+    torsoMesh.position.set(0, 0.9, 0);
+    bodyGroup.add(torsoMesh);
+
+    const limbMat = new THREE.MeshBasicMaterial({ color: 0x334155, wireframe: true });
+    
+    const armL = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.15, 1.4, 8), limbMat);
+    armL.position.set(-0.95, 1.0, 0);
+    armL.rotation.z = 0.2;
+    bodyGroup.add(armL);
+
+    const armR = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.15, 1.4, 8), limbMat);
+    armR.position.set(0.95, 1.0, 0);
+    armR.rotation.z = -0.2;
+    bodyGroup.add(armR);
+
+    // Organ Nodes
+    const brainGeo = new THREE.IcosahedronGeometry(0.35, 2);
+    const brainMat = new THREE.MeshStandardMaterial({ color: 0xa855f7, emissive: 0xa855f7, emissiveIntensity: 0.4, roughness: 0.3 });
+    const brainNode = new THREE.Mesh(brainGeo, brainMat);
+    brainNode.position.set(0, 2.2, 0.05);
+    bodyGroup.add(brainNode);
+    organNodes.BRAIN = brainNode;
+
+    const heartGeo = new THREE.DodecahedronGeometry(0.3, 1);
+    const heartMat = new THREE.MeshStandardMaterial({ color: 0xf43f5e, emissive: 0xf43f5e, emissiveIntensity: 0.6, roughness: 0.2 });
+    const heartNode = new THREE.Mesh(heartGeo, heartMat);
+    heartNode.position.set(-0.15, 1.15, 0.25);
+    bodyGroup.add(heartNode);
+    organNodes.HEART = heartNode;
+
+    const lungGeo = new THREE.SphereGeometry(0.28, 12, 12);
+    const lungMat = new THREE.MeshStandardMaterial({ color: 0x06b6d4, emissive: 0x06b6d4, emissiveIntensity: 0.5 });
+    const lungL = new THREE.Mesh(lungGeo, lungMat);
+    lungL.position.set(-0.35, 1.1, 0.1);
+    const lungR = new THREE.Mesh(lungGeo, lungMat);
+    lungR.position.set(0.35, 1.1, 0.1);
+    const lungsGroup = new THREE.Group();
+    lungsGroup.add(lungL);
+    lungsGroup.add(lungR);
+    bodyGroup.add(lungsGroup);
+    organNodes.LUNGS = lungsGroup;
+
+    const stomachGeo = new THREE.SphereGeometry(0.32, 14, 14);
+    const stomachMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, emissive: 0xf59e0b, emissiveIntensity: 0.5 });
+    const stomachNode = new THREE.Mesh(stomachGeo, stomachMat);
+    stomachNode.position.set(0.1, 0.55, 0.2);
+    bodyGroup.add(stomachNode);
+    organNodes.STOMACH = stomachNode;
+
+    dtScene.add(bodyGroup);
+
+    let isDragging = false;
+    let previousMousePosition = { x: 0, y: 0 };
+
+    canvas.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        previousMousePosition = { x: e.clientX, y: e.clientY };
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        const deltaX = e.clientX - previousMousePosition.x;
+        const deltaY = e.clientY - previousMousePosition.y;
+
+        bodyGroup.rotation.y += deltaX * 0.01;
+        bodyGroup.rotation.x += deltaY * 0.01;
+
+        previousMousePosition = { x: e.clientX, y: e.clientY };
+    });
+
+    window.addEventListener('mouseup', () => { isDragging = false; });
+
+    function animate() {
+        requestAnimationFrame(animate);
+        
+        if (!isDragging) {
+            bodyGroup.rotation.y += 0.005;
+        }
+
+        if (organNodes.HEART) {
+            const time = Date.now() * 0.004;
+            const scale = 1 + Math.sin(time) * 0.08;
+            organNodes.HEART.scale.set(scale, scale, scale);
+        }
+
+        dtRenderer.render(dtScene, dtCamera);
+    }
+
+    animate();
+    dtIsAnimating = true;
+}
+
+function updateDigitalTwinOrgans(sys, dia, sugar, pulse, spo2) {
+    if (!organNodes.HEART) return;
+
+    const THREE = window.THREE;
+    if (!THREE) return;
+
+    const heartStatusEl = document.getElementById('dt-heart-status');
+    if (sys >= 140 || dia >= 90 || pulse > 100) {
+        organNodes.HEART.material.color.setHex(0xe11d48);
+        organNodes.HEART.material.emissive.setHex(0xf43f5e);
+        organNodes.HEART.material.emissiveIntensity = 1.0;
+        if (heartStatusEl) {
+            heartStatusEl.className = 'text-rose-400 font-black text-xs animate-pulse';
+            heartStatusEl.innerText = `High Pressure (BP ${sys}/${dia} mmHg)`;
+        }
+    } else {
+        organNodes.HEART.material.color.setHex(0x10b981);
+        organNodes.HEART.material.emissive.setHex(0x10b981);
+        organNodes.HEART.material.emissiveIntensity = 0.4;
+        if (heartStatusEl) {
+            heartStatusEl.className = 'text-emerald-400 font-bold text-xs';
+            heartStatusEl.innerText = `Normal (BP ${sys}/${dia} mmHg)`;
+        }
+    }
+
+    const lungsStatusEl = document.getElementById('dt-lungs-status');
+    if (spo2 < 95) {
+        if (lungsStatusEl) {
+            lungsStatusEl.className = 'text-rose-400 font-black text-xs animate-pulse';
+            lungsStatusEl.innerText = `Low Oxygen (SpO2 ${spo2}%)`;
+        }
+    } else {
+        if (lungsStatusEl) {
+            lungsStatusEl.className = 'text-cyan-400 font-bold text-xs';
+            lungsStatusEl.innerText = `Optimal (SpO2 ${spo2}%)`;
+        }
+    }
+
+    const stomachStatusEl = document.getElementById('dt-stomach-status');
+    if (sugar >= 140) {
+        if (stomachStatusEl) {
+            stomachStatusEl.className = 'text-amber-400 font-black text-xs';
+            stomachStatusEl.innerText = `Elevated Glucose (${sugar} mg/dL)`;
+        }
+    } else {
+        if (stomachStatusEl) {
+            stomachStatusEl.className = 'text-emerald-400 font-bold text-xs';
+            stomachStatusEl.innerText = `Controlled (${sugar} mg/dL)`;
+        }
+    }
+}
+
+function focusDigitalTwinOrgan(organName) {
+    const organNameEl = document.getElementById('dt-selected-organ-name');
+    if (organNameEl) organNameEl.innerText = organName;
+
+    if (dtCamera) {
+        if (organName === 'HEART') {
+            dtCamera.position.set(0, 1.15, 3.5);
+        } else if (organName === 'LUNGS') {
+            dtCamera.position.set(0, 1.1, 3.5);
+        } else if (organName === 'STOMACH') {
+            dtCamera.position.set(0, 0.55, 3.5);
+        } else if (organName === 'BRAIN') {
+            dtCamera.position.set(0, 2.2, 3.5);
+        }
+    }
+}
+
+function resetDigitalTwinCamera() {
+    if (dtCamera) {
+        dtCamera.position.set(0, 1.2, 7);
+    }
+    const organNameEl = document.getElementById('dt-selected-organ-name');
+    if (organNameEl) organNameEl.innerText = 'Overall System';
+}
+
+
+// ====================================================================
+// 🔬 5. MECHANISM OF ACTION (MoA) PROCEDURAL SIMULATOR ENGINE
+// ====================================================================
+
+let moaCanvas, moaCtx;
+let moaActiveMedicine = 'MOVICOL';
+let moaIsPlaying = true;
+let moaSpeed = 1;
+let moaTime = 0;
+let moaAnimationId = null;
+
+const MOA_MEDICINE_DATA = {
+    'MOVICOL': {
+        name: 'MOVICOL (Osmotic Hydration)',
+        mechanism: 'Osmotic binding: Macrogol 3350 binds water molecules in the intestinal lumen, causing gentle hydration & bowel movement without absorption into bloodstream.',
+        phase1: 'Phase 1: Gastric Dissolution - Macrogol sachet dissolves into ionic electrolyte water.',
+        phase2: 'Phase 2: Micro-Capillary Osmosis - Water molecules bound tightly to PEG chain.',
+        phase3: 'Phase 3: Luminal Hydration - Stool hydration without systemic absorption.'
+    },
+    'CLOBANIL': {
+        name: 'CLOBANIL (Clobazam 5mg)',
+        mechanism: 'GABA-A Allosteric Modulation: Enhances GABA inhibitory neurotransmission at central GABA-A receptors to reduce seizure activity.',
+        phase1: 'Phase 1: Gastric Fluid Dissolution - Clobazam 5mg tablet breaks down.',
+        phase2: 'Phase 2: Blood-Brain Barrier Capillary Crossing - Molecules flow into cerebral vessels.',
+        phase3: 'Phase 3: GABA-A Receptor Docking - Enhances chloride ion influx into neurons.'
+    },
+    'MG-OR': {
+        name: 'MG-OR (Magnesium Electrolyte Solution)',
+        mechanism: 'Electrolyte Replenishment: Free Mg2+ ions regulate cellular Na+/K+-ATPase pumps and neuromuscular excitability.',
+        phase1: 'Phase 1: Ionic Dissociation - Mg2+ & Citrate dissociation in stomach.',
+        phase2: 'Phase 2: Cellular Transport - Micro-capillary absorption into plasma.',
+        phase3: 'Phase 3: Ion Channel Binding - Regulates cardiac and muscle membrane potential.'
+    },
+    'Paracetamol': {
+        name: 'Paracetamol (500mg)',
+        mechanism: 'Central COX Inhibition: Selectively inhibits Cyclooxygenase (COX-3) in central nervous system to reduce prostaglandin synthesis.',
+        phase1: 'Phase 1: Rapid Gastric Absorption - Tablet dissolves in 5 minutes.',
+        phase2: 'Phase 2: Hepatic Micro-Capillary Flow - Flow through portal vein.',
+        phase3: 'Phase 3: Central COX Receptor Binding - Analgesic & antipyretic relief.'
+    },
+    'Metformin': {
+        name: 'Metformin (500mg)',
+        mechanism: 'AMPK Activation: Activates AMP-activated protein kinase in hepatocytes, suppressing hepatic gluconeogenesis.',
+        phase1: 'Phase 1: Small Intestine Absorption - Transported via OCT1 transporters.',
+        phase2: 'Phase 2: Liver Micro-Capillary Flow - Enters hepatic lobules.',
+        phase3: 'Phase 3: Mitochondrial Complex I Binding - Suppresses gluconeogenesis.'
+    }
+};
+
+function openMoASimulatorModal() {
+    showModal('moa-simulator-modal');
+    setTimeout(() => {
+        initMoASimulator();
+    }, 150);
+}
+
+function closeMoASimulatorModal() {
+    hideModal('moa-simulator-modal');
+    if (moaAnimationId) {
+        cancelAnimationFrame(moaAnimationId);
+    }
+}
+
+function initMoASimulator() {
+    moaCanvas = document.getElementById('moa-canvas');
+    if (!moaCanvas) return;
+
+    const parent = moaCanvas.parentElement;
+    moaCanvas.width = parent.clientWidth || 600;
+    moaCanvas.height = parent.clientHeight || 350;
+    moaCtx = moaCanvas.getContext('2d');
+
+    moaTime = 0;
+    moaIsPlaying = true;
+
+    startMoARenderLoop();
+}
+
+function switchMoAMedicine(medKey) {
+    moaActiveMedicine = medKey;
+    moaTime = 0;
+    const data = MOA_MEDICINE_DATA[medKey];
+    if (data) {
+        document.getElementById('moa-phase-description').innerText = data.mechanism;
+    }
+}
+
+function toggleMoASimulation() {
+    moaIsPlaying = !moaIsPlaying;
+    const textEl = document.getElementById('moa-play-text');
+    const iconEl = document.getElementById('moa-play-icon');
+    if (textEl) textEl.innerText = moaIsPlaying ? 'Pause' : 'Play';
+    if (iconEl) iconEl.className = moaIsPlaying ? 'fa-solid fa-pause' : 'fa-solid fa-play';
+}
+
+function resetMoASimulation() {
+    moaTime = 0;
+    moaIsPlaying = true;
+}
+
+function updateMoASpeed(val) {
+    moaSpeed = parseFloat(val) || 1;
+}
+
+function startMoARenderLoop() {
+    if (moaAnimationId) cancelAnimationFrame(moaAnimationId);
+
+    function loop() {
+        moaAnimationId = requestAnimationFrame(loop);
+        if (moaIsPlaying) {
+            moaTime += 0.016 * moaSpeed;
+        }
+        drawMoAFrame();
+    }
+    loop();
+}
+
+function drawMoAFrame() {
+    if (!moaCtx || !moaCanvas) return;
+
+    const w = moaCanvas.width;
+    const h = moaCanvas.height;
+
+    moaCtx.fillStyle = '#090d16';
+    moaCtx.fillRect(0, 0, w, h);
+
+    const cycle = moaTime % 12;
+    const data = MOA_MEDICINE_DATA[moaActiveMedicine] || MOA_MEDICINE_DATA['MOVICOL'];
+    const stageTitle = document.getElementById('moa-stage-title');
+
+    if (cycle < 4) {
+        if (stageTitle) stageTitle.innerText = data.phase1;
+        drawPhase1Gastric(w, h, cycle);
+    } else if (cycle < 8) {
+        if (stageTitle) stageTitle.innerText = data.phase2;
+        drawPhase2Capillary(w, h, cycle - 4);
+    } else {
+        if (stageTitle) stageTitle.innerText = data.phase3;
+        drawPhase3Receptor(w, h, cycle - 8);
+    }
+}
+
+function drawPhase1Gastric(w, h, t) {
+    moaCtx.fillStyle = 'rgba(13, 148, 136, 0.15)';
+    moaCtx.beginPath();
+    moaCtx.arc(w / 2, h / 2, 100 + Math.sin(t * 3) * 10, 0, Math.PI * 2);
+    moaCtx.fill();
+
+    const pillX = w / 2;
+    const pillY = h / 2;
+    const progress = t / 4;
+
+    moaCtx.save();
+    moaCtx.translate(pillX, pillY);
+    moaCtx.rotate(t * 0.5);
+
+    moaCtx.fillStyle = '#14b8a6';
+    moaCtx.beginPath();
+    if (typeof moaCtx.roundRect === 'function') {
+        moaCtx.roundRect(-40 * (1 - progress * 0.5), -20 * (1 - progress * 0.5), 80 * (1 - progress * 0.5), 40 * (1 - progress * 0.5), 20);
+    } else {
+        moaCtx.rect(-40 * (1 - progress * 0.5), -20 * (1 - progress * 0.5), 80 * (1 - progress * 0.5), 40 * (1 - progress * 0.5));
+    }
+    moaCtx.fill();
+
+    moaCtx.restore();
+
+    const count = Math.floor(progress * 40);
+    for (let i = 0; i < count; i++) {
+        const angle = (i / 40) * Math.PI * 2 + t;
+        const radius = 40 + (i * 3) + Math.sin(t * 5 + i) * 15;
+        const px = pillX + Math.cos(angle) * radius;
+        const py = pillY + Math.sin(angle) * radius;
+
+        moaCtx.fillStyle = '#2dd4bf';
+        moaCtx.beginPath();
+        moaCtx.arc(px, py, 4, 0, Math.PI * 2);
+        moaCtx.fill();
+    }
+}
+
+function drawPhase2Capillary(w, h, t) {
+    moaCtx.strokeStyle = 'rgba(244, 63, 94, 0.4)';
+    moaCtx.lineWidth = 14;
+    moaCtx.beginPath();
+    moaCtx.moveTo(0, h * 0.3);
+    moaCtx.quadraticCurveTo(w * 0.5, h * 0.2, w, h * 0.4);
+    moaCtx.stroke();
+
+    moaCtx.beginPath();
+    moaCtx.moveTo(0, h * 0.7);
+    moaCtx.quadraticCurveTo(w * 0.5, h * 0.8, w, h * 0.6);
+    moaCtx.stroke();
+
+    for (let i = 0; i < 6; i++) {
+        const rx = ((i * 120) + (t * 80)) % (w + 100) - 50;
+        const ry = h * 0.5 + Math.sin(rx * 0.01) * 30;
+
+        moaCtx.fillStyle = '#e11d48';
+        moaCtx.beginPath();
+        moaCtx.ellipse(rx, ry, 22, 14, 0.2, 0, Math.PI * 2);
+        moaCtx.fill();
+    }
+
+    for (let j = 0; j < 15; j++) {
+        const dx = ((j * 45) + (t * 120)) % (w + 50) - 20;
+        const dy = h * 0.48 + Math.sin(j + t * 4) * 20;
+
+        moaCtx.fillStyle = '#38bdf8';
+        moaCtx.beginPath();
+        moaCtx.arc(dx, dy, 5, 0, Math.PI * 2);
+        moaCtx.fill();
+    }
+}
+
+function drawPhase3Receptor(w, h, t) {
+    moaCtx.fillStyle = 'rgba(99, 102, 241, 0.2)';
+    moaCtx.fillRect(w * 0.4, 0, w * 0.6, h);
+
+    moaCtx.fillStyle = '#6366f1';
+    for (let y = 10; y < h; y += 25) {
+        moaCtx.beginPath();
+        moaCtx.arc(w * 0.4, y, 8, 0, Math.PI * 2);
+        moaCtx.fill();
+    }
+
+    const recY = h * 0.5;
+    moaCtx.fillStyle = '#a855f7';
+    moaCtx.beginPath();
+    moaCtx.arc(w * 0.4, recY, 25, Math.PI * 0.5, Math.PI * 1.5);
+    moaCtx.fill();
+
+    const progress = Math.min(1, t / 3);
+    const molX = (w * 0.15) + (progress * (w * 0.25 - 10));
+    const molY = recY;
+
+    moaCtx.fillStyle = '#2dd4bf';
+    moaCtx.beginPath();
+    moaCtx.arc(molX, molY, 14, 0, Math.PI * 2);
+    moaCtx.fill();
+
+    if (progress >= 0.9) {
+        moaCtx.fillStyle = '#f59e0b';
+        for (let i = 0; i < 8; i++) {
+            const angle = (i / 8) * Math.PI * 2;
+            const sx = w * 0.4 + Math.cos(angle) * (30 + Math.sin(t * 10) * 10);
+            const sy = recY + Math.sin(angle) * (30 + Math.sin(t * 10) * 10);
+
+            moaCtx.beginPath();
+            moaCtx.arc(sx, sy, 3, 0, Math.PI * 2);
+            moaCtx.fill();
+        }
+    }
+}
+

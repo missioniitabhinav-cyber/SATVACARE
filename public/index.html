@@ -31,8 +31,10 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- Supabase JS Client CDN -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- html2pdf.js CDN for PDF export -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <!-- Three.js CDN for 3D Patient Digital Twin WebGL -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- Tesseract.js CDN for AI Prescription Vision OCR -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
     <!-- Custom Styles -->
     <link rel="stylesheet" href="styles.css">
 </head>
@@ -455,6 +457,140 @@
                         </div>
                     </div>
 
+                    <!-- 🌐 3D Patient Digital Twin & Anatomical Risk Map (WebGL / Three.js) -->
+                    <div class="glass-card p-6 shadow-xl space-y-4 bg-gradient-to-br from-slate-900 via-slate-800 to-teal-950 text-white rounded-3xl relative overflow-hidden border border-teal-500/30">
+                        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 relative z-10">
+                            <div>
+                                <span class="px-2.5 py-0.5 rounded-full bg-teal-500/20 text-teal-300 border border-teal-400/30 text-[10px] font-black uppercase tracking-widest inline-flex items-center gap-1.5 mb-1">
+                                    <i class="fa-solid fa-cube text-teal-400"></i> Interactive WebGL Render
+                                </span>
+                                <h3 class="text-lg font-black text-white flex items-center gap-2 tracking-tight">
+                                    <i class="fa-solid fa-child-reaching text-teal-400"></i> 3D Patient Digital Twin
+                                </h3>
+                                <p class="text-xs text-slate-300 font-medium">Real-time anatomical organ highlighting based on logged health vitals &amp; side-effects</p>
+                            </div>
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <button type="button" onclick="focusDigitalTwinOrgan('HEART')" class="px-2.5 py-1 rounded-xl bg-rose-500/20 hover:bg-rose-500/40 border border-rose-400/40 text-rose-200 text-xs font-extrabold transition">
+                                    <i class="fa-solid fa-heart-pulse mr-1"></i> Heart
+                                </button>
+                                <button type="button" onclick="focusDigitalTwinOrgan('LUNGS')" class="px-2.5 py-1 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/40 border border-cyan-400/40 text-cyan-200 text-xs font-extrabold transition">
+                                    <i class="fa-solid fa-lungs mr-1"></i> Lungs
+                                </button>
+                                <button type="button" onclick="focusDigitalTwinOrgan('STOMACH')" class="px-2.5 py-1 rounded-xl bg-amber-500/20 hover:bg-amber-500/40 border border-amber-400/40 text-amber-200 text-xs font-extrabold transition">
+                                    <i class="fa-solid fa-vial mr-1"></i> Stomach/Liver
+                                </button>
+                                <button type="button" onclick="focusDigitalTwinOrgan('BRAIN')" class="px-2.5 py-1 rounded-xl bg-purple-500/20 hover:bg-purple-500/40 border border-purple-400/40 text-purple-200 text-xs font-extrabold transition">
+                                    <i class="fa-solid fa-brain mr-1"></i> Brain
+                                </button>
+                                <button type="button" onclick="openMoASimulatorModal()" class="px-3 py-1.5 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 text-slate-950 font-black text-xs shadow-md transition hover:scale-105 flex items-center gap-1.5">
+                                    <i class="fa-solid fa-atom text-slate-950"></i> MoA Simulator
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 relative z-10 pt-2">
+                            <!-- 3D Canvas Viewport -->
+                            <div class="lg:col-span-8 h-80 sm:h-96 rounded-2xl bg-slate-950/80 border border-slate-700/60 relative overflow-hidden flex items-center justify-center">
+                                <canvas id="digital-twin-canvas" class="w-full h-full cursor-grab active:cursor-grabbing"></canvas>
+                                
+                                <div class="absolute bottom-3 left-3 bg-slate-900/80 backdrop-blur-md px-3 py-1.5 rounded-xl border border-slate-700 text-[11px] font-bold text-slate-300 flex items-center gap-2 pointer-events-none">
+                                    <i class="fa-solid fa-hand-pointer text-teal-400"></i> Click &amp; Drag to Rotate • Scroll to Zoom
+                                </div>
+                                <div class="absolute top-3 left-3 flex gap-2">
+                                    <span id="dt-pulse-indicator" class="px-2.5 py-1 rounded-lg bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5">
+                                        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span> Live WebGL Sync Active
+                                    </span>
+                                </div>
+                            </div>
+
+                            <!-- Organ Inspection Panel -->
+                            <div id="organ-details-panel" class="lg:col-span-4 bg-slate-900/90 border border-slate-700/80 rounded-2xl p-4 space-y-3 flex flex-col justify-between">
+                                <div class="space-y-2">
+                                    <h4 class="text-xs font-black text-teal-400 uppercase tracking-widest border-b border-slate-800 pb-2 flex items-center justify-between">
+                                        <span>Anatomical Status</span>
+                                        <span id="dt-selected-organ-name" class="text-white text-xs font-bold">Overall System</span>
+                                    </h4>
+                                    <div id="dt-organ-status-body" class="space-y-2.5 text-xs">
+                                        <div class="p-2.5 rounded-xl bg-slate-800/80 border border-slate-700">
+                                            <span class="text-[10px] text-slate-400 uppercase font-bold block">Heart &amp; Vascular System</span>
+                                            <strong id="dt-heart-status" class="text-emerald-400 font-extrabold text-xs">Normal (BP: 120/80 mmHg)</strong>
+                                        </div>
+                                        <div class="p-2.5 rounded-xl bg-slate-800/80 border border-slate-700">
+                                            <span class="text-[10px] text-slate-400 uppercase font-bold block">Respiratory / Lungs</span>
+                                            <strong id="dt-lungs-status" class="text-emerald-400 font-extrabold text-xs">Optimal (SpO2: 98%)</strong>
+                                        </div>
+                                        <div class="p-2.5 rounded-xl bg-slate-800/80 border border-slate-700">
+                                            <span class="text-[10px] text-slate-400 uppercase font-bold block">Stomach &amp; Metabolic</span>
+                                            <strong id="dt-stomach-status" class="text-emerald-400 font-extrabold text-xs">Controlled (Sugar: 95 mg/dL)</strong>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="pt-2 border-t border-slate-800 flex items-center justify-between">
+                                    <button type="button" onclick="resetDigitalTwinCamera()" class="w-full py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold text-slate-200 transition">
+                                        <i class="fa-solid fa-arrows-rotate mr-1"></i> Reset Viewport
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 📈 Predictive Vitals Risk Radar & 48-Hour Forward Trajectory Engine -->
+                    <div class="glass-card p-6 shadow-xl space-y-4 bg-white border border-slate-200 rounded-3xl">
+                        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                            <div>
+                                <span class="px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 text-[10px] font-black uppercase tracking-widest inline-flex items-center gap-1.5 mb-1">
+                                    <i class="fa-solid fa-brain text-indigo-600"></i> Clinical Trajectory Scoring
+                                </span>
+                                <h3 class="text-lg font-black text-slate-900 flex items-center gap-2 tracking-tight">
+                                    <i class="fa-solid fa-wave-square text-indigo-600"></i> Predictive Vitals Risk Scoring (48-Hour Forward Trajectory)
+                                </h3>
+                                <p class="text-xs text-slate-500 font-medium">Machine learning risk evaluation predicting forward 48-hour hypertension &amp; glycemic spike trajectory</p>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span id="predictive-risk-score-badge" class="px-3 py-1.5 rounded-xl bg-emerald-100 text-emerald-800 border border-emerald-300 font-black text-xs flex items-center gap-1.5">
+                                    <i class="fa-solid fa-shield-heart text-emerald-600"></i> Risk Level: LOW (12%)
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 pt-2">
+                            <!-- Trajectory Graph -->
+                            <div class="lg:col-span-8 bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-2">
+                                <div class="flex items-center justify-between">
+                                    <h4 class="text-xs font-black text-slate-800 uppercase tracking-wider">
+                                        48-Hour Predicted Vital Trends (Systolic BP / Sugar)
+                                    </h4>
+                                    <span class="text-[10px] text-slate-500 font-semibold">Predicted vs Threshold</span>
+                                </div>
+                                <div class="h-56 relative">
+                                    <canvas id="predictive-risk-chart"></canvas>
+                                </div>
+                            </div>
+
+                            <!-- Early Warning Indicators & Mitigation Panel -->
+                            <div class="lg:col-span-4 space-y-3 flex flex-col justify-between">
+                                <div class="space-y-2">
+                                    <h4 class="text-xs font-black text-slate-800 uppercase tracking-wider border-b border-slate-200 pb-1">
+                                        Clinical Warning Flags &amp; Trajectory
+                                    </h4>
+                                    <div id="predictive-warning-flags-container" class="space-y-2">
+                                        <!-- Dynamically filled by JS -->
+                                    </div>
+                                </div>
+
+                                <div class="p-3.5 bg-indigo-50/80 border border-indigo-200 rounded-2xl space-y-1.5">
+                                    <h5 class="text-xs font-black text-indigo-950 flex items-center gap-1.5 uppercase tracking-wide">
+                                        <i class="fa-solid fa-stethoscope text-indigo-600"></i> Recommendations
+                                    </h5>
+                                    <p id="predictive-mitigation-text" class="text-xs text-indigo-900 font-medium leading-relaxed">
+                                        Vitals within safe parameters. Maintain current medication dosage schedule and keep hydration level optimal.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- 🩺 Logged Medicine Symptoms & Side-Effects Log Card -->
                     <div class="glass-card p-6 shadow-xl space-y-4">
                         <div class="flex items-center justify-between">
@@ -536,6 +672,44 @@
 
             <form id="rx-form" onsubmit="handleRxSubmit(event)" class="space-y-5">
                 <input type="hidden" id="rx-id">
+
+                <!-- 📸 AI Prescription OCR & Vision Scanner Banner -->
+                <div class="p-4 bg-gradient-to-r from-teal-500/10 via-indigo-500/10 to-emerald-500/10 border border-teal-500/30 rounded-2xl space-y-2">
+                    <div class="flex items-center justify-between gap-3">
+                        <div class="flex items-center gap-2">
+                            <div class="w-8 h-8 rounded-xl bg-teal-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+                                <i class="fa-solid fa-camera-retro"></i>
+                            </div>
+                            <div>
+                                <h4 class="text-xs font-black text-slate-900 uppercase tracking-wide">AI Doctor Prescription OCR Scanner</h4>
+                                <p class="text-[11px] text-slate-500 font-medium">Snap or upload a photo of doctor's handwritten Rx to auto-fill details</p>
+                            </div>
+                        </div>
+                        <div>
+                            <input type="file" id="rx-ocr-file-input" accept="image/*" class="hidden" onchange="processPrescriptionOCR(event)">
+                            <button type="button" onclick="document.getElementById('rx-ocr-file-input').click()" class="px-3.5 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-extrabold text-xs shadow-md transition flex items-center gap-1.5">
+                                <i class="fa-solid fa-cloud-arrow-up"></i> Scan Prescription Photo
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- OCR Status indicator -->
+                    <div id="rx-ocr-status" class="hidden p-2 rounded-xl bg-white border border-teal-200 text-xs font-bold text-teal-800 flex items-center gap-2">
+                        <i class="fa-solid fa-spinner animate-spin text-teal-600"></i>
+                        <span id="rx-ocr-status-text">Parsing prescription image with Tesseract Vision AI...</span>
+                    </div>
+
+                    <!-- ⚠️ Drug-Drug Contraindication Safety Alert Box -->
+                    <div id="rx-contraindication-alert" class="hidden p-3.5 rounded-2xl bg-rose-50 border border-rose-300 text-rose-950 space-y-1">
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid fa-triangle-exclamation text-rose-600 text-sm"></i>
+                            <strong class="text-xs font-black uppercase tracking-wide">DRUG CONTRAINDICATION ALERT DETECTED</strong>
+                        </div>
+                        <p id="rx-contraindication-text" class="text-xs font-semibold leading-relaxed text-rose-900">
+                            Warning: Taking this medication with your active cabinet prescription may cause severe adverse reactions.
+                        </p>
+                    </div>
+                </div>
 
                 <!-- Section 1: Medicine Identification -->
                 <div class="bg-slate-50 p-4.5 rounded-2xl border border-slate-200 space-y-4">
@@ -1312,6 +1486,148 @@
                     <!-- Populated via JS -->
                 </div>
             </div>
+        </div>
+    <!-- 🔬 Mechanism of Action (MoA) Procedural Cellular Simulator Modal -->
+    <div id="moa-simulator-modal" class="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md hidden opacity-0 transition-all duration-300">
+        <div class="modal-content bg-slate-950 border border-teal-500/30 rounded-3xl max-w-4xl w-full p-6 sm:p-8 shadow-2xl space-y-6 text-white max-h-[92vh] overflow-y-auto">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-2xl bg-teal-500/20 border border-teal-400/40 text-teal-400 flex items-center justify-center text-lg shadow-sm">
+                        <i class="fa-solid fa-atom animate-spin-slow"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-black text-white flex items-center gap-2">
+                            Mechanism of Action (MoA) Simulator
+                            <span class="px-2.5 py-0.5 rounded-full bg-teal-500/20 text-teal-300 border border-teal-400/30 text-[10px] uppercase tracking-wider">Cellular Level</span>
+                        </h3>
+                        <p class="text-xs text-slate-400 font-medium">Interactive procedural visualization of drug dissolution, capillary flow &amp; receptor binding</p>
+                    </div>
+                </div>
+                <button onclick="closeMoASimulatorModal()" class="w-8 h-8 flex items-center justify-center rounded-xl bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 transition">
+                    <i class="fa-solid fa-xmark text-sm"></i>
+                </button>
+            </div>
+
+            <!-- Medicine Selection & Stage Toolbar -->
+            <div class="flex flex-wrap items-center justify-between gap-3 bg-slate-900/80 p-3 rounded-2xl border border-slate-800">
+                <div class="flex items-center gap-2">
+                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Select Medicine:</span>
+                    <select id="moa-medicine-select" onchange="switchMoAMedicine(this.value)" class="py-1.5 px-3 rounded-xl bg-slate-800 border border-slate-700 text-xs font-black text-teal-300 outline-none">
+                        <option value="MOVICOL">💧 MOVICOL (Osmotic Hydration)</option>
+                        <option value="CLOBANIL">🧠 CLOBANIL (GABA-A Receptor)</option>
+                        <option value="MG-OR">🧪 MG-OR (Magnesium Electrolyte)</option>
+                        <option value="Paracetamol">🌡️ Paracetamol (COX Enzyme Inhibit)</option>
+                        <option value="Metformin">🩸 Metformin (AMPK Activation)</option>
+                    </select>
+                </div>
+
+                <!-- Simulation Control Buttons -->
+                <div class="flex items-center gap-2">
+                    <button type="button" onclick="toggleMoASimulation()" id="moa-play-btn" class="px-4 py-1.5 bg-teal-500 hover:bg-teal-400 text-slate-950 font-black text-xs rounded-xl transition flex items-center gap-1.5 shadow-md">
+                        <i class="fa-solid fa-pause" id="moa-play-icon"></i> <span id="moa-play-text">Pause</span>
+                    </button>
+                    <button type="button" onclick="resetMoASimulation()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs rounded-xl border border-slate-700 transition">
+                        <i class="fa-solid fa-rotate-left"></i> Reset
+                    </button>
+                </div>
+            </div>
+
+            <!-- Simulation Canvas Viewport -->
+            <div class="relative rounded-2xl overflow-hidden border border-slate-800 bg-slate-950 h-80 sm:h-96 flex items-center justify-center">
+                <canvas id="moa-canvas" class="w-full h-full"></canvas>
+                
+                <!-- Stage Overlay Badge -->
+                <div class="absolute top-3 left-3 bg-slate-900/90 backdrop-blur-md px-3.5 py-2 rounded-xl border border-teal-500/30 text-xs space-y-0.5">
+                    <span class="text-[10px] text-teal-400 font-black uppercase tracking-widest block">Active Phase</span>
+                    <strong id="moa-stage-title" class="text-white font-extrabold block text-sm">Phase 1: Gastric Dissolution</strong>
+                </div>
+
+                <!-- Molecular Info Box -->
+                <div class="absolute bottom-3 left-3 right-3 bg-slate-900/90 backdrop-blur-md p-3 rounded-xl border border-slate-800 text-xs font-medium text-slate-300 flex items-center justify-between gap-3">
+                    <div id="moa-phase-description" class="leading-relaxed">
+                        Drug tablet breaks down in gastric fluids, releasing targeted active molecules into micro-vessels.
+                    </div>
+                    <div class="shrink-0 flex items-center gap-2">
+                        <span class="text-[10px] text-slate-400 uppercase font-bold">Speed:</span>
+                        <input type="range" id="moa-speed-slider" min="0.5" max="3" step="0.5" value="1" onchange="updateMoASpeed(this.value)" class="w-20 accent-teal-400">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 🤖 Conversational AI Triage Chatbot Floating Button & Modal -->
+    <button id="triage-chatbot-float-btn" onclick="openTriageChatbotModal()" class="fixed bottom-6 right-6 z-40 p-4 rounded-full bg-gradient-to-r from-teal-600 via-emerald-600 to-indigo-600 text-white shadow-2xl hover:scale-110 active:scale-95 transition-all duration-300 flex items-center gap-3 border-2 border-white/40 group">
+        <div class="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center text-lg">
+            <i class="fa-solid fa-robot text-white group-hover:rotate-12 transition-transform"></i>
+        </div>
+        <span class="text-xs font-black tracking-tight hidden sm:inline pr-1">AI Triage Assistant</span>
+        <span class="w-3 h-3 rounded-full bg-emerald-400 animate-ping absolute top-1 right-1"></span>
+    </button>
+
+    <!-- Modal: Conversational Triage Chatbot -->
+    <div id="triage-chatbot-modal" class="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md hidden opacity-0 transition-all duration-300">
+        <div class="modal-content bg-white border border-slate-300 rounded-3xl max-w-lg w-full p-5 sm:p-6 shadow-2xl space-y-4 text-slate-900 flex flex-col h-[85vh] sm:h-[750px]">
+            <!-- Header -->
+            <div class="flex items-center justify-between border-b border-slate-200 pb-3 shrink-0">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-teal-600 to-emerald-500 text-white flex items-center justify-center text-lg shadow-md">
+                        <i class="fa-solid fa-user-nurse"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-black text-slate-900 flex items-center gap-2">
+                            Sattva AI Triage Assistant
+                            <span class="px-2 py-0.5 rounded-full bg-teal-100 text-teal-800 text-[10px] font-extrabold uppercase">Edge AI</span>
+                        </h3>
+                        <p class="text-xs text-slate-500 font-medium">Ask symptoms, medication advice &amp; emergency escalation</p>
+                    </div>
+                </div>
+                <button onclick="closeTriageChatbotModal()" class="w-8 h-8 flex items-center justify-center rounded-xl bg-slate-100 text-slate-400 hover:text-slate-700 transition">
+                    <i class="fa-solid fa-xmark text-sm"></i>
+                </button>
+            </div>
+
+            <!-- Symptom Quick Chips -->
+            <div class="flex items-center gap-1.5 overflow-x-auto pb-1 shrink-0 scrollbar-none">
+                <button type="button" onclick="sendTriageQuickPrompt('Stomach ache after taking MOVICOL')" class="px-2.5 py-1 rounded-xl bg-teal-50 hover:bg-teal-100 border border-teal-200 text-teal-900 text-[11px] font-bold shrink-0 transition">
+                    🥣 Stomach ache
+                </button>
+                <button type="button" onclick="sendTriageQuickPrompt('Chest pain and shortness of breath')" class="px-2.5 py-1 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-900 text-[11px] font-bold shrink-0 transition">
+                    🚨 Chest pain
+                </button>
+                <button type="button" onclick="sendTriageQuickPrompt('High Blood Pressure reading 160/100')" class="px-2.5 py-1 rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-900 text-[11px] font-bold shrink-0 transition">
+                    🩺 High BP 160
+                </button>
+                <button type="button" onclick="sendTriageQuickPrompt('Can I take Paracetamol with my current meds?')" class="px-2.5 py-1 rounded-xl bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-900 text-[11px] font-bold shrink-0 transition">
+                    💊 OTC Query
+                </button>
+            </div>
+
+            <!-- Chat Transcript Messages Container -->
+            <div id="triage-chat-messages" class="flex-1 overflow-y-auto p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-3.5">
+                <!-- Welcome Bot Message -->
+                <div class="flex gap-3">
+                    <div class="w-8 h-8 rounded-xl bg-teal-600 text-white flex items-center justify-center text-xs shrink-0 shadow-sm">
+                        <i class="fa-solid fa-robot"></i>
+                    </div>
+                    <div class="bg-white p-3.5 rounded-2xl rounded-tl-xs border border-slate-200 text-xs space-y-1.5 max-w-[85%] shadow-xs">
+                        <p class="font-semibold text-slate-800">
+                            Hello! I am your Sattva AI Clinical Triage Assistant. How are you feeling today?
+                        </p>
+                        <p class="text-[11px] text-slate-500">
+                            Describe any symptoms or medication questions, and I will cross-reference your cabinet prescriptions or escalate to emergency 108 if needed.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Input Bar -->
+            <form onsubmit="handleTriageChatSubmit(event)" class="flex items-center gap-2 pt-1 shrink-0">
+                <input type="text" id="triage-chat-input" required placeholder="Describe your symptoms (e.g. Dizziness, High BP, Nausea)..." class="flex-1 px-4 py-3 rounded-xl bg-slate-50 border border-slate-300 text-xs font-semibold text-slate-900 focus:border-teal-600 outline-none">
+                <button type="submit" class="px-4 py-3 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-black shadow-md transition flex items-center gap-1.5 shrink-0">
+                    <span>Send</span> <i class="fa-solid fa-paper-plane text-xs"></i>
+                </button>
+            </form>
         </div>
     </div>
 
