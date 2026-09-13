@@ -737,8 +737,9 @@ const DB = {
         if (isSupabaseConnected) {
             try {
                 const { data, error } = await supabase.from('pharmacy_orders').select('*').order('created_at', { ascending: false });
-                if (!error && data) {
+                if (!error && Array.isArray(data)) {
                     orders = data;
+                    writeLocalOrders(data);
                 } else {
                     orders = readLocalOrders();
                 }
@@ -749,15 +750,7 @@ const DB = {
             orders = readLocalOrders();
         }
 
-        const localOrders = readLocalOrders();
-        const map = new Map();
-        orders.forEach(o => map.set(o.id, o));
-        localOrders.forEach(o => {
-            if (!map.has(o.id)) map.set(o.id, o);
-        });
-
-        const combined = Array.from(map.values());
-        return combined.filter(o => matchesUser(o, userEmail));
+        return orders.filter(o => matchesUser(o, userEmail));
     },
 
     async addOrder(data, userEmail = 'patient@medibuddy.com') {
@@ -858,8 +851,11 @@ const DB = {
     async deleteOrder(id, userEmail = 'patient@medibuddy.com') {
         if (isSupabaseConnected) {
             try {
-                await supabase.from('pharmacy_orders').delete().eq('id', id);
-            } catch (e) {}
+                const { error } = await supabase.from('pharmacy_orders').delete().eq('id', id);
+                if (error) console.error('Supabase deleteOrder error:', error);
+            } catch (e) {
+                console.error('Supabase deleteOrder exception:', e);
+            }
         }
 
         let orders = readLocalOrders();
@@ -869,7 +865,5 @@ const DB = {
         return { success: true, id };
     }
 };
-
-module.exports = DB;
 
 module.exports = DB;

@@ -557,83 +557,15 @@ const DEFAULT_CLIENT_RXS = [
     }
 ];
 
-const DEFAULT_CLIENT_ORDERS = [
-    {
-        id: 'ord-1788694790644',
-        prescription_id: 'rx-pangraf-025',
-        medicine_name: 'PANGRAF 0.25mg',
-        brand_name: 'Mankind',
-        pharmacy_name: 'APOLLO PHARMACY',
-        order_number: '358351812',
-        quantity_ordered: 40,
-        unit_price: 22.06,
-        total_price: 882.4,
-        status: 'SHIPPED',
-        order_date: new Date().toISOString().split('T')[0],
-        expected_delivery: '2026-09-12',
-        notes: 'DELHIVERY: 14289887631024'
-    },
-    {
-        id: 'ord-1788694567440',
-        prescription_id: 'rx-udiliv-450',
-        medicine_name: 'UDILIV 450mg',
-        brand_name: 'Abbott',
-        pharmacy_name: 'APOLLO PHARMACY',
-        order_number: '358351811',
-        quantity_ordered: 20,
-        unit_price: 72.06,
-        total_price: 1441.2,
-        status: 'OUT_FOR_DELIVERY',
-        order_date: new Date().toISOString().split('T')[0],
-        expected_delivery: new Date().toISOString().split('T')[0],
-        notes: 'Out for delivery today by Apollo Express'
-    },
-    {
-        id: 'ord-1788520355494',
-        prescription_id: 'rx-pangraf-05',
-        medicine_name: 'PANGRAF 0.5mg',
-        brand_name: 'Mankind',
-        pharmacy_name: 'APOLLO PHARMACY',
-        order_number: '357995032',
-        quantity_ordered: 50,
-        unit_price: 28.96,
-        total_price: 1448.0,
-        status: 'SHIPPED',
-        order_date: '2026-09-04',
-        expected_delivery: '2026-09-08',
-        notes: 'Tracking: DELHIVERY 14289887499682'
-    },
-    {
-        id: 'ord-1788516151339',
-        prescription_id: 'rx-cardivas-3',
-        medicine_name: 'CARDIVAS 3.125mg',
-        brand_name: 'Sun Pharma',
-        pharmacy_name: 'LOCAL PHARMACY',
-        order_number: 'ORD-73156',
-        quantity_ordered: 30,
-        unit_price: 10.66,
-        total_price: 320.0,
-        status: 'DELIVERED',
-        order_date: '2026-09-01',
-        expected_delivery: '2026-09-03',
-        notes: 'Delivered and added to cabinet stock'
-    }
-];
+const DEFAULT_CLIENT_ORDERS = [];
 
 function generateDefaultClientLogs() {
     const logs = [];
     const todayObj = new Date();
-    const rxList = DEFAULT_CLIENT_RXS;
-
+    const pad = (n) => String(n).padStart(2, '0');
+    
     for (let i = 0; i < 7; i++) {
         const d = new Date(todayObj);
-        d.setDate(todayObj.getDate() - i);
-        const dStr = getLocalDateStr(d);
-
-        rxList.forEach(rx => {
-            const freq = rx.dosage_frequency_type || 'TWICE_DAILY';
-            if (freq === 'ONCE_MORNING' || freq === 'TWICE_DAILY') {
-                logs.push({
                     id: `log-m-${rx.id}-${dStr}`,
                     prescription_id: rx.id,
                     medicine_name: rx.medicine_name,
@@ -863,17 +795,13 @@ function saveClientLogs(logs) {
 function getClientOrders() {
     const key = getClientStorageKey('orders');
     let orders = localStorage.getItem(key);
-    if (!orders) {
-        localStorage.setItem(key, JSON.stringify(DEFAULT_CLIENT_ORDERS));
-        return DEFAULT_CLIENT_ORDERS;
-    }
+    if (!orders) return [];
     try {
         const parsed = JSON.parse(orders);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-        localStorage.setItem(key, JSON.stringify(DEFAULT_CLIENT_ORDERS));
-        return DEFAULT_CLIENT_ORDERS;
+        if (Array.isArray(parsed)) return parsed;
+        return [];
     } catch (e) {
-        return DEFAULT_CLIENT_ORDERS;
+        return [];
     }
 }
 
@@ -1128,7 +1056,37 @@ function getRxCategoryBadgeHTML(rxType) {
     return `<span class="badge-rx px-2.5 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wider inline-flex items-center"><i class="fa-solid fa-prescription mr-1"></i> Rx Prescribed</span>`;
 }
 
-function getExpiryStatusBadgeHTML(expiryDate, batchNumber, batchStripCount) {
+function getExpiryStatusBadgeHTML(expiryDate, batchNumber, batchStripCount, batches) {
+    if (batches && Array.isArray(batches) && batches.length > 0) {
+        return batches.map(b => {
+            let bInfo = '';
+            if (b.batch_number) {
+                const sText = b.batch_strip_count ? ` (${b.batch_strip_count} Strip${b.batch_strip_count > 1 ? 's' : ''})` : '';
+                bInfo = `<span class="px-2 py-0.5 bg-teal-50 text-teal-900 border border-teal-300 rounded-lg text-[10px] font-extrabold shadow-xs inline-flex items-center gap-1 mb-1 mr-1"><i class="fa-solid fa-barcode text-teal-600"></i>Batch: ${escapeHtml(b.batch_number)}${sText}</span>`;
+            }
+            let expBadge = '';
+            if (b.expiry_date) {
+                const expDate = new Date(b.expiry_date + 'T00:00:00');
+                if (!isNaN(expDate.getTime())) {
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    const diffTime = expDate - today;
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    const formattedDate = expDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric', day: 'numeric' });
+                    if (diffDays < 0) {
+                        const ago = Math.abs(diffDays);
+                        expBadge = `<span class="px-2 py-0.5 bg-rose-100 text-rose-800 border border-rose-300 rounded-lg text-[10px] font-black shadow-xs inline-flex items-center gap-1 mb-1 mr-1"><i class="fa-solid fa-triangle-exclamation text-rose-600"></i> EXPIRED (${ago}d ago)</span>`;
+                    } else if (diffDays <= 60) {
+                        expBadge = `<span class="px-2 py-0.5 bg-amber-100 text-amber-900 border border-amber-300 rounded-lg text-[10px] font-black shadow-xs inline-flex items-center gap-1 mb-1 mr-1"><i class="fa-solid fa-hourglass-half text-amber-600"></i> Expiring Soon (${diffDays}d left)</span>`;
+                    } else {
+                        expBadge = `<span class="px-2 py-0.5 bg-slate-100 text-slate-700 border border-slate-300 rounded-lg text-[10px] font-extrabold shadow-xs inline-flex items-center gap-1 mb-1 mr-1"><i class="fa-solid fa-calendar-xmark text-slate-500"></i> Exp: ${formattedDate}</span>`;
+                    }
+                }
+            }
+            return `${bInfo} ${expBadge}`.trim();
+        }).join(' ');
+    }
+
     let batchInfo = '';
     if (batchNumber) {
         const stripsText = batchStripCount ? ` (${batchStripCount} Strip${batchStripCount > 1 ? 's' : ''})` : '';
@@ -1159,16 +1117,90 @@ function getExpiryStatusBadgeHTML(expiryDate, batchNumber, batchStripCount) {
     return `${batchInfo} ${expBadge}`.trim();
 }
 
+function renderBatchStripRows(batches) {
+    const container = document.getElementById('rx-batch-list-container');
+    if (!container) return;
+
+    if (!batches || !Array.isArray(batches) || batches.length === 0) {
+        batches = [{ batch_number: '', batch_strip_count: 3, expiry_date: '' }];
+    }
+
+    container.innerHTML = batches.map((b, idx) => `
+        <div class="rx-batch-row grid grid-cols-1 sm:grid-cols-12 gap-3 items-center bg-white p-3 rounded-xl border border-teal-300 shadow-xs">
+            <div class="sm:col-span-4">
+                <label class="block text-[11px] font-extrabold text-teal-800 uppercase mb-1"><i class="fa-solid fa-barcode text-teal-600 mr-1"></i> Batch No.</label>
+                <input type="text" value="${escapeHtml(b.batch_number || '')}" placeholder="e.g. BATCH-2026-X9" class="rx-batch-no-input w-full px-3 py-2 rounded-lg border border-slate-300 text-xs text-slate-900 font-bold focus:border-teal-600 outline-none">
+            </div>
+            <div class="sm:col-span-3">
+                <label class="block text-[11px] font-extrabold text-teal-800 uppercase mb-1"><i class="fa-solid fa-layer-group text-teal-600 mr-1"></i> Strips</label>
+                <input type="number" min="1" value="${b.batch_strip_count || 1}" oninput="autoCalcTotalPills()" placeholder="Strips" class="rx-batch-strips-input w-full px-3 py-2 rounded-lg border border-slate-300 text-xs text-slate-900 font-bold focus:border-teal-600 outline-none">
+            </div>
+            <div class="sm:col-span-4">
+                <label class="block text-[11px] font-extrabold text-teal-800 uppercase mb-1"><i class="fa-solid fa-calendar-xmark text-teal-600 mr-1"></i> Expiry Date</label>
+                <input type="date" value="${b.expiry_date || ''}" class="rx-batch-expiry-input w-full px-3 py-2 rounded-lg border border-slate-300 text-xs text-slate-900 font-bold focus:border-teal-600 outline-none">
+            </div>
+            <div class="sm:col-span-1 text-right flex items-center justify-end pt-4 sm:pt-0">
+                ${batches.length > 1 ? `
+                    <button type="button" onclick="removeBatchStripRow(${idx})" title="Remove this batch strip" class="p-2 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition text-sm">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                ` : `
+                    <span class="text-slate-300 text-xs p-2"><i class="fa-solid fa-lock"></i></span>
+                `}
+            </div>
+        </div>
+    `).join('');
+}
+
+function getBatchRowsFromDOM() {
+    const rows = [];
+    const rowElems = document.querySelectorAll('.rx-batch-row');
+    rowElems.forEach(row => {
+        const no = row.querySelector('.rx-batch-no-input') ? row.querySelector('.rx-batch-no-input').value.trim() : '';
+        const count = row.querySelector('.rx-batch-strips-input') ? (parseInt(row.querySelector('.rx-batch-strips-input').value, 10) || 1) : 1;
+        const exp = row.querySelector('.rx-batch-expiry-input') ? row.querySelector('.rx-batch-expiry-input').value : null;
+        rows.push({ batch_number: no, batch_strip_count: count, expiry_date: exp });
+    });
+    return rows;
+}
+
+function addBatchStripRow() {
+    const currentRows = getBatchRowsFromDOM();
+    currentRows.push({ batch_number: '', batch_strip_count: 1, expiry_date: '' });
+    renderBatchStripRows(currentRows);
+    autoCalcTotalPills();
+}
+
+function removeBatchStripRow(idx) {
+    const currentRows = getBatchRowsFromDOM();
+    if (currentRows.length > 1) {
+        currentRows.splice(idx, 1);
+        renderBatchStripRows(currentRows);
+        autoCalcTotalPills();
+    }
+}
+
 function autoCalcTotalPills() {
-    const stripsEl = document.getElementById('rx-batch-strip-count');
+    const rowElems = document.querySelectorAll('.rx-batch-row');
     const pillsPerStripEl = document.getElementById('rx-units-per-pack');
     const totalPillsEl = document.getElementById('rx-total-pills');
-    if (stripsEl && pillsPerStripEl && totalPillsEl) {
-        const strips = parseFloat(stripsEl.value) || 0;
-        const perStrip = parseFloat(pillsPerStripEl.value) || 0;
-        if (strips > 0 && perStrip > 0) {
-            totalPillsEl.value = parseFloat((strips * perStrip).toFixed(2));
-        }
+    const perStrip = parseFloat(pillsPerStripEl ? pillsPerStripEl.value : 10) || 10;
+
+    let totalStrips = 0;
+    if (rowElems && rowElems.length > 0) {
+        rowElems.forEach(row => {
+            const input = row.querySelector('.rx-batch-strips-input');
+            if (input) {
+                totalStrips += (parseFloat(input.value) || 0);
+            }
+        });
+    } else {
+        const stripsEl = document.getElementById('rx-batch-strip-count');
+        if (stripsEl) totalStrips = parseFloat(stripsEl.value) || 0;
+    }
+
+    if (totalPillsEl && totalStrips > 0 && perStrip > 0) {
+        totalPillsEl.value = parseFloat((totalStrips * perStrip).toFixed(2));
     }
 }
 
@@ -1699,13 +1731,17 @@ async function fetchOrders() {
             data = await getSupabaseOrders();
         }
         state.orders = (data && Array.isArray(data)) ? data : getClientOrders();
+        saveClientOrders(state.orders);
         const badgeCount = document.getElementById('orders-badge-count');
         if (badgeCount) badgeCount.innerText = state.orders.filter(o => o.status !== 'DELIVERED' && o.status !== 'CANCELLED').length;
         renderOrdersList();
+        renderOrderHistoryLogs();
     } catch (e) {
         let sbOrders = await getSupabaseOrders();
         state.orders = (sbOrders && Array.isArray(sbOrders)) ? sbOrders : getClientOrders();
+        saveClientOrders(state.orders);
         renderOrdersList();
+        renderOrderHistoryLogs();
     }
 }
 
@@ -1853,9 +1889,9 @@ function openAddPrescriptionModal() {
     if (doseSelect) doseSelect.value = '1';
     const rxTypeSelect = document.getElementById('rx-classification-type');
     if (rxTypeSelect) rxTypeSelect.value = 'RX';
-    if (document.getElementById('rx-batch-number')) document.getElementById('rx-batch-number').value = '';
-    if (document.getElementById('rx-batch-strip-count')) document.getElementById('rx-batch-strip-count').value = '3';
-    if (document.getElementById('rx-expiry-date')) document.getElementById('rx-expiry-date').value = '';
+    
+    renderBatchStripRows([{ batch_number: '', batch_strip_count: 3, expiry_date: '' }]);
+    autoCalcTotalPills();
     showModal('rx-modal');
 }
 
@@ -1886,9 +1922,21 @@ async function openEditPrescriptionModal(id) {
         document.getElementById('rx-meal-relation').value = String(rx.meal_relation || 'AFTER_MEAL').toUpperCase();
         document.getElementById('rx-total-pills').value = rx.total_tablets_remaining || 30;
         document.getElementById('rx-units-per-pack').value = rx.units_per_pack || 10;
-        if (document.getElementById('rx-batch-number')) document.getElementById('rx-batch-number').value = rx.batch_number || '';
-        if (document.getElementById('rx-batch-strip-count')) document.getElementById('rx-batch-strip-count').value = rx.batch_strip_count || Math.ceil((rx.total_tablets_remaining || 30) / (rx.units_per_pack || 10));
-        if (document.getElementById('rx-expiry-date')) document.getElementById('rx-expiry-date').value = rx.expiry_date || '';
+        
+        let batches = rx.batches || rx.batch_details || [];
+        if (typeof batches === 'string') {
+            try { batches = JSON.parse(batches); } catch(e) { batches = []; }
+        }
+        if (!Array.isArray(batches) || batches.length === 0) {
+            batches = [{
+                batch_number: rx.batch_number || '',
+                batch_strip_count: rx.batch_strip_count || 1,
+                expiry_date: rx.expiry_date || ''
+            }];
+        }
+        renderBatchStripRows(batches);
+        autoCalcTotalPills();
+
         document.getElementById('rx-doctor').value = rx.doctor_name || '';
         document.getElementById('rx-hospital').value = rx.clinic_hospital || '';
         document.getElementById('rx-number').value = rx.prescription_number || '';
@@ -1910,6 +1958,14 @@ async function handleRxSubmit(e) {
     e.preventDefault();
     const id = document.getElementById('rx-id').value;
 
+    const batchRows = getBatchRowsFromDOM();
+    const nonKeys = batchRows.filter(b => b.batch_number || b.expiry_date);
+    const validBatches = nonKeys.length > 0 ? batchRows : (batchRows.length > 0 ? batchRows : [{ batch_number: '', batch_strip_count: 1, expiry_date: null }]);
+
+    const uniqueBatchNos = Array.from(new Set(validBatches.map(b => b.batch_number).filter(Boolean))).join(', ');
+    const totalStripsCount = validBatches.reduce((acc, b) => acc + (parseInt(b.batch_strip_count, 10) || 1), 0);
+    const earliestExpiry = validBatches.map(b => b.expiry_date).filter(Boolean).sort()[0] || null;
+
     const payload = {
         medicine_name: document.getElementById('rx-name').value,
         brand_name: document.getElementById('rx-brand').value,
@@ -1922,9 +1978,11 @@ async function handleRxSubmit(e) {
         meal_relation: document.getElementById('rx-meal-relation').value,
         total_tablets_remaining: parseFloat(document.getElementById('rx-total-pills').value) || 30,
         units_per_pack: parseInt(document.getElementById('rx-units-per-pack').value, 10) || 10,
-        batch_number: document.getElementById('rx-batch-number') ? document.getElementById('rx-batch-number').value : '',
-        batch_strip_count: document.getElementById('rx-batch-strip-count') ? (parseInt(document.getElementById('rx-batch-strip-count').value, 10) || 1) : 1,
-        expiry_date: document.getElementById('rx-expiry-date') ? (document.getElementById('rx-expiry-date').value || null) : null,
+        batch_number: uniqueBatchNos,
+        batch_strip_count: totalStripsCount,
+        expiry_date: earliestExpiry,
+        batches: validBatches,
+        batch_details: validBatches,
         doctor_name: document.getElementById('rx-doctor').value,
         clinic_hospital: document.getElementById('rx-hospital').value,
         prescription_number: document.getElementById('rx-number').value,
@@ -1964,11 +2022,13 @@ async function handleRxSubmit(e) {
                 err = res2.error;
             }
 
-            if (err && err.message && (err.message.includes('batch_number') || err.message.includes('expiry_date') || err.message.includes('batch_strip_count'))) {
+            if (err && err.message && (err.message.includes('batch_number') || err.message.includes('expiry_date') || err.message.includes('batch_strip_count') || err.message.includes('batches'))) {
                 const cleanPayload = { ...payload };
                 delete cleanPayload.batch_number;
                 delete cleanPayload.batch_strip_count;
                 delete cleanPayload.expiry_date;
+                delete cleanPayload.batches;
+                delete cleanPayload.batch_details;
                 if (id) {
                     await state.supabaseClient.from('patient_prescriptions').update({ ...cleanPayload, updated_at: new Date().toISOString() }).eq('id', id);
                 } else {
@@ -2191,15 +2251,33 @@ async function markOrderDelivered(id) {
 async function deleteOrder(id) {
     if (!confirm('Delete this pharmacy order record?')) return;
     try {
-        const res = await safeFetchJson(`/api/patient/orders/${id}`, { method: 'DELETE', headers: getUserHeaders() });
+        await safeFetchJson(`/api/patient/orders/${id}`, { method: 'DELETE', headers: getUserHeaders() });
 
-        if (!res && state.supabaseClient) {
-            await state.supabaseClient.from('pharmacy_orders').delete().eq('id', id);
+        if (state.supabaseClient) {
+            try {
+                await state.supabaseClient.from('pharmacy_orders').delete().eq('id', id);
+            } catch (sbErr) {
+                console.warn('Direct Supabase order deletion warning:', sbErr);
+            }
         }
 
-        showToast('Order record removed.', 'info');
-        loadPatientPortal();
-    } catch (e) {}
+        state.orders = (state.orders || []).filter(o => o.id !== id);
+        saveClientOrders(state.orders);
+
+        showToast('Order record removed permanently.', 'info');
+
+        renderOrdersList();
+        renderOrderHistoryLogs();
+        const badgeCount = document.getElementById('orders-badge-count');
+        if (badgeCount) {
+            badgeCount.innerText = state.orders.filter(o => o.status !== 'DELIVERED' && o.status !== 'CANCELLED').length;
+        }
+
+        fetchOrders();
+    } catch (e) {
+        console.error('Delete order error:', e);
+        showToast(e.message || 'Failed to remove order record.', 'error');
+    }
 }
 
 // Order History Audit Logs Modal
@@ -2253,9 +2331,14 @@ function renderOrderHistoryLogs() {
                     </p>
                     ${o.notes ? `<p class="text-[11px] text-slate-500"><i class="fa-solid fa-circle-info mr-1"></i> ${escapeHtml(o.notes)}</p>` : ''}
                 </div>
-                <div class="text-right sm:shrink-0">
-                    <span class="text-[11px] text-slate-500 block font-medium">${dateDisplay}</span>
-                    ${o.total_price ? `<strong class="text-emerald-700 text-sm font-black">₹${o.total_price}</strong>` : ''}
+                <div class="flex items-center gap-3 sm:shrink-0">
+                    <div class="text-right">
+                        <span class="text-[11px] text-slate-500 block font-medium">${dateDisplay}</span>
+                        ${o.total_price ? `<strong class="text-emerald-700 text-sm font-black">₹${o.total_price}</strong>` : ''}
+                    </div>
+                    <button onclick="deleteOrder('${o.id}')" title="Delete Order Record" class="btn-glass p-2 text-slate-400 hover:text-rose-600 text-xs rounded-xl hover:bg-rose-50 transition">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
                 </div>
             </div>
         `;
