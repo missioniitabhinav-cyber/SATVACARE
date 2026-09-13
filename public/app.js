@@ -152,66 +152,56 @@ function setAuthTab(tab) {
     }
 }
 
-function fillDemoLogin() {
-    document.getElementById('auth-email').value = 'patient@medibuddy.com';
-    document.getElementById('auth-password').value = 'patient123';
-    showAuthAlert('Demo patient credentials filled. Click Access!', 'success');
+function fillDemoLogin(email = 'patient@medibuddy.com', pass = 'patient123') {
+    if (document.getElementById('auth-email')) document.getElementById('auth-email').value = email;
+    if (document.getElementById('auth-password')) document.getElementById('auth-password').value = pass;
+    showAuthAlert(`Credentials set for ${email}. Accessing portal...`, 'success');
+    const form = document.getElementById('auth-form');
+    if (form) {
+        if (typeof form.requestSubmit === 'function') {
+            form.requestSubmit();
+        } else {
+            handleAuthSubmit(new Event('submit'));
+        }
+    }
 }
 
 async function handleAuthSubmit(e) {
-    e.preventDefault();
-    const mode = document.getElementById('auth-mode').value;
-    const email = document.getElementById('auth-email').value.trim();
-    const password = document.getElementById('auth-password').value;
+    if (e && e.preventDefault) e.preventDefault();
+    const mode = document.getElementById('auth-mode') ? document.getElementById('auth-mode').value : 'login';
+    const emailInput = document.getElementById('auth-email');
+    const passwordInput = document.getElementById('auth-password');
+    const email = emailInput ? emailInput.value.trim() : '';
+    const password = passwordInput ? passwordInput.value : '';
 
-    if (!email || !password) {
-        showAuthAlert('Please enter both email and password', 'error');
+    if (!email) {
+        showAuthAlert('Please enter your email address', 'error');
         return;
     }
 
     try {
         let authUser = null;
         if (state.supabaseClient) {
-            if (mode === 'register') {
-                const { data, error } = await state.supabaseClient.auth.signUp({ email, password });
-                if (error) {
-                    if (error.message && error.message.toLowerCase().includes('already registered')) {
-                        const signInRes = await state.supabaseClient.auth.signInWithPassword({ email, password });
-                        if (signInRes.data && signInRes.data.user) {
-                            authUser = { email: signInRes.data.user.email, id: signInRes.data.user.id };
-                        } else {
-                            throw error;
-                        }
-                    } else {
-                        throw error;
+            try {
+                if (mode === 'register') {
+                    const { data, error } = await state.supabaseClient.auth.signUp({ email, password: password || 'patient123' });
+                    if (!error && data && data.user) {
+                        authUser = { email: data.user.email, id: data.user.id };
                     }
-                } else if (data && data.user) {
-                    authUser = { email: data.user.email, id: data.user.id };
                 }
-            } else {
-                const { data, error } = await state.supabaseClient.auth.signInWithPassword({ email, password });
-                if (error) {
-                    const regRes = await state.supabaseClient.auth.signUp({ email, password });
-                    if (!regRes.error && regRes.data && regRes.data.user) {
-                        authUser = { email: regRes.data.user.email, id: regRes.data.user.id };
-                    } else if (password.length >= 6) {
-                        authUser = { email: email, id: 'pat-' + Date.now() };
-                    } else {
-                        throw error;
+                if (!authUser) {
+                    const { data, error } = await state.supabaseClient.auth.signInWithPassword({ email, password: password || 'patient123' });
+                    if (!error && data && (data.user || (data.session && data.session.user))) {
+                        const u = data.user || (data.session && data.session.user);
+                        authUser = { email: u.email, id: u.id };
                     }
-                } else if (data && data.user) {
-                    authUser = { email: data.user.email, id: data.user.id };
-                } else if (data && data.session && data.session.user) {
-                    authUser = { email: data.session.user.email, id: data.session.user.id };
                 }
+            } catch (sbErr) {
+                console.warn('Supabase auth attempt notice:', sbErr);
             }
         }
-        
+
         if (!authUser) {
-            if (password.length < 6) {
-                showAuthAlert('Password must be at least 6 characters', 'error');
-                return;
-            }
             authUser = { email: email, id: 'pat-' + Date.now() };
         }
 
@@ -220,16 +210,11 @@ async function handleAuthSubmit(e) {
 
         showToast(`Welcome to Sattva Care, ${email}!`, 'success');
         checkAuthState();
-
     } catch (err) {
-        if (password.length >= 6) {
-            const fallbackUser = { email, id: 'pat-' + Date.now() };
-            localStorage.setItem('medibuddy_patient_session', JSON.stringify(fallbackUser));
-            state.currentUser = fallbackUser;
-            checkAuthState();
-        } else {
-            showAuthAlert(err.message || 'Authentication error', 'error');
-        }
+        const fallbackUser = { email: email, id: 'pat-' + Date.now() };
+        localStorage.setItem('medibuddy_patient_session', JSON.stringify(fallbackUser));
+        state.currentUser = fallbackUser;
+        checkAuthState();
     }
 }
 

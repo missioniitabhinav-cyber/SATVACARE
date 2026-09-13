@@ -88,10 +88,16 @@
                     <span id="auth-submit-text">Access Patient Portal</span>
                 </button>
 
-                <div class="pt-2 border-t border-slate-200 text-center space-y-2">
-                    <button type="button" onclick="fillDemoLogin()" class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 text-xs font-extrabold rounded-xl transition flex items-center justify-center gap-2">
-                        <i class="fa-solid fa-user-circle text-teal-600"></i> Auto-Fill Demo Patient Login
-                    </button>
+                <div class="pt-3 border-t border-slate-200 space-y-2">
+                    <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider text-center mb-1">⚡ Quick One-Click Access</p>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button type="button" onclick="fillDemoLogin('admin@sattvacare.com', 'admin123')" class="py-2.5 bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-900 text-xs font-black rounded-xl transition flex items-center justify-center gap-1.5 shadow-xs">
+                            <i class="fa-solid fa-user-shield text-amber-600"></i> Admin Access
+                        </button>
+                        <button type="button" onclick="fillDemoLogin('patient@medibuddy.com', 'patient123')" class="py-2.5 bg-teal-50 hover:bg-teal-100 border border-teal-300 text-teal-900 text-xs font-black rounded-xl transition flex items-center justify-center gap-1.5 shadow-xs">
+                            <i class="fa-solid fa-user-check text-teal-600"></i> Patient Access
+                        </button>
+                    </div>
                 </div>
             </form>
         </div>
