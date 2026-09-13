@@ -3635,11 +3635,7 @@ function updateOfflineBadgeUI() {
             </span>
         `;
     } else {
-        badgeContainer.innerHTML = `
-            <span class="px-2.5 py-1 bg-emerald-100 text-emerald-900 border border-emerald-300 text-[10px] font-bold rounded-lg flex items-center gap-1.5 shadow-xs">
-                <i class="fa-solid fa-cloud-check text-emerald-600"></i> Cloud Synced
-            </span>
-        `;
+        badgeContainer.innerHTML = '';
     }
 }
 
