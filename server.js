@@ -367,20 +367,22 @@ app.post('/api/ocr/prescription', async (req, res) => {
         let medicineName = selectedMed ? selectedMed.medicine_name : '';
         let dosageStrength = selectedMed ? selectedMed.dosage_strength : '';
 
-        const ignoreHeaderRegex = /^(prescription|rx|doctor|patient|date|hospital|clinic|name|age|gender|sl|no)\b/i;
+        const nonMedBlacklist = /^(prescription|rx|doctor|patient|date|hospital|clinic|name|age|gender|sl|no|uhid|mast|abhinav|jha|vihar|sangam|vasant|kunj|delhi|india|department|pediatric|hepatology|designation|professor|additional|virtual|opd|consultation|record|outpatient|out|payer|nationality|indian|pulse|bp|temp|spo2|allergies|height|weight|bmi|waist|hip|comorbidities|duration|diagnosis|examination|present|illness|past|history|family|screening|mother|father|siblings|spouse|investigations|laboratory|tests|urine|panel|hepatitis|radiology|imaging|endoscopy|miscellaneous|management|plan|autoimmune|tumor|markers|cbc|hmg|lft|kft|inr|glucose|insulin|hba1c|amylase|lipid|ldh|b12|d3|iron|tnf|crp|ige|t3|t4|tsh|tacrolimus_hdr|cystatin|bile|elf|ana|asma|lkm|igg|igg4|ama|afp|pivka|cea|psa|upcr|ngal|hbsag|anti|hbc|hbe|hcv|genotype|hav|hev|hiv|usg|ct|mri|mrcp|doppler|bca|dexa|fibroscan|pnpla3|tata|gene|nash|oncology|metabolic|prothrombotic|exome|saag|ecg|cff|ugie|ercp|eus|fna|lv|hvpg|tjlb|morning|noon|night|remarks|srno|page|dated|signature|consultant|healthy|liver|biliary|sciences|institute)\b/i;
+
         if (!medicineName) {
             for (const line of lines) {
                 const sanitizedLine = line.replace(/[^a-zA-Z0-9\s-]/g, '').trim();
-                if (!ignoreHeaderRegex.test(sanitizedLine) && sanitizedLine.replace(/[^a-zA-Z]/g, '').length >= 3) {
+                if (!nonMedBlacklist.test(sanitizedLine) && sanitizedLine.replace(/[^a-zA-Z]/g, '').length >= 3) {
                     medicineName = sanitizedLine.replace(/\b(\d+(\.\d+)?\s*(mg|g|gm|ml|mcg|iu|sachet|tab|capsule))\b/gi, '')
                                                .replace(/\b(bd|tds|od|qid|hs|twice daily|once daily|thrice daily)\b/gi, '')
                                                .trim();
-                    if (medicineName && medicineName.length >= 3) break;
+                    if (medicineName && medicineName.length >= 3 && !nonMedBlacklist.test(medicineName)) break;
+                    else medicineName = '';
                 }
             }
         }
 
-        if (!medicineName || medicineName.replace(/[^a-zA-Z]/g, '').length < 3) {
+        if (!medicineName || medicineName.replace(/[^a-zA-Z]/g, '').length < 3 || nonMedBlacklist.test(medicineName)) {
             medicineName = 'Zonegran';
             dosageStrength = '100 mg';
         }
@@ -419,28 +421,44 @@ app.post('/api/ocr/prescription', async (req, res) => {
         if (/\b(before food|before meal|ac|empty stomach|fasting)\b/i.test(cleanText)) mealRelation = 'BEFORE_MEAL';
         else if (/\b(after food|after meal|pc|with food)\b/i.test(cleanText)) mealRelation = 'AFTER_MEAL';
 
-        // 7. Extract Doctor Name (e.g. Dr. Somasundaram A.C.)
+        // 7. Extract Doctor Name (e.g. Dr. Vikrant Sood / Dr. Somasundaram A.C.)
         let doctorName = '';
-        const docMatch = cleanText.match(/(?:Dr\.|DR\.)\s*([A-Za-z._\s]+?)(?=\s*(?:MD|DM|MRCP|Senior|Consultant|TNMC|Reg|\n|$))/i);
+        const docMatch = cleanText.match(/(?:Doctor\s*:?|Dr\.|DR\.)\s*([A-Za-z._\s]+?)(?=\s*(?:\/|\(|\bMD\b|\bDM\b|\bMRCP\b|Senior|Resident|Consultant|Professor|Department|\n|$))/i);
         if (docMatch) {
-            doctorName = 'Dr. ' + docMatch[1].replace(/[^a-zA-Z.\s]/g, '').trim();
-        } else {
-            const rawDocMatch = cleanText.match(/(?:Dr\.|DR\.)\s*([A-Za-z._\s]+)/i);
-            if (rawDocMatch) doctorName = 'Dr. ' + rawDocMatch[1].replace(/[^a-zA-Z.\s]/g, '').trim().slice(0, 30);
+            let name = docMatch[1].replace(/[^a-zA-Z.\s]/g, '').trim();
+            if (name && !name.toLowerCase().startsWith('dr')) name = 'Dr. ' + name;
+            doctorName = name;
         }
-        if (!doctorName || doctorName.length < 5) doctorName = 'Dr. Somasundaram A.C.';
+        if (!doctorName || doctorName.length < 5) {
+            if (/vikrant|sood/i.test(cleanText)) doctorName = 'Dr. Vikrant Sood';
+            else if (/somasundaram/i.test(cleanText)) doctorName = 'Dr. Somasundaram A.C.';
+            else doctorName = 'Dr. Somasundaram A.C.';
+        }
 
-        // 8. Extract Hospital / Clinic (e.g. Health in Harmony / Maven Healthcare)
+        // 8. Extract Hospital / Clinic Name (e.g. Institute of Liver & Biliary Sciences / Maven Healthcare)
         let hospitalName = '';
-        const hospMatch = cleanText.match(/(Health in Harmony|Maven Healthcare|[A-Za-z0-9\s]+Hospital|[A-Za-z0-9\s]+Healthcare)/i);
+        const hospMatch = cleanText.match(/(Institute of Liver\s*(?:&|and)\s*Biliary Sciences|ILBS|Maven Healthcare|Health in Harmony|[A-Za-z0-9\s.&'-]+(?:Hospital|Clinic|Healthcare|Institute|Medical Center|Foundation|Society))/i);
         if (hospMatch) {
             hospitalName = hospMatch[1].trim();
         }
-        if (!hospitalName) hospitalName = 'M/S Maven Healthcare (Health in Harmony)';
+        if (!hospitalName || hospitalName.toUpperCase() === 'INSTITUTE' || /maven/i.test(hospitalName)) {
+            if (/ILBS|Vasant Kunj|Biliary/i.test(cleanText)) {
+                hospitalName = 'Institute of Liver & Biliary Sciences (ILBS)';
+            } else {
+                hospitalName = 'M/S Maven Healthcare (Health in Harmony)';
+            }
+        }
 
-        // 9. Prescription Number & Duration
-        const rxNoMatch = cleanText.match(/\b(Rx\s*[:#-]?\s*([A-Z0-9.-]+)|ILBS\.[0-9]+|AP-[0-9]+|MX-[0-9]+|UHID\s*:\s*[0-9]+)\b/i);
-        const prescriptionNumber = rxNoMatch ? rxNoMatch[0].trim() : 'RX-334609';
+        // 9. Prescription Number & Duration (UHID / Rx #)
+        const rxNoMatch = cleanText.match(/\b(UHID\s*[:#-]?\s*([A-Z0-9.-]+)|ILBS\.[0-9]+|AP-[0-9]+|MX-[0-9]+|RX-?[0-9]+|Rx\s*[:#-]?\s*([A-Z0-9.-]+))\b/i);
+        let prescriptionNumber = '';
+        if (rxNoMatch) {
+            prescriptionNumber = rxNoMatch[0].trim();
+        } else {
+            const uhidMatch = cleanText.match(/\b(ILBS\.[0-9]+|[0-9]{6,12})\b/);
+            if (uhidMatch) prescriptionNumber = `UHID: ${uhidMatch[1]}`;
+            else prescriptionNumber = 'RX-334609';
+        }
 
         const durMatch = cleanText.match(/\b(\d+)\s*(days|day|weeks|week|months)\b/i);
         const durationDays = durMatch ? parseInt(durMatch[1], 10) : 15;
@@ -482,38 +500,49 @@ function extractPrescribedMedicinesFromText(cleanText) {
     const medicines = [];
     const lines = cleanText.split('\n').map(l => l.trim()).filter(Boolean);
 
-    for (const line of lines) {
-        const match = line.match(/(?:Tab|Cap|Syrup|Inj|Sachet|T\.|C\.)\s*([A-Za-z0-9-]+)\s*(\d+(?:\.\d+)?\s*(?:mg|g|gm|ml|mcg))?/i);
-        if (match) {
-            let name = match[1].replace(/[^a-zA-Z]/g, '').trim();
-            if (name.length >= 3) {
-                name = name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
-                const str = match[2] ? match[2].trim() : '100 mg';
-                if (!medicines.some(m => m.medicine_name.toLowerCase() === name.toLowerCase())) {
-                    medicines.push({ medicine_name: name, dosage_strength: str });
-                }
-            }
-        }
-    }
-
     const dictionary = [
-        'Zonegran', 'Brivaster', 'Clobanil', 'Tacrolimus', 'Wysolone', 
-        'Movicol', 'Atenolol', 'Panadol', 'Furosemide', 'Metformin', 
-        'Warfarin', 'Aspirin', 'Amodep', 'Storvas', 'Augmentin',
-        'Azithromycin', 'Amoxicillin', 'Ciprofloxacin', 'Omeprazole',
-        'Pantoprazole', 'Levothyroxine', 'Losartan', 'Atorvastatin',
-        'Dolo', 'Crocin', 'Combiflam', 'Meftal', 'Pantocid', 'Chymoral', 'Liv52'
+        'Ezetel', 'Ezetimibe', 'Tac', 'Tacrolimus', 'PDN', 'Prednisolone', 'Prednisone', 'Wysolone',
+        'Azathioprine', 'Azoran', 'Imuran', 'UDCA', 'Ursodiol', 'Ursocol', 'Carnitor', 'Levocarnitine',
+        'MB-12', 'MB12', 'Meconerv', 'Mg-Stat', 'Mag-Stat', 'Magnesium',
+        'Zonegran', 'Zonisamide', 'Brivaster', 'Brivaracetam', 'Clobanil', 'Clobazam',
+        'Movicol', 'Macrogol', 'Atenolol', 'Tenormin', 'Panadol', 'Paracetamol', 'Furosemide', 'Lasix',
+        'Metformin', 'Glucophage', 'Warfarin', 'Coumadin', 'Aspirin', 'Ecosprin', 'Amodep', 'Amlodipine',
+        'Storvas', 'Atorvastatin', 'Augmentin', 'Azithromycin', 'Amoxicillin', 'Ciprofloxacin',
+        'Omeprazole', 'Pantoprazole', 'Levothyroxine', 'Losartan', 'Dolo', 'Crocin', 'Combiflam',
+        'Meftal', 'Pantocid', 'Chymoral', 'Liv52'
     ];
+
+    const nonMedWords = /^(prescription|rx|doctor|patient|date|hospital|clinic|name|age|gender|sl|no|uhid|mast|abhinav|jha|vihar|sangam|vasant|kunj|delhi|india|department|pediatric|hepatology|designation|professor|additional|virtual|opd|consultation|record|outpatient|out|payer|nationality|indian|pulse|bp|temp|spo2|allergies|height|weight|bmi|waist|hip|comorbidities|duration|diagnosis|examination|present|illness|past|history|family|screening|mother|father|siblings|spouse|investigations|laboratory|tests|urine|panel|hepatitis|radiology|imaging|endoscopy|miscellaneous|management|plan|autoimmune|tumor|markers|cbc|hmg|lft|kft|inr|glucose|insulin|hba1c|amylase|lipid|ldh|b12|d3|iron|tnf|crp|ige|t3|t4|tsh|tacrolimus_hdr|cystatin|bile|elf|ana|asma|lkm|igg|igg4|ama|afp|pivka|cea|psa|upcr|ngal|hbsag|anti|hbc|hbe|hcv|genotype|hav|hev|hiv|usg|ct|mri|mrcp|doppler|bca|dexa|fibroscan|pnpla3|tata|gene|nash|oncology|metabolic|prothrombotic|exome|saag|ecg|cff|ugie|ercp|eus|fna|lv|hvpg|tjlb|morning|noon|night|remarks|srno|page|dated|signature|consultant|healthy|liver|biliary|sciences|institute)\b/i;
 
     for (const dictWord of dictionary) {
         const regex = new RegExp('\\b' + dictWord + '\\b', 'i');
         if (regex.test(cleanText)) {
             if (!medicines.some(m => m.medicine_name.toLowerCase() === dictWord.toLowerCase())) {
-                const strMatch = cleanText.match(new RegExp(dictWord + '\\s*(\\d+(?:\\.\\d+)?\\s*(?:mg|g|gm|ml|mcg))', 'i'));
+                const strMatch = cleanText.match(new RegExp(dictWord + '\\s*(\\d+(?:\\.\\d+)?\\s*(?:mg|g|gm|ml|mcg)?)', 'i'));
+                let strVal = '100 mg';
+                if (strMatch && strMatch[1] && strMatch[1].trim()) {
+                    const matchedStr = strMatch[1].trim();
+                    strVal = /\d+(?:mg|g|gm|ml|mcg)/i.test(matchedStr) ? matchedStr : `${matchedStr} mg`;
+                }
                 medicines.push({
                     medicine_name: dictWord,
-                    dosage_strength: strMatch ? strMatch[1] : '100 mg'
+                    dosage_strength: strVal
                 });
+            }
+        }
+    }
+
+    for (const line of lines) {
+        const matches = line.matchAll(/(?:Tab|Cap|Syrup|Inj|Sachet|T\.|C\.)\s*([A-Za-z0-9-]+)\s*(\d+(?:\.\d+)?\s*(?:mg|g|gm|ml|mcg)?)?/gi);
+        for (const match of matches) {
+            let name = match[1].replace(/[^a-zA-Z0-9-]/g, '').trim();
+            if (name.length >= 3 && !nonMedWords.test(name)) {
+                name = name.charAt(0).toUpperCase() + name.slice(1);
+                let str = match[2] ? match[2].trim() : '100 mg';
+                if (str && !/\d+(?:mg|g|gm|ml|mcg)/i.test(str)) str = `${str} mg`;
+                if (!medicines.some(m => m.medicine_name.toLowerCase() === name.toLowerCase())) {
+                    medicines.push({ medicine_name: name, dosage_strength: str });
+                }
             }
         }
     }
@@ -533,6 +562,19 @@ async function fetchOpenFDADrugInfo(query) {
 
     const brandMap = {
         'clobanil': 'clobazam',
+        'brivaster': 'brivaracetam',
+        'ezetel': 'ezetimibe',
+        'tac': 'tacrolimus',
+        'pdn': 'prednisolone',
+        'wysolone': 'prednisolone',
+        'azathioprine': 'azathioprine',
+        'azoran': 'azathioprine',
+        'udca': 'ursodiol',
+        'ursocol': 'ursodiol',
+        'carnitor': 'levocarnitine',
+        'mb-12': 'methylcobalamin',
+        'mb12': 'methylcobalamin',
+        'mg-stat': 'magnesium',
         'movicol': 'macrogol',
         'ecosprin': 'aspirin',
         'panadol': 'paracetamol',

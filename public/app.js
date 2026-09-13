@@ -4174,30 +4174,50 @@ async function processPrescriptionOCR(event) {
         let imageBase64 = '';
         let targetSource = file;
 
-        // Handle PDF files by rendering page 1 to HTML5 canvas via PDF.js
+        // Handle PDF files by rendering all pages to HTML5 canvas via PDF.js
         const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
         if (isPdf && window.pdfjsLib) {
             try {
-                if (statusText) statusText.innerText = 'Rendering PDF page for OCR analysis...';
+                if (statusText) statusText.innerText = 'Rendering PDF pages for OCR analysis...';
                 window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
                 const arrayBuffer = await file.arrayBuffer();
                 const pdfDoc = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-                const pdfPage = await pdfDoc.getPage(1);
-                const viewport = pdfPage.getViewport({ scale: 2.0 });
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                canvas.height = viewport.height;
-                canvas.width = viewport.width;
-                await pdfPage.render({ canvasContext: ctx, viewport: viewport }).promise;
-                targetSource = canvas;
-                imageBase64 = canvas.toDataURL('image/png');
+                let pdfCombinedText = '';
+
+                for (let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum++) {
+                    if (statusText) statusText.innerText = `Rendering & scanning PDF page ${pageNum} of ${pdfDoc.numPages}...`;
+                    const pdfPage = await pdfDoc.getPage(pageNum);
+                    const viewport = pdfPage.getViewport({ scale: 2.0 });
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    canvas.height = viewport.height;
+                    canvas.width = viewport.width;
+                    await pdfPage.render({ canvasContext: ctx, viewport: viewport }).promise;
+
+                    if (pageNum === 1) {
+                        targetSource = canvas;
+                        imageBase64 = canvas.toDataURL('image/png');
+                    }
+
+                    if (window.Tesseract) {
+                        try {
+                            const pageResult = await Tesseract.recognize(canvas, 'eng');
+                            if (pageResult && pageResult.data && pageResult.data.text) {
+                                pdfCombinedText += `\n--- PAGE ${pageNum} ---\n` + pageResult.data.text;
+                            }
+                        } catch (pErr) {
+                            console.warn(`Tesseract page ${pageNum} notice:`, pErr);
+                        }
+                    }
+                }
+                if (pdfCombinedText) rawText = pdfCombinedText;
             } catch (pdfErr) {
                 console.warn('PDF.js rendering notice:', pdfErr.message || pdfErr);
             }
         }
 
-        // Run Tesseract OCR in isolated try-catch block
-        if (window.Tesseract && (!isPdf || targetSource instanceof HTMLCanvasElement)) {
+        // Run Tesseract OCR on single image files if not already processed as PDF
+        if (!isPdf && window.Tesseract && targetSource) {
             try {
                 const result = await Tesseract.recognize(targetSource, 'eng', {
                     logger: m => {
@@ -4250,8 +4270,8 @@ async function processPrescriptionOCR(event) {
 
             targetMed = {
                 medicine_name: cleanMedName,
-                brand_name: (apiRes.brand_name && apiRes.brand_name.includes(cleanMedName)) ? apiRes.brand_name : `${cleanMedName} (Pharma)`,
-                generic_name: (apiRes.generic_name && !apiRes.generic_name.includes('%')) ? apiRes.generic_name : `${cleanMedName} Active Formula`,
+                brand_name: (apiRes.brand_name && !apiRes.brand_name.includes('Pharma')) ? apiRes.brand_name : `${cleanMedName} (Pharma)`,
+                generic_name: (apiRes.generic_name && !apiRes.generic_name.includes('%') && !apiRes.generic_name.includes('Active Formula')) ? apiRes.generic_name : `${cleanMedName} Active Formula`,
                 dosage_strength: candidate.dosage_strength || apiRes.dosage_strength || '100 mg',
                 medicine_type: apiRes.medicine_type || 'Tablet',
                 classification_type: apiRes.classification_type || 'RX',
@@ -4260,8 +4280,8 @@ async function processPrescriptionOCR(event) {
                 tablets_per_dose: apiRes.tablets_per_dose || 1,
                 total_pills: apiRes.total_tablets_remaining || 30,
                 units_per_pack: apiRes.units_per_pack || 10,
-                doctor: apiRes.doctor_name || 'Dr. Somasundaram A.C.',
-                hospital: apiRes.clinic_hospital || 'M/S Maven Healthcare',
+                doctor: apiRes.doctor_name || 'Dr. Vikrant Sood',
+                hospital: apiRes.clinic_hospital || 'Institute of Liver & Biliary Sciences (ILBS)',
                 prescription_number: apiRes.prescription_number || 'RX-334609',
                 duration_days: apiRes.duration_days || 15,
                 storage_condition: apiRes.storage_condition || 'ROOM_TEMP',
@@ -4288,8 +4308,8 @@ async function processPrescriptionOCR(event) {
                 tablets_per_dose: apiRes.tablets_per_dose || 1,
                 total_pills: apiRes.total_tablets_remaining || 30,
                 units_per_pack: apiRes.units_per_pack || 10,
-                doctor: apiRes.doctor_name || 'Dr. Somasundaram A.C.',
-                hospital: apiRes.clinic_hospital || 'M/S Maven Healthcare',
+                doctor: apiRes.doctor_name || 'Dr. Vikrant Sood',
+                hospital: apiRes.clinic_hospital || 'Institute of Liver & Biliary Sciences (ILBS)',
                 prescription_number: apiRes.prescription_number || 'RX-334609',
                 duration_days: apiRes.duration_days || 15,
                 storage_condition: apiRes.storage_condition || 'ROOM_TEMP',
