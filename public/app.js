@@ -554,6 +554,43 @@ function getClientSideSchedule(targetDate) {
     return buildScheduleFromData(rxs, logs, dateStr);
 }
 
+// 🔮 Modal Visibility Engine (High-Performance Fade & Display)
+function showModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (!modal) return;
+    modal.classList.remove('hidden');
+    setTimeout(() => {
+        modal.classList.remove('opacity-0');
+    }, 10);
+}
+
+function hideModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (!modal) return;
+    modal.classList.add('opacity-0');
+    setTimeout(() => {
+        modal.classList.add('hidden');
+    }, 300);
+}
+
+function closeRxModal() {
+    hideModal('rx-modal');
+}
+
+function openExportModal() {
+    const data = {
+        patient: (state.currentUser && state.currentUser.email) ? state.currentUser.email : 'patient@medibuddy.com',
+        export_date: new Date().toISOString(),
+        prescriptions: state.prescriptions || [],
+        schedule: state.schedule || [],
+        orders: state.orders || [],
+        vitals: state.vitals || []
+    };
+    const jsonStr = JSON.stringify(data, null, 2);
+    downloadFile(jsonStr, `SattvaCare_Medical_Export_${Date.now()}.json`, 'application/json');
+    showToast('✓ Complete medical records exported as JSON!', 'success');
+}
+
 // ⚡ Quick Tools Dropdown Toggle
 function toggleToolsDropdown() {
     const menu = document.getElementById('tools-dropdown-menu');
@@ -2803,15 +2840,14 @@ function generateWhatsAppReportText() {
 }
 
 function openWhatsAppShareModal() {
-    const modal = document.getElementById('whatsapp-share-modal');
     const preview = document.getElementById('whatsapp-preview-box');
     const msg = generateWhatsAppReportText();
     if (preview) preview.innerText = msg;
-    if (modal) modal.classList.remove('hidden');
+    showModal('whatsapp-share-modal');
 }
 
 function closeWhatsAppShareModal() {
-    document.getElementById('whatsapp-share-modal').classList.add('hidden');
+    hideModal('whatsapp-share-modal');
 }
 
 function sendWhatsAppMessage() {
@@ -2882,9 +2918,8 @@ function playDoseChimeSound() {
 
 // 🗓️ 30-Day Adherence Calendar Heatmap Modal Functions
 async function open30DayCalendarModal() {
-    const modal = document.getElementById('calendar-30day-modal');
+    showModal('calendar-30day-modal');
     const grid = document.getElementById('calendar-30day-grid');
-    modal.classList.remove('hidden');
 
     let history = null;
     if (!isStaticWebDeployment()) {
@@ -2907,7 +2942,7 @@ async function open30DayCalendarModal() {
 }
 
 function close30DayCalendarModal() {
-    document.getElementById('calendar-30day-modal').classList.add('hidden');
+    hideModal('calendar-30day-modal');
 }
 
 function generateClient30DayHistory() {
@@ -2934,8 +2969,7 @@ function generateClient30DayHistory() {
 
 // 💳 Pharmacy Expense Tracker & GST Invoice Functions
 async function openExpenseModal() {
-    const modal = document.getElementById('expense-modal');
-    modal.classList.remove('hidden');
+    showModal('expense-modal');
 
     let exp = null;
     if (!isStaticWebDeployment()) {
@@ -2985,7 +3019,7 @@ async function openExpenseModal() {
 }
 
 function closeExpenseModal() {
-    document.getElementById('expense-modal').classList.add('hidden');
+    hideModal('expense-modal');
 }
 
 function calculateClientExpenses() {
@@ -3028,14 +3062,12 @@ function downloadExpenseStatement() {
 let currentVaultFileBase64 = null;
 
 function openVaultModal() {
-    const modal = document.getElementById('rx-vault-modal');
-    if (modal) modal.classList.remove('hidden');
+    showModal('rx-vault-modal');
     fetchVaultDocuments();
 }
 
 function closeVaultModal() {
-    const modal = document.getElementById('rx-vault-modal');
-    if (modal) modal.classList.add('hidden');
+    hideModal('rx-vault-modal');
 }
 
 function handleVaultFileSelected(e) {
