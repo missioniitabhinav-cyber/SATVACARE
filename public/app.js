@@ -551,29 +551,17 @@ function generateDefaultClientLogs() {
     
     for (let i = 0; i < 7; i++) {
         const d = new Date(todayObj);
-                    id: `log-m-${rx.id}-${dStr}`,
-                    prescription_id: rx.id,
-                    medicine_name: rx.medicine_name,
-                    scheduled_time: 'MORNING',
-                    status: 'TAKEN',
-                    tablets_consumed: rx.tablets_per_dose || 1,
-                    taken_at: `${dStr}T08:15:00.000Z`
-                });
-            }
-            if (freq === 'ONCE_NIGHT' || freq === 'TWICE_DAILY') {
-                if (!(i === 1 && rx.id === 'rx-zonegran')) {
-                    logs.push({
-                        id: `log-n-${rx.id}-${dStr}`,
-                        prescription_id: rx.id,
-                        medicine_name: rx.medicine_name,
-                        scheduled_time: 'NIGHT',
-                        status: 'TAKEN',
-                        tablets_consumed: rx.tablets_per_dose || 1,
-                        taken_at: `${dStr}T21:00:00.000Z`
-                    });
-                }
-            }
-        });
+        d.setDate(d.getDate() - i);
+        const dateStr = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+
+        logs.push(
+            { id: `log-mg-m-${dateStr}`, prescription_id: 'rx-mg-or-500', medicine_name: 'MG-OR 500mg', scheduled_time: '08:00', status: i === 0 ? 'PENDING' : 'TAKEN', taken_at: i === 0 ? null : `${dateStr}T08:05:00.000Z`, date: dateStr, tablets_consumed: 1 },
+            { id: `log-pan-m-${dateStr}`, prescription_id: 'rx-pangraf-025', medicine_name: 'PANGRAF 0.25mg', scheduled_time: '09:00', status: i === 0 ? 'TAKEN' : 'TAKEN', taken_at: `${dateStr}T09:02:00.000Z`, date: dateStr, tablets_consumed: 1 },
+            { id: `log-udi-m-${dateStr}`, prescription_id: 'rx-udiliv-450', medicine_name: 'UDILIV 450mg', scheduled_time: '09:00', status: i === 0 ? 'TAKEN' : 'TAKEN', taken_at: `${dateStr}T09:02:00.000Z`, date: dateStr, tablets_consumed: 1 },
+            { id: `log-car-e-${dateStr}`, prescription_id: 'rx-cardivas-3', medicine_name: 'CARDIVAS 3.125mg', scheduled_time: '20:00', status: (i === 0 || i === 1) ? 'PENDING' : 'TAKEN', taken_at: (i === 0 || i === 1) ? null : `${dateStr}T20:05:00.000Z`, date: dateStr, tablets_consumed: 1 },
+            { id: `log-udi-n-${dateStr}`, prescription_id: 'rx-udiliv-450', medicine_name: 'UDILIV 450mg', scheduled_time: '21:00', status: (i === 0 || i === 1) ? 'PENDING' : 'TAKEN', taken_at: (i === 0 || i === 1) ? null : `${dateStr}T21:10:00.000Z`, date: dateStr, tablets_consumed: 1 },
+            { id: `log-pan-n-${dateStr}`, prescription_id: 'rx-pangraf-05', medicine_name: 'PANGRAF 0.5mg', scheduled_time: '21:00', status: (i === 0 || i === 1) ? 'PENDING' : 'TAKEN', taken_at: (i === 0 || i === 1) ? null : `${dateStr}T21:10:00.000Z`, date: dateStr, tablets_consumed: 1 }
+        );
     }
     return logs;
 }
