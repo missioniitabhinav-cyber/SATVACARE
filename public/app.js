@@ -597,14 +597,24 @@ async function fetchPatientStats() {
                 });
                 let req = 0, taken = 0;
                 schedule.forEach(s => {
-                    req += (s.daily_frequency || 1);
-                    if (s.morning_taken) taken++;
-                    if (s.afternoon_taken) taken++;
-                    if (s.evening_taken) taken++;
-                    if (s.night_taken) taken++;
+                    let reqCount = 2;
+                    if (s.dosage_frequency_type === 'ONCE_MORNING' || s.dosage_frequency_type === 'ONCE_NIGHT') reqCount = 1;
+                    else if (s.dosage_frequency_type === 'THRICE_DAILY') reqCount = 3;
+                    else if (s.dosage_frequency_type === 'FOUR_TIMES_DAILY') reqCount = 4;
+                    else if (s.dosage_frequency_type === 'AS_NEEDED') reqCount = 1;
+                    
+                    req += reqCount;
+
+                    let takenForRx = 0;
+                    if (s.morning_taken) takenForRx++;
+                    if (s.afternoon_taken) takenForRx++;
+                    if (s.evening_taken) takenForRx++;
+                    if (s.night_taken) takenForRx++;
+
+                    taken += Math.min(reqCount, takenForRx);
                 });
                 stats = {
-                    adherence_percentage: req > 0 ? Math.round((taken / req) * 100) : 0,
+                    adherence_percentage: req > 0 ? Math.min(100, Math.round((taken / req) * 100)) : 0,
                     today_taken_count: taken,
                     today_scheduled_count: req,
                     total_pills_remaining: totalPills,
@@ -637,14 +647,24 @@ async function fetchPatientStats() {
             });
             let req = 0, taken = 0;
             schedule.forEach(s => {
-                req += (s.daily_frequency || 1);
-                if (s.morning_taken) taken++;
-                if (s.afternoon_taken) taken++;
-                if (s.evening_taken) taken++;
-                if (s.night_taken) taken++;
+                let reqCount = 2;
+                if (s.dosage_frequency_type === 'ONCE_MORNING' || s.dosage_frequency_type === 'ONCE_NIGHT') reqCount = 1;
+                else if (s.dosage_frequency_type === 'THRICE_DAILY') reqCount = 3;
+                else if (s.dosage_frequency_type === 'FOUR_TIMES_DAILY') reqCount = 4;
+                else if (s.dosage_frequency_type === 'AS_NEEDED') reqCount = 1;
+
+                req += reqCount;
+
+                let takenForRx = 0;
+                if (s.morning_taken) takenForRx++;
+                if (s.afternoon_taken) takenForRx++;
+                if (s.evening_taken) takenForRx++;
+                if (s.night_taken) takenForRx++;
+
+                taken += Math.min(reqCount, takenForRx);
             });
             stats = {
-                adherence_percentage: req > 0 ? Math.round((taken / req) * 100) : 0,
+                adherence_percentage: req > 0 ? Math.min(100, Math.round((taken / req) * 100)) : 0,
                 today_taken_count: taken,
                 today_scheduled_count: req,
                 total_pills_remaining: totalPills,

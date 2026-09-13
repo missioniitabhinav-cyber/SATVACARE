@@ -790,16 +790,20 @@ const DB = {
             if (s.dosage_frequency_type === 'ONCE_MORNING' || s.dosage_frequency_type === 'ONCE_NIGHT') reqCount = 1;
             else if (s.dosage_frequency_type === 'THRICE_DAILY') reqCount = 3;
             else if (s.dosage_frequency_type === 'FOUR_TIMES_DAILY') reqCount = 4;
+            else if (s.dosage_frequency_type === 'AS_NEEDED') reqCount = 1;
 
             totalDosesRequiredToday += reqCount;
 
-            if (s.morning_taken) totalDosesTakenToday++;
-            if (s.afternoon_taken) totalDosesTakenToday++;
-            if (s.evening_taken) totalDosesTakenToday++;
-            if (s.night_taken) totalDosesTakenToday++;
+            let takenForRx = 0;
+            if (s.morning_taken) takenForRx++;
+            if (s.afternoon_taken) takenForRx++;
+            if (s.evening_taken) takenForRx++;
+            if (s.night_taken) takenForRx++;
+
+            totalDosesTakenToday += Math.min(reqCount, takenForRx);
         });
 
-        const adherencePercent = totalDosesRequiredToday > 0 ? Math.round((totalDosesTakenToday / totalDosesRequiredToday) * 100) : 0;
+        const adherencePercent = totalDosesRequiredToday > 0 ? Math.min(100, Math.round((totalDosesTakenToday / totalDosesRequiredToday) * 100)) : 0;
 
         const runoutAlertList = rxs.filter(r => r.is_runout_alert_5days).map(r => ({
             id: r.id,
