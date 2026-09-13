@@ -282,8 +282,8 @@ function isUserMatch(item, userEmail) {
     if (itemUser === target) return true;
 
     // Main patient default fallbacks (for un-migrated items)
-    if (target === 'patient@sattvacare.com' || target === 'patient@medibuddy.com' || target === 'patient-1') {
-        return !itemUser || itemUser === 'patient@sattvacare.com' || itemUser === 'patient@medibuddy.com' || itemUser === 'patient-1';
+    if (target === 'patient@sattvacare.com' || target === 'patient@medibuddy.com' || target === 'patient-1' || target === 'admin@sattvacare.com') {
+        return !itemUser || itemUser === 'patient@sattvacare.com' || itemUser === 'patient@medibuddy.com' || itemUser === 'patient-1' || itemUser === 'admin@sattvacare.com';
     }
 
     return false;

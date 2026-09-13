@@ -1,8 +1,8 @@
 [
   {
     "id": "vit-1789303382725",
-    "user_id": "admin@sattvacare.com",
-    "user_email": "admin@sattvacare.com",
+    "user_id": "patient@sattvacare.com",
+    "user_email": "patient@sattvacare.com",
     "sys_bp": 170,
     "dia_bp": 88,
     "blood_sugar": 98,
