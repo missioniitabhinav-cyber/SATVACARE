@@ -8,7 +8,7 @@
 CREATE TABLE IF NOT EXISTS public.patient_prescriptions (
     id TEXT PRIMARY KEY,
     user_id TEXT DEFAULT 'patient-1',
-    user_email TEXT DEFAULT 'patient@medibuddy.com',
+    user_email TEXT DEFAULT 'patient@sattvacare.com',
     medicine_name TEXT NOT NULL,
     brand_name TEXT,
     generic_name TEXT,
@@ -59,7 +59,7 @@ CREATE TABLE IF NOT EXISTS public.patient_prescriptions (
 CREATE TABLE IF NOT EXISTS public.medication_logs (
     id TEXT PRIMARY KEY,
     user_id TEXT DEFAULT 'patient-1',
-    user_email TEXT DEFAULT 'patient@medibuddy.com',
+    user_email TEXT DEFAULT 'patient@sattvacare.com',
     prescription_id TEXT REFERENCES public.patient_prescriptions(id) ON DELETE CASCADE,
     medicine_name TEXT NOT NULL,
     brand_name TEXT,
@@ -77,7 +77,7 @@ CREATE TABLE IF NOT EXISTS public.medication_logs (
 CREATE TABLE IF NOT EXISTS public.pharmacy_orders (
     id TEXT PRIMARY KEY,
     user_id TEXT DEFAULT 'patient-1',
-    user_email TEXT DEFAULT 'patient@medibuddy.com',
+    user_email TEXT DEFAULT 'patient@sattvacare.com',
     prescription_id TEXT REFERENCES public.patient_prescriptions(id) ON DELETE SET NULL,
     medicine_name TEXT NOT NULL,
     brand_name TEXT,
@@ -113,7 +113,7 @@ CREATE TABLE IF NOT EXISTS public.vitals_logs (
 
 -- 5. Safe Column Migrations for Existing Tables
 ALTER TABLE public.patient_prescriptions ADD COLUMN IF NOT EXISTS user_id TEXT DEFAULT 'patient-1';
-ALTER TABLE public.patient_prescriptions ADD COLUMN IF NOT EXISTS user_email TEXT DEFAULT 'patient@medibuddy.com';
+ALTER TABLE public.patient_prescriptions ADD COLUMN IF NOT EXISTS user_email TEXT DEFAULT 'patient@sattvacare.com';
 ALTER TABLE public.patient_prescriptions ADD COLUMN IF NOT EXISTS prescription_type TEXT DEFAULT 'RX';
 ALTER TABLE public.patient_prescriptions ADD COLUMN IF NOT EXISTS tablets_per_dose NUMERIC DEFAULT 1.0;
 ALTER TABLE public.patient_prescriptions ADD COLUMN IF NOT EXISTS brand_name TEXT;
@@ -131,12 +131,12 @@ ALTER TABLE public.patient_prescriptions ADD COLUMN IF NOT EXISTS batch_details 
 ALTER TABLE public.patient_prescriptions ADD COLUMN IF NOT EXISTS batches JSONB DEFAULT '[]'::jsonb;
 
 ALTER TABLE public.medication_logs ADD COLUMN IF NOT EXISTS user_id TEXT DEFAULT 'patient-1';
-ALTER TABLE public.medication_logs ADD COLUMN IF NOT EXISTS user_email TEXT DEFAULT 'patient@medibuddy.com';
+ALTER TABLE public.medication_logs ADD COLUMN IF NOT EXISTS user_email TEXT DEFAULT 'patient@sattvacare.com';
 ALTER TABLE public.medication_logs ADD COLUMN IF NOT EXISTS date TEXT;
 ALTER TABLE public.medication_logs ADD COLUMN IF NOT EXISTS taken_at TIMESTAMPTZ DEFAULT NOW();
 
 ALTER TABLE public.pharmacy_orders ADD COLUMN IF NOT EXISTS user_id TEXT DEFAULT 'patient-1';
-ALTER TABLE public.pharmacy_orders ADD COLUMN IF NOT EXISTS user_email TEXT DEFAULT 'patient@medibuddy.com';
+ALTER TABLE public.pharmacy_orders ADD COLUMN IF NOT EXISTS user_email TEXT DEFAULT 'patient@sattvacare.com';
 
 -- 5. Row Level Security (RLS) & Permissive Policies
 ALTER TABLE public.patient_prescriptions ENABLE ROW LEVEL SECURITY;
