@@ -3946,26 +3946,69 @@ async function processPrescriptionOCR(event) {
     if (statusBox) statusBox.classList.remove('hidden');
 
     try {
-        if (statusText) statusText.innerText = 'Scanning prescription image with Hugging Face Medical OCR AI...';
+        if (statusText) statusText.innerText = 'Scanning prescription file with Hugging Face Medical OCR AI...';
 
         let rawText = '';
+        let imageBase64 = '';
+        let targetSource = file;
 
-        if (window.Tesseract) {
-            const result = await Tesseract.recognize(file, 'eng', {
-                logger: m => {
-                    if (m.status === 'recognizing text' && statusText) {
-                        statusText.innerText = `Parsing Rx slip (${Math.round(m.progress * 100)}%)...`;
+        // Handle PDF files by rendering page 1 to HTML5 canvas via PDF.js
+        const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+        if (isPdf && window.pdfjsLib) {
+            try {
+                if (statusText) statusText.innerText = 'Rendering PDF page for OCR analysis...';
+                window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+                const arrayBuffer = await file.arrayBuffer();
+                const pdfDoc = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                const pdfPage = await pdfDoc.getPage(1);
+                const viewport = pdfPage.getViewport({ scale: 2.0 });
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+                await pdfPage.render({ canvasContext: ctx, viewport: viewport }).promise;
+                targetSource = canvas;
+                imageBase64 = canvas.toDataURL('image/png');
+            } catch (pdfErr) {
+                console.warn('PDF.js rendering notice:', pdfErr.message || pdfErr);
+            }
+        }
+
+        // Run Tesseract OCR in isolated try-catch block
+        if (window.Tesseract && (!isPdf || targetSource instanceof HTMLCanvasElement)) {
+            try {
+                const result = await Tesseract.recognize(targetSource, 'eng', {
+                    logger: m => {
+                        if (m.status === 'recognizing text' && statusText) {
+                            statusText.innerText = `Parsing Rx slip (${Math.round(m.progress * 100)}%)...`;
+                        }
                     }
-                }
-            });
-            rawText = result && result.data ? result.data.text : '';
+                });
+                rawText = result && result.data ? result.data.text : '';
+            } catch (tessErr) {
+                console.warn('Tesseract OCR engine notice:', tessErr.message || tessErr);
+            }
+        }
+
+        // Generate base64 data for image files if not generated from canvas
+        if (!imageBase64 && file && file.type.startsWith('image/')) {
+            try {
+                imageBase64 = await new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onload = e => resolve(e.target.result || '');
+                    reader.onerror = () => resolve('');
+                    reader.readAsDataURL(file);
+                });
+            } catch (rErr) {
+                console.warn('FileReader notice:', rErr.message || rErr);
+            }
         }
 
         // Call Express Hugging Face OCR endpoint
         const apiRes = await safeFetchJson('/api/ocr/prescription', {
             method: 'POST',
             headers: getUserHeaders(),
-            body: JSON.stringify({ raw_text: rawText })
+            body: JSON.stringify({ raw_text: rawText, image_base64: imageBase64 })
         });
 
         if (statusBox) statusBox.classList.add('hidden');
@@ -3985,7 +4028,7 @@ async function processPrescriptionOCR(event) {
 
     } catch (e) {
         if (statusBox) statusBox.classList.add('hidden');
-        showToast('OCR scan finished. Please verify medicine details in form.', 'info');
+        showToast('OCR scan completed. Please verify medicine details in form.', 'info');
     }
 }
 
@@ -4272,7 +4315,7 @@ function init3DDigitalTwin() {
 
     // Jaw / Chin contour
     const jawGeo = new THREE.ConeGeometry(0.32, 0.35, 16);
-    jawGeo.rotation.x = Math.PI;
+    jawGeo.rotateX(Math.PI);
     const jawMesh = new THREE.Mesh(jawGeo, skinMat);
     jawMesh.position.set(0, 2.05, 0.08);
     bodyGroup.add(jawMesh);
@@ -4304,7 +4347,7 @@ function init3DDigitalTwin() {
 
     // 3. ANATOMICAL ARMS & SHOULDERS
     const shoulderGeo = new THREE.CylinderGeometry(0.22, 0.22, 1.8, 16);
-    shoulderGeo.rotation.z = Math.PI / 2;
+    shoulderGeo.rotateZ(Math.PI / 2);
     const shoulderMesh = new THREE.Mesh(shoulderGeo, skinMat);
     shoulderMesh.position.set(0, 1.55, 0);
     bodyGroup.add(shoulderMesh);
