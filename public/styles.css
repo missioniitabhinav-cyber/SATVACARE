@@ -436,29 +436,4 @@ label {
 }
 
 
-/* ====================================================================
-   OFFICIAL PRINTABLE MEDICAL PASS (@media print)
-   ==================================================================== */
-@media print {
-    body * {
-        visibility: hidden !important;
-    }
-    #medical-pass-modal, #printable-medical-pass, #printable-medical-pass * {
-        visibility: visible !important;
-    }
-    #medical-pass-modal {
-        position: absolute !important;
-        left: 0 !important;
-        top: 0 !important;
-        width: 100% !important;
-        height: auto !important;
-        background: #ffffff !important;
-        padding: 0 !important;
-    }
-    #printable-medical-pass {
-        border: none !important;
-        box-shadow: none !important;
-        padding: 20px !important;
-        width: 100% !important;
-    }
-}
+

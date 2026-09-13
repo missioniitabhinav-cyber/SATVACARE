@@ -271,14 +271,21 @@ function generateDefaultClientLogs() {
 }
 
 function isUserMatch(item, userEmail) {
-    if (!userEmail) return true;
+    if (!userEmail) return false;
     const target = String(userEmail).trim().toLowerCase();
+    if (!target) return false;
+
     const itemUser = String(item.user_id || item.user_email || '').trim().toLowerCase();
-    if (!itemUser) return true;
-    if (target === 'patient@medibuddy.com' || target === 'patient-1' || target === 'admin@sattvacare.com' || target.includes('patient') || target.includes('admin')) {
-        return !itemUser || itemUser === 'patient@medibuddy.com' || itemUser === 'patient-1' || itemUser === 'admin@sattvacare.com' || itemUser.includes('patient') || itemUser.includes('admin');
+    
+    // Strict exact match
+    if (itemUser === target) return true;
+
+    // Main patient default fallbacks (for un-migrated items)
+    if (target === 'patient@sattvacare.com' || target === 'patient@medibuddy.com' || target === 'patient-1') {
+        return !itemUser || itemUser === 'patient@sattvacare.com' || itemUser === 'patient@medibuddy.com' || itemUser === 'patient-1';
     }
-    return itemUser === target;
+
+    return false;
 }
 
 // Direct Supabase Database Integration Engine (Strictly User-Scoped)
@@ -488,18 +495,23 @@ function getClientStorageKey(suffix) {
 
 function getClientPrescriptions() {
     const key = getClientStorageKey('rxs');
+    const userEmail = (state.currentUser && state.currentUser.email) ? state.currentUser.email.trim().toLowerCase() : '';
+    const isMainPatient = !userEmail || userEmail === 'patient@sattvacare.com' || userEmail === 'patient@medibuddy.com' || userEmail === 'admin@sattvacare.com';
+
     let rxs = localStorage.getItem(key);
     if (!rxs) {
-        localStorage.setItem(key, JSON.stringify(DEFAULT_CLIENT_RXS));
-        return DEFAULT_CLIENT_RXS;
+        const initial = isMainPatient ? DEFAULT_CLIENT_RXS : [];
+        localStorage.setItem(key, JSON.stringify(initial));
+        return initial;
     }
     try {
         const parsed = JSON.parse(rxs);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-        localStorage.setItem(key, JSON.stringify(DEFAULT_CLIENT_RXS));
-        return DEFAULT_CLIENT_RXS;
+        if (Array.isArray(parsed)) return parsed;
+        const initial = isMainPatient ? DEFAULT_CLIENT_RXS : [];
+        localStorage.setItem(key, JSON.stringify(initial));
+        return initial;
     } catch (e) {
-        return DEFAULT_CLIENT_RXS;
+        return isMainPatient ? DEFAULT_CLIENT_RXS : [];
     }
 }
 
@@ -509,20 +521,23 @@ function saveClientPrescriptions(rxs) {
 
 function getClientLogs() {
     const key = getClientStorageKey('logs');
+    const userEmail = (state.currentUser && state.currentUser.email) ? state.currentUser.email.trim().toLowerCase() : '';
+    const isMainPatient = !userEmail || userEmail === 'patient@sattvacare.com' || userEmail === 'patient@medibuddy.com' || userEmail === 'admin@sattvacare.com';
+
     let logs = localStorage.getItem(key);
     if (!logs) {
-        const defaultLogs = generateDefaultClientLogs();
-        localStorage.setItem(key, JSON.stringify(defaultLogs));
-        return defaultLogs;
+        const initial = isMainPatient ? generateDefaultClientLogs() : [];
+        localStorage.setItem(key, JSON.stringify(initial));
+        return initial;
     }
     try { 
         const parsed = JSON.parse(logs);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-        const defaultLogs = generateDefaultClientLogs();
-        localStorage.setItem(key, JSON.stringify(defaultLogs));
-        return defaultLogs;
+        if (Array.isArray(parsed)) return parsed;
+        const initial = isMainPatient ? generateDefaultClientLogs() : [];
+        localStorage.setItem(key, JSON.stringify(initial));
+        return initial;
     } catch (e) {
-        return generateDefaultClientLogs();
+        return isMainPatient ? generateDefaultClientLogs() : [];
     }
 }
 
@@ -2745,70 +2760,16 @@ async function handleSaveVitals(e) {
     }
 }
 
-// 🖨️ Printable Official Medical Pass Modal
-function openPrintableMedicalPassModal() {
-    renderPrintableMedicalPass();
-    showModal('medical-pass-modal');
-}
 
-function closePrintableMedicalPassModal() {
-    hideModal('medical-pass-modal');
-}
-
-function closeMedicalPassModal() {
-    hideModal('medical-pass-modal');
-}
-
-function renderPrintableMedicalPass() {
-    const tableBody = document.getElementById('pass-prescriptions-table-body');
-    const warningsBox = document.getElementById('pass-safety-warnings-list');
-    const userEmail = (state.currentUser && state.currentUser.email) ? state.currentUser.email : 'patient@medibuddy.com';
-    
-    const passPatientName = document.getElementById('pass-patient-name');
-    if (passPatientName) passPatientName.innerText = userEmail;
-
-    const passGenDate = document.getElementById('pass-generated-date');
-    if (passGenDate) passGenDate.innerText = `Generated: ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
-
-    const rxs = (state.prescriptions && state.prescriptions.length > 0) ? state.prescriptions : (state.schedule || []);
-    if (!tableBody) return;
-
-    if (rxs.length === 0) {
-        tableBody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-slate-500 font-bold">No active prescriptions in patient cabinet</td></tr>`;
-        if (warningsBox) warningsBox.innerHTML = `<p class="text-slate-500 font-medium">No active warnings</p>`;
-        return;
-    }
-
-    tableBody.innerHTML = rxs.map(r => `
-        <tr class="hover:bg-slate-50">
-            <td class="p-2.5 font-bold text-slate-900">${escapeHtml(r.medicine_name || '')} ${r.brand_name ? `<span class="text-teal-700 text-[10px]">(${escapeHtml(r.brand_name)})</span>` : ''}</td>
-            <td class="p-2.5 font-semibold text-slate-700">${escapeHtml(r.dosage_strength || 'Standard')} • ${escapeHtml(r.medicine_type || 'Tablet')}</td>
-            <td class="p-2.5 font-bold text-teal-800">${escapeHtml(r.frequency_label || 'Twice Daily')}</td>
-            <td class="p-2.5 font-medium text-slate-700">${escapeHtml(r.meal_relation_text || 'Take as directed')} ${r.instructions ? `<br><span class="text-[10px] text-slate-500">${escapeHtml(r.instructions)}</span>` : ''}</td>
-            <td class="p-2.5 font-semibold text-slate-600">${r.batch_number ? `Batch: ${escapeHtml(r.batch_number)}<br>` : ''}${r.expiry_date ? `Exp: ${r.expiry_date}` : 'Exp: N/A'}</td>
-        </tr>
-    `).join('');
-
-    const allWarnings = [];
-    rxs.forEach(r => {
-        if (r.food_safety_warnings && Array.isArray(r.food_safety_warnings)) {
-            r.food_safety_warnings.forEach(w => allWarnings.push(`• <strong>${escapeHtml(r.medicine_name)}</strong>: ${escapeHtml(w)}`));
-        }
-    });
-
-    if (warningsBox) {
-        warningsBox.innerHTML = allWarnings.length > 0 ? allWarnings.map(w => `<p>${w}</p>`).join('') : `<p class="text-amber-900 font-medium">Standard prescription precautions apply. Follow doctor instructions.</p>`;
-    }
-}
 
 // 📲 WhatsApp Caregiver & Doctor Share Modal
 function generateWhatsAppReportText() {
-    const userEmail = (state.currentUser && state.currentUser.email) ? state.currentUser.email : 'patient@medibuddy.com';
+    const userEmail = (state.currentUser && state.currentUser.email) ? state.currentUser.email : 'patient@sattvacare.com';
     const dateStr = state.selectedDate || getTodayDateStr();
     const stats = state.stats || {};
     const schedule = state.schedule || [];
 
-    let msg = `🏥 *SATTVA CARE / MEDIBUDDY PATIENT INTAKE REPORT*\n`;
+    let msg = `🏥 *SATTVA CARE PATIENT INTAKE REPORT*\n`;
     msg += `👤 *Patient:* ${userEmail}\n`;
     msg += `📅 *Date:* ${dateStr}\n`;
     msg += `📊 *Adherence:* ${stats.adherence_percentage || 0}% (${stats.today_taken_count || 0} of ${stats.today_scheduled_count || 0} doses completed)\n\n`;
@@ -3047,8 +3008,8 @@ function calculateClientExpenses() {
 function downloadExpenseStatement() {
     const exp = state.expenses || calculateClientExpenses();
     let txt = `====================================================\n`;
-    txt += `🏥 SATTVA CARE / MEDIBUDDY PHARMACY GST INVOICE STATEMENT\n`;
-    txt += `Patient: ${(state.currentUser && state.currentUser.email) ? state.currentUser.email : 'patient@medibuddy.com'}\n`;
+    txt += `🏥 SATTVA CARE PHARMACY GST INVOICE STATEMENT\n`;
+    txt += `Patient: ${(state.currentUser && state.currentUser.email) ? state.currentUser.email : 'patient@sattvacare.com'}\n`;
     txt += `Date: ${new Date().toLocaleDateString()}\n`;
     txt += `====================================================\n\n`;
     txt += `Total Orders: ${exp.total_orders_count || 0}\n`;
@@ -3228,31 +3189,28 @@ function triggerEmergencySOS() {
     const badgeEl = document.getElementById('sos-gps-accuracy-badge');
     const hospitalLink = document.getElementById('sos-nearby-hospitals-link');
     
-    const userEmail = (state.currentUser && state.currentUser.email) ? state.currentUser.email : 'patient@medibuddy.com';
-    const activeMeds = (state.schedule || []).map(s => `${s.medicine_name} (${s.dosage_strength || 'Tablet'})`).join(', ');
+    const userEmail = (state.currentUser && state.currentUser.email) ? state.currentUser.email : 'patient@sattvacare.com';
     const timeStr = new Date().toLocaleString();
 
     // 1. Open modal INSTANTLY (0 sec latency)
     showModal('emergency-sos-modal');
 
     // Helper to build real-time emergency dispatch message
-    function buildSosText(locationUrl, accuracyText) {
-        let text = `🚨 *URGENT MEDICAL EMERGENCY SOS*\n`;
-        text += `👤 *Patient:* ${userEmail}\n`;
-        text += `🕒 *Time:* ${timeStr}\n`;
+    function buildSosText(locationUrl) {
+        let text = `🚨 URGENT MEDICAL EMERGENCY SOS\n`;
+        text += `👤 Patient: ${userEmail}\n`;
+        text += `🕒 Time: ${timeStr}\n`;
         if (locationUrl) {
-            text += `📍 *Live GPS Location:* ${locationUrl}\n`;
+            text += `📍 Live GPS Location: ${locationUrl}\n`;
         } else {
-            text += `📍 *Live Location:* (Fetching GPS / Permission Pending)\n`;
+            text += `📍 Live Location: Fetching GPS Location...\n`;
         }
-        if (accuracyText) text += `🎯 *GPS Accuracy:* ${accuracyText}\n`;
-        text += `💊 *Current Medications:* ${activeMeds || 'None registered'}\n`;
-        text += `⚠️ *URGENT:* Patient requires immediate emergency medical care! Check on patient or dispatch ambulance now.`;
+        text += `\n⚠️ URGENT: Patient requires immediate emergency assistance!`;
         return text;
     }
 
     // 2. Initial instant message (0 sec)
-    if (preview) preview.innerText = buildSosText(null, null);
+    if (preview) preview.innerText = buildSosText(null);
 
     // 3. Fast High-Accuracy Geolocation Detection (1-3 seconds)
     if ('geolocation' in navigator) {
@@ -3269,14 +3227,14 @@ function triggerEmergencySOS() {
 
                 if (statusEl) statusEl.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-600"></i> Live GPS Acquired (${lat}, ${lng})`;
                 if (badgeEl) {
-                    badgeEl.innerText = `GPS Acc: ~${acc}m`;
-                    badgeEl.className = 'text-[9px] font-bold px-2 py-0.5 bg-emerald-100 text-emerald-900 rounded-md';
+                    badgeEl.innerText = `Live GPS Active`;
+                    badgeEl.className = 'text-[10px] font-semibold px-2 py-0.5 bg-emerald-100 text-emerald-900 rounded-md';
                 }
                 if (hospitalLink) {
                     hospitalLink.href = `https://www.google.com/maps/search/hospitals+near+me/@${lat},${lng},15z`;
                 }
                 if (preview) {
-                    preview.innerText = buildSosText(mapsUrl, `Within ~${acc} meters`);
+                    preview.innerText = buildSosText(mapsUrl);
                 }
             },
             (err) => {

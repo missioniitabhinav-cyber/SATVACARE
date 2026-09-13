@@ -185,7 +185,7 @@
     "instructions": "[MORNING ONLY] [TRX MEDICINE]",
     "daily_frequency": 1,
     "dose_times": null,
-    "total_tablets_remaining": 37,
+    "total_tablets_remaining": 10,
     "refill_threshold_days": 5,
     "unit_price": 0,
     "doctor_name": "DR.VIKRANT SOOD",
@@ -194,7 +194,7 @@
     "start_date": "2026-09-04",
     "end_date": null,
     "created_at": "2026-09-04T11:43:43.009+00:00",
-    "updated_at": "2026-09-13T11:13:32.857Z",
+    "updated_at": "2026-09-13T13:25:24.470Z",
     "brand_name": "PFIZER",
     "generic_name": "PREDNISOLONE",
     "dosage_frequency_type": "ONCE_MORNING",
@@ -209,9 +209,25 @@
     "batch_number": "",
     "batch_strip_count": 1,
     "expiry_date": null,
-    "batch_details": [],
-    "batches": [],
-    "days_supply_remaining": 38,
+    "batch_details": [
+      {
+        "batch_number": "",
+        "batch_strip_count": 1,
+        "expiry_date": ""
+      }
+    ],
+    "batches": [
+      {
+        "batch_number": "",
+        "batch_strip_count": 1,
+        "expiry_date": ""
+      }
+    ],
+    "days_supply_remaining": 37,
+    "predicted_runout_date": "Oct 20, 2026",
+    "food_safety_warnings": [
+      "🍲 Take after meals to minimize gastric irritation."
+    ],
     "is_runout_alert_5days": false,
     "is_out_of_stock": false,
     "frequency_label": "Morning Only (08:00 AM)",

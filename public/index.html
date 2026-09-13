@@ -51,7 +51,7 @@
                 <h2 class="text-2xl font-black text-slate-900 tracking-tight flex items-center justify-center gap-2">
                     SATTVA <span class="text-xs font-black px-2.5 py-0.5 rounded-full bg-teal-50 text-teal-700 border border-teal-200 uppercase tracking-widest">CARE</span>
                 </h2>
-                <p class="text-xs text-slate-500 font-medium">Personal Patient Medicine & Pill Intake Portal</p>
+                <p class="text-xs text-slate-500 font-medium">Personal Patient Monitoring Portal</p>
             </div>
 
             <div class="grid grid-cols-2 p-1.5 bg-slate-100 rounded-2xl border border-slate-200 relative z-10">
@@ -72,7 +72,7 @@
                     <label class="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Email Address</label>
                     <div class="relative">
                         <i class="fa-solid fa-envelope absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
-                        <input type="email" id="auth-email" required autocomplete="username" placeholder="patient@medibuddy.com" 
+                        <input type="email" id="auth-email" required autocomplete="username" placeholder="patient@sattvacare.com" 
                             class="w-full pl-10 pr-4 py-3 rounded-xl bg-white border border-slate-300 text-sm text-slate-900 font-semibold focus:border-teal-600 outline-none transition">
                     </div>
                 </div>
@@ -97,7 +97,7 @@
                         <button type="button" onclick="fillDemoLogin('admin@sattvacare.com', 'admin123')" class="py-2.5 bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-900 text-xs font-black rounded-xl transition flex items-center justify-center gap-1.5 shadow-xs">
                             <i class="fa-solid fa-user-shield text-amber-600"></i> Admin Access
                         </button>
-                        <button type="button" onclick="fillDemoLogin('patient@medibuddy.com', 'patient123')" class="py-2.5 bg-teal-50 hover:bg-teal-100 border border-teal-300 text-teal-900 text-xs font-black rounded-xl transition flex items-center justify-center gap-1.5 shadow-xs">
+                        <button type="button" onclick="fillDemoLogin('patient@sattvacare.com', 'patient123')" class="py-2.5 bg-teal-50 hover:bg-teal-100 border border-teal-300 text-teal-900 text-xs font-black rounded-xl transition flex items-center justify-center gap-1.5 shadow-xs">
                             <i class="fa-solid fa-user-check text-teal-600"></i> Patient Access
                         </button>
                     </div>
@@ -127,10 +127,10 @@
                     <!-- Family Profile Selector Pill -->
                     <div class="relative ml-2">
                         <select id="family-profile-select" onchange="switchFamilyProfile(event)" class="py-1.5 px-3 rounded-xl bg-teal-50/80 border border-teal-200 text-xs font-black text-teal-900 focus:border-teal-600 outline-none shadow-xs">
-                            <option value="patient@medibuddy.com">👤 Self (Patient)</option>
-                            <option value="father@medibuddy.com">👔 Father</option>
-                            <option value="mother@medibuddy.com">👗 Mother</option>
-                            <option value="child@medibuddy.com">👶 Child</option>
+                            <option value="patient@sattvacare.com">👤 Self (Patient)</option>
+                            <option value="father@sattvacare.com">👔 Father</option>
+                            <option value="mother@sattvacare.com">👗 Mother</option>
+                            <option value="child@sattvacare.com">👶 Child</option>
                         </select>
                     </div>
                 </div>
@@ -140,7 +140,7 @@
                     <!-- User Status Display -->
                     <div class="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-xs">
                         <div id="db-dot" class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></div>
-                        <span id="user-display-email" class="font-bold text-slate-700 max-w-[150px] truncate">patient@medibuddy.com</span>
+                        <span id="user-display-email" class="font-bold text-slate-700 max-w-[150px] truncate">patient@sattvacare.com</span>
                     </div>
 
                     <!-- Primary Action: Add Medicine -->
@@ -197,10 +197,6 @@
                             <button onclick="openExpenseModal(); toggleToolsDropdown();" class="tools-dropdown-item">
                                 <i class="fa-solid fa-receipt text-indigo-600 w-4 text-center"></i>
                                 <span>Pharmacy Expense Tracker</span>
-                            </button>
-                            <button onclick="openPrintableMedicalPassModal(); toggleToolsDropdown();" class="tools-dropdown-item">
-                                <i class="fa-solid fa-print text-amber-600 w-4 text-center"></i>
-                                <span>Official Medical Pass</span>
                             </button>
                             <button onclick="openWhatsAppShareModal(); toggleToolsDropdown();" class="tools-dropdown-item">
                                 <i class="fa-brands fa-whatsapp text-emerald-600 w-4 text-center"></i>
@@ -456,9 +452,6 @@
                                     </div>
                                 </div>
                             </div>
-                            <button onclick="openPrintableMedicalPassModal()" class="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-black flex items-center justify-center gap-2 shadow-md transition">
-                                <i class="fa-solid fa-print text-amber-400"></i> Print Official Medical Pass
-                            </button>
                         </div>
                     </div>
 
@@ -510,7 +503,7 @@
                         </div>
                         <div>
                             <span class="text-base font-black text-slate-900 tracking-tight">SATTVA CARE</span>
-                            <p class="text-xs text-slate-500 font-medium">Personal Patient Medicine & Pill Intake Portal</p>
+                            <p class="text-xs text-slate-500 font-medium">Personal Patient Monitoring Portal</p>
                         </div>
                     </div>
 
@@ -1001,95 +994,7 @@
         </div>
     </div>
 
-    <!-- 🖨️ Printable Official Medical Pass Modal -->
-    <div id="medical-pass-modal" class="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md hidden opacity-0 transition-all duration-300">
-        <div class="modal-content bg-white border border-slate-300 rounded-3xl max-w-4xl w-full p-6 sm:p-8 shadow-2xl space-y-6 max-h-[92vh] overflow-y-auto text-slate-900">
-            <div class="flex items-center justify-between border-b border-slate-200 pb-4">
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-xl bg-slate-900 text-amber-400 flex items-center justify-center text-lg shadow-md">
-                        <i class="fa-solid fa-id-card"></i>
-                    </div>
-                    <div>
-                        <h3 class="text-lg font-black text-slate-900">Official Patient Medical Pass & RX Sheet</h3>
-                        <p class="text-xs text-slate-500 font-medium">Ready to print or save as PDF for physician / emergency use</p>
-                    </div>
-                </div>
-                <div class="flex items-center gap-2">
-                    <button onclick="window.print()" class="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-black shadow-md transition flex items-center gap-1.5">
-                        <i class="fa-solid fa-print"></i> Print / Save PDF
-                    </button>
-                    <button onclick="closePrintableMedicalPassModal()" class="btn-glass p-2 rounded-xl text-slate-400 hover:text-slate-600">
-                        <i class="fa-solid fa-xmark text-base"></i>
-                    </button>
-                </div>
-            </div>
 
-            <!-- Printable Pass Card Container -->
-            <div id="printable-medical-pass" class="bg-white p-8 rounded-2xl border border-slate-300 shadow-md space-y-6">
-                <!-- Pass Header -->
-                <div class="flex items-center justify-between border-b-2 border-teal-600 pb-4">
-                    <div class="flex items-center gap-3">
-                        <img src="sattva_logo.png" alt="Sattva Care" class="w-12 h-12 object-contain">
-                        <div>
-                            <h2 class="text-xl font-black text-slate-900 tracking-tight">SATTVA CARE PATIENT MEDICAL PASS</h2>
-                            <p class="text-xs text-teal-800 font-extrabold uppercase">Official Patient Medication Record • Valid 2026</p>
-                        </div>
-                    </div>
-                    <div class="text-right">
-                        <span class="px-3 py-1 bg-teal-50 border border-teal-300 text-teal-900 rounded-lg text-xs font-black block">ID: SC-2026-PATIENT-1</span>
-                        <span class="text-[10px] text-slate-500 font-bold block mt-1" id="pass-generated-date">Date: Sep 13, 2026</span>
-                    </div>
-                </div>
-
-                <!-- Patient & Emergency Profile Grid -->
-                <div class="grid grid-cols-3 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200 text-xs">
-                    <div>
-                        <span class="text-slate-500 font-bold block text-[10px] uppercase">Patient Name / Email</span>
-                        <strong class="text-slate-900 font-extrabold text-sm block" id="pass-patient-name">Patient (patient@medibuddy.com)</strong>
-                    </div>
-                    <div>
-                        <span class="text-slate-500 font-bold block text-[10px] uppercase">Primary Physician</span>
-                        <strong class="text-slate-900 font-extrabold text-sm block" id="pass-doctor-name">Dr. MediBuddy Clinic</strong>
-                    </div>
-                    <div>
-                        <span class="text-slate-500 font-bold block text-[10px] uppercase">Emergency Helpline / Hospital</span>
-                        <strong class="text-slate-900 font-extrabold text-sm block">108 / Sattva Healthcare Emergency</strong>
-                    </div>
-                </div>
-
-                <!-- Active Prescriptions Matrix Table -->
-                <div class="space-y-2">
-                    <h4 class="text-xs font-black text-slate-800 uppercase tracking-wider">Active Prescriptions & Dosage Timings</h4>
-                    <table class="w-full text-left border-collapse text-xs">
-                        <thead>
-                            <tr class="bg-slate-800 text-white text-[11px]">
-                                <th class="p-2.5 rounded-tl-lg">Medicine & Brand</th>
-                                <th class="p-2.5">Dosage / Type</th>
-                                <th class="p-2.5">Schedule</th>
-                                <th class="p-2.5">Instructions</th>
-                                <th class="p-2.5 rounded-tr-lg">Batch / Expiry</th>
-                            </tr>
-                        </thead>
-                        <tbody id="pass-prescriptions-table-body" class="divide-y divide-slate-200 border-b border-slate-200"></tbody>
-                    </table>
-                </div>
-
-                <!-- Patient Food & Drug Warnings -->
-                <div class="p-4 bg-amber-50 border border-amber-200 rounded-xl space-y-1">
-                    <h5 class="text-xs font-black text-amber-950 flex items-center gap-1.5">
-                        <i class="fa-solid fa-triangle-exclamation text-amber-600"></i> Special Food & Drug Warnings
-                    </h5>
-                    <div id="pass-safety-warnings-list" class="text-xs text-amber-900 font-medium space-y-0.5"></div>
-                </div>
-
-                <!-- Pass Footer -->
-                <div class="pt-4 border-t border-slate-200 flex items-center justify-between text-[10px] text-slate-500 font-bold">
-                    <span>Generated by Sattva Care Patient Management System</span>
-                    <span>Emergency Contact: +91 1800-SATTVA-CARE</span>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <!-- 📲 WhatsApp Share Modal -->
     <div id="whatsapp-share-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-fade-in">
@@ -1289,66 +1194,68 @@
     </div>
 
     <!-- 🚨 Emergency Caregiver SOS & Doctor Quick Dial Modal -->
-    <div id="emergency-sos-modal" class="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md hidden opacity-0 transition-all duration-300">
-        <div class="modal-content bg-white border border-rose-300 rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl space-y-5 text-slate-900">
-            <div class="flex items-center justify-between border-b border-rose-200 pb-4">
+    <div id="emergency-sos-modal" class="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/80 backdrop-blur-md hidden opacity-0 transition-all duration-300">
+        <div class="modal-content bg-white border border-rose-200 rounded-3xl max-w-lg w-full p-5 sm:p-8 shadow-2xl space-y-5 text-slate-900">
+            <div class="flex items-center justify-between border-b border-rose-100 pb-4">
                 <div class="flex items-center gap-3">
-                    <div class="w-11 h-11 rounded-2xl bg-rose-600 text-white flex items-center justify-center text-xl shadow-md animate-pulse">
+                    <div class="w-10 h-10 rounded-2xl bg-rose-600 text-white flex items-center justify-center text-lg shadow-sm">
                         <i class="fa-solid fa-truck-medical"></i>
                     </div>
                     <div>
-                        <h3 class="text-xl font-black text-rose-950">1-TAP EMERGENCY SOS</h3>
-                        <p class="text-xs text-rose-700 font-bold flex items-center gap-1" id="sos-location-status">
-                            <i class="fa-solid fa-location-crosshairs animate-spin"></i> Detecting Live GPS Location (1-2s)...
+                        <h3 class="text-lg font-bold text-slate-900 tracking-tight">Emergency Assistance &amp; Caregiver Dispatch</h3>
+                        <p class="text-xs text-rose-700 font-medium flex items-center gap-1.5 mt-0.5" id="sos-location-status">
+                            <i class="fa-solid fa-location-crosshairs animate-spin"></i> Detecting Live Location...
                         </p>
                     </div>
                 </div>
-                <button onclick="closeEmergencySOSModal()" class="text-slate-400 hover:text-slate-700 text-lg transition p-1">
-                    <i class="fa-solid fa-xmark"></i>
+                <button onclick="closeEmergencySOSModal()" class="w-8 h-8 flex items-center justify-center rounded-xl bg-slate-100 text-slate-400 hover:text-slate-700 hover:bg-slate-200 transition">
+                    <i class="fa-solid fa-xmark text-sm"></i>
                 </button>
             </div>
 
-            <!-- Rapid Action Buttons Grid -->
-            <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                <a href="tel:108" class="p-3 bg-rose-600 hover:bg-rose-700 text-white rounded-2xl text-center shadow-md transition flex flex-col items-center justify-center">
-                    <i class="fa-solid fa-phone-volume text-lg mb-1"></i>
-                    <strong class="text-xs block font-black">Call 108</strong>
-                    <span class="text-[9px] opacity-90 block">Ambulance</span>
+            <!-- Emergency Quick Dial Buttons -->
+            <div class="grid grid-cols-3 gap-2.5">
+                <a href="tel:108" class="p-3.5 bg-rose-600 hover:bg-rose-700 text-white rounded-2xl text-center shadow-xs transition flex flex-col items-center justify-center group">
+                    <i class="fa-solid fa-phone-volume text-xl mb-1 group-hover:scale-110 transition-transform"></i>
+                    <strong class="text-xs block font-bold">Call 108</strong>
+                    <span class="text-[10px] text-rose-100 block font-normal">Ambulance</span>
                 </a>
-                <a href="tel:112" class="p-3 bg-red-800 hover:bg-red-900 text-white rounded-2xl text-center shadow-md transition flex flex-col items-center justify-center">
-                    <i class="fa-solid fa-shield-cat text-lg mb-1"></i>
-                    <strong class="text-xs block font-black">Call 112</strong>
-                    <span class="text-[9px] opacity-90 block">Emergency</span>
+                <a href="tel:112" class="p-3.5 bg-rose-900 hover:bg-rose-950 text-white rounded-2xl text-center shadow-xs transition flex flex-col items-center justify-center group">
+                    <i class="fa-solid fa-shield-cat text-xl mb-1 group-hover:scale-110 transition-transform"></i>
+                    <strong class="text-xs block font-bold">Call 112</strong>
+                    <span class="text-[10px] text-rose-200 block font-normal">Emergency</span>
                 </a>
-                <a id="sos-nearby-hospitals-link" href="https://www.google.com/maps/search/hospitals+near+me" target="_blank" class="p-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-center shadow-md transition flex flex-col items-center justify-center col-span-2 sm:col-span-1">
-                    <i class="fa-solid fa-hospital-user text-lg mb-1"></i>
-                    <strong class="text-xs block font-black">Nearby Hospitals</strong>
-                    <span class="text-[9px] opacity-90 block">Open Map</span>
+                <a id="sos-nearby-hospitals-link" href="https://www.google.com/maps/search/hospitals+near+me" target="_blank" class="p-3.5 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl text-center shadow-xs transition flex flex-col items-center justify-center group">
+                    <i class="fa-solid fa-hospital text-xl mb-1 text-teal-400 group-hover:scale-110 transition-transform"></i>
+                    <strong class="text-xs block font-bold">Hospitals</strong>
+                    <span class="text-[10px] text-slate-300 block font-normal">Nearby Maps</span>
                 </a>
             </div>
 
-            <div class="p-4 bg-rose-50 border border-rose-200 rounded-2xl space-y-2">
+            <!-- Dispatch Message Preview Box -->
+            <div class="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
                 <div class="flex items-center justify-between">
-                    <span class="text-[10px] font-black text-rose-800 uppercase tracking-widest block">Emergency Dispatch Text</span>
-                    <span id="sos-gps-accuracy-badge" class="text-[9px] font-bold px-2 py-0.5 bg-rose-200 text-rose-900 rounded-md">GPS Fetching...</span>
+                    <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Emergency Dispatch Text Preview</span>
+                    <span id="sos-gps-accuracy-badge" class="text-[10px] font-semibold px-2 py-0.5 bg-slate-200 text-slate-700 rounded-md">GPS Fetching...</span>
                 </div>
-                <p id="sos-message-preview" class="text-xs font-mono bg-white p-3 rounded-xl border border-rose-200 text-slate-900 whitespace-pre-wrap leading-relaxed max-h-36 overflow-y-auto">
-                    Loading emergency dispatch text with live location...
+                <p id="sos-message-preview" class="text-xs font-mono bg-white p-3 rounded-xl border border-slate-200 text-slate-800 whitespace-pre-wrap leading-relaxed max-h-32 overflow-y-auto shadow-xs">
+                    Loading emergency text with live GPS location...
                 </p>
             </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <button onclick="dispatchWhatsAppSOS()" class="py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black shadow-lg transition flex items-center justify-center gap-2">
-                    <i class="fa-brands fa-whatsapp text-lg"></i> 1-Tap WhatsApp SOS
+            <!-- Dispatch Actions -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <button onclick="dispatchWhatsAppSOS()" class="py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-xs transition flex items-center justify-center gap-2">
+                    <i class="fa-brands fa-whatsapp text-base"></i> Send Alert via WhatsApp
                 </button>
-                <button onclick="copySOSText()" class="py-3.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-black shadow-lg transition flex items-center justify-center gap-2">
-                    <i class="fa-solid fa-copy text-amber-400 text-base"></i> Copy Emergency SMS
+                <button onclick="copySOSText()" class="py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold shadow-xs transition flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-copy text-amber-400 text-sm"></i> Copy Emergency Text
                 </button>
             </div>
 
-            <div class="pt-2 border-t border-slate-200 flex items-center justify-between text-xs">
-                <span class="text-slate-500 font-semibold text-[11px]"><i class="fa-solid fa-bolt text-amber-500 mr-1"></i>Ultra-Fast 1-5s Dispatch Engine</span>
-                <button onclick="closeEmergencySOSModal()" class="btn-glass px-4 py-2 rounded-xl text-xs font-bold">Close</button>
+            <div class="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+                <span class="text-slate-400 text-[11px] font-medium"><i class="fa-solid fa-shield-heart text-teal-600 mr-1"></i> Sattva Care Emergency Support System</span>
+                <button onclick="closeEmergencySOSModal()" class="px-4 py-1.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition">Close</button>
             </div>
         </div>
     </div>

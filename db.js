@@ -278,17 +278,21 @@ function enhancePrescription(rx) {
 }
 
 function matchesUser(item, userEmail) {
-    if (!userEmail || typeof userEmail !== 'string') return true;
+    if (!userEmail || typeof userEmail !== 'string') return false;
     const target = userEmail.trim().toLowerCase();
-    if (!target) return true;
+    if (!target) return false;
     
     const itemUser = String(item.user_id || item.user_email || '').trim().toLowerCase();
     
-    if (target === 'patient@medibuddy.com' || target === 'patient-1' || target === 'admin@sattvacare.com' || target.includes('admin') || target.includes('patient')) {
-        return !itemUser || itemUser === 'patient@medibuddy.com' || itemUser === 'patient-1' || itemUser === 'admin@sattvacare.com' || itemUser.includes('admin') || itemUser.includes('patient');
+    // Strict exact user match
+    if (itemUser === target) return true;
+
+    // Main patient default fallbacks (for un-migrated items)
+    if (target === 'patient@sattvacare.com' || target === 'patient@medibuddy.com' || target === 'patient-1') {
+        return !itemUser || itemUser === 'patient@sattvacare.com' || itemUser === 'patient@medibuddy.com' || itemUser === 'patient-1';
     }
     
-    return itemUser === target;
+    return false;
 }
 
 function isLogForDate(l, dateStr) {
@@ -327,7 +331,7 @@ function isLogForRx(l, rx) {
     return false;
 }
 
-function sanitizeDbPayload(rx, userEmail = 'patient@medibuddy.com') {
+function sanitizeDbPayload(rx, userEmail = 'patient@sattvacare.com') {
     return {
         id: rx.id,
         user_id: rx.user_id || userEmail,
@@ -359,7 +363,7 @@ function sanitizeDbPayload(rx, userEmail = 'patient@medibuddy.com') {
     };
 }
 
-function sanitizeOrderDbPayload(order, userEmail = 'patient@medibuddy.com') {
+function sanitizeOrderDbPayload(order, userEmail = 'patient@sattvacare.com') {
     return {
         id: order.id,
         user_id: order.user_id || userEmail,
@@ -381,7 +385,7 @@ function sanitizeOrderDbPayload(order, userEmail = 'patient@medibuddy.com') {
     };
 }
 
-function sanitizeLogDbPayload(log, userEmail = 'patient@medibuddy.com') {
+function sanitizeLogDbPayload(log, userEmail = 'patient@sattvacare.com') {
     return {
         id: log.id,
         user_id: log.user_id || userEmail,
@@ -410,7 +414,7 @@ function formatIntakeTime(isoStr) {
 const DB = {
     isSupabaseConnected: () => isSupabaseConnected,
 
-    async getPrescriptions(userEmail = 'patient@medibuddy.com') {
+    async getPrescriptions(userEmail = 'patient@sattvacare.com') {
         let rxs = [];
         if (isSupabaseConnected) {
             try {
@@ -441,12 +445,12 @@ const DB = {
         return deduplicated.map(enhancePrescription);
     },
 
-    async getPrescriptionById(id, userEmail = 'patient@medibuddy.com') {
+    async getPrescriptionById(id, userEmail = 'patient@sattvacare.com') {
         const rxs = await this.getPrescriptions(userEmail);
         return rxs.find(r => r.id === id) || null;
     },
 
-    async addPrescription(data, userEmail = 'patient@medibuddy.com') {
+    async addPrescription(data, userEmail = 'patient@sattvacare.com') {
         const newId = 'rx-' + Date.now();
         const freqType = data.dosage_frequency_type || 'TWICE_DAILY';
         const rxType = data.prescription_type ? data.prescription_type.toUpperCase() : inferPrescriptionType(data);
@@ -544,7 +548,7 @@ const DB = {
         return enhancePrescription(newRx);
     },
 
-    async updatePrescription(id, updateData, userEmail = 'patient@medibuddy.com') {
+    async updatePrescription(id, updateData, userEmail = 'patient@sattvacare.com') {
         const existing = await this.getPrescriptionById(id, userEmail);
         if (!existing) throw new Error('Prescription record not found');
 
@@ -628,7 +632,7 @@ const DB = {
         return enhancePrescription(updated);
     },
 
-    async deletePrescription(id, userEmail = 'patient@medibuddy.com') {
+    async deletePrescription(id, userEmail = 'patient@sattvacare.com') {
         if (isSupabaseConnected) {
             try {
                 await supabase.from('patient_prescriptions').delete().eq('id', id);
@@ -643,7 +647,7 @@ const DB = {
     },
 
     // Refill Pills in Cabinet
-    async refillPills(id, addPillCount = 30, userEmail = 'patient@medibuddy.com') {
+    async refillPills(id, addPillCount = 30, userEmail = 'patient@sattvacare.com') {
         const rx = await this.getPrescriptionById(id, userEmail);
         if (!rx) throw new Error('Prescription not found');
 
@@ -651,7 +655,7 @@ const DB = {
         return await this.updatePrescription(id, { total_tablets_remaining: newTotal }, userEmail);
     },
 
-    async getLogs(userEmail = 'patient@medibuddy.com') {
+    async getLogs(userEmail = 'patient@sattvacare.com') {
         let logs = [];
         if (isSupabaseConnected) {
             try {
@@ -672,7 +676,7 @@ const DB = {
     },
 
     // Single Unified Card Schedule Data for Any Date
-    async getTodaySchedule(userEmail = 'patient@medibuddy.com', targetDate = null) {
+    async getTodaySchedule(userEmail = 'patient@sattvacare.com', targetDate = null) {
         const rxs = await this.getPrescriptions(userEmail);
         const logs = await this.getLogs(userEmail);
 
@@ -727,7 +731,7 @@ const DB = {
     },
 
     // Toggle Specific Dose Slot (Supports Target Date for past 7 days)
-    async toggleDoseSlot({ prescription_id, slot_name, user_email = 'patient@medibuddy.com', target_date = null }) {
+    async toggleDoseSlot({ prescription_id, slot_name, user_email = 'patient@sattvacare.com', target_date = null }) {
         const rx = await this.getPrescriptionById(prescription_id, user_email);
         if (!rx) throw new Error('Prescription record not found');
 
@@ -1070,10 +1074,10 @@ const DB = {
     // Family Profiles List
     async getFamilyProfiles() {
         return [
-            { id: 'patient@medibuddy.com', name: 'Self (Main Patient)', relation: 'Self', avatar: 'fa-user-circle' },
-            { id: 'father@medibuddy.com', name: 'Father (Elder Care)', relation: 'Parent', avatar: 'fa-user-tie' },
-            { id: 'mother@medibuddy.com', name: 'Mother (Elder Care)', relation: 'Parent', avatar: 'fa-person-dress' },
-            { id: 'child@medibuddy.com', name: 'Child (Dependent)', relation: 'Child', avatar: 'fa-child' }
+            { id: 'patient@sattvacare.com', name: 'Self (Main Patient)', relation: 'Self', avatar: 'fa-user-circle' },
+            { id: 'father@sattvacare.com', name: 'Father (Elder Care)', relation: 'Parent', avatar: 'fa-user-tie' },
+            { id: 'mother@sattvacare.com', name: 'Mother (Elder Care)', relation: 'Parent', avatar: 'fa-person-dress' },
+            { id: 'child@sattvacare.com', name: 'Child (Dependent)', relation: 'Child', avatar: 'fa-child' }
         ];
     },
 

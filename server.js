@@ -33,7 +33,7 @@ app.get('/api/config', (req, res) => {
 app.get('/api/status', (req, res) => {
     res.json({
         status: 'online',
-        app: 'MediBuddy Patient Medicine Management Portal',
+        app: 'Sattva Care Patient Medicine Management Portal',
         supabase_connected: DB.isSupabaseConnected(),
         storage_engine: DB.isSupabaseConnected() ? 'Supabase Cloud PostgreSQL' : 'Local Persistence',
         timestamp: new Date().toISOString()
@@ -327,7 +327,7 @@ app.get('*', (req, res) => {
 
 app.listen(PORT, () => {
     console.log(`====================================================`);
-    console.log(`🚀 MediBuddy Patient Portal is running on http://localhost:${PORT}`);
+    console.log(`🚀 Sattva Care Patient Portal is running on http://localhost:${PORT}`);
     console.log(`💊 Features: Single Card Per Medicine, Morning/Afternoon/Evening/Night Buttons & Supabase`);
     console.log(`====================================================`);
 });
