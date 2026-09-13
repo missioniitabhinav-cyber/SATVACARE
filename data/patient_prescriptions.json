@@ -103,7 +103,7 @@
     "start_date": "2026-09-04",
     "end_date": null,
     "created_at": "2026-09-04T11:55:16.922+00:00",
-    "updated_at": "2026-09-13T11:16:57.370Z",
+    "updated_at": "2026-09-13T11:41:54.890Z",
     "brand_name": "LINUX LABS",
     "generic_name": "CLOBAZAM",
     "dosage_frequency_type": "ONCE_NIGHT",
@@ -118,21 +118,14 @@
     "batch_number": "p0234",
     "batch_strip_count": 1,
     "expiry_date": "2026-10-01",
-    "batch_details": [
-      {
-        "batch_number": "p0234",
-        "batch_strip_count": 1,
-        "expiry_date": "2026-10-01"
-      }
+    "batch_details": [],
+    "batches": [],
+    "days_supply_remaining": 18,
+    "predicted_runout_date": "Oct 1, 2026",
+    "food_safety_warnings": [
+      "🍲 Take after meals to minimize gastric irritation.",
+      "🚨 Controlled NRx Medicine — Strictly avoid alcohol & driving after dose."
     ],
-    "batches": [
-      {
-        "batch_number": "p0234",
-        "batch_strip_count": 1,
-        "expiry_date": "2026-10-01"
-      }
-    ],
-    "days_supply_remaining": 20,
     "is_runout_alert_5days": false,
     "is_out_of_stock": false,
     "frequency_label": "Night Only (09:00 PM)",

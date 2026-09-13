@@ -1355,6 +1355,7 @@ function toggleDoseSlotClient(prescriptionId, slotName, targetDate) {
         isNowTaken = false;
     } else {
         rx.total_tablets_remaining = Math.max(0, parseFloat((rx.total_tablets_remaining - doseQty).toFixed(2)));
+        const takenAtIso = (dateStr === getTodayDateStr()) ? new Date().toISOString() : `${dateStr}T${new Date().toTimeString().slice(0,8)}.000Z`;
         logs.unshift({
             id: 'log-' + Date.now(),
             prescription_id: prescriptionId,
@@ -1362,7 +1363,7 @@ function toggleDoseSlotClient(prescriptionId, slotName, targetDate) {
             scheduled_time: slotName,
             status: 'TAKEN',
             tablets_consumed: doseQty,
-            taken_at: `${dateStr}T12:00:00.000Z`
+            taken_at: takenAtIso
         });
         isNowTaken = true;
     }
@@ -3303,5 +3304,165 @@ function handleSymptomSubmit(e) {
 
     showToast(`🩺 Symptom logged successfully (${severity})`, 'success');
     closeSymptomModal();
+}
+
+// 🩺 Health Vitals & Printable Medical Pass Handlers
+async function fetchVitals() {
+    let vitals = null;
+    if (!isStaticWebDeployment()) {
+        vitals = await safeFetchJson(`/api/patient/vitals?t=${Date.now()}`, { headers: getUserHeaders() });
+    }
+    if (!vitals) {
+        const key = getClientStorageKey('vitals');
+        vitals = JSON.parse(localStorage.getItem(key) || '[]');
+    }
+    state.vitals = vitals || [];
+    renderVitalsSummary(state.vitals);
+}
+
+function renderVitalsSummary(vitals) {
+    const container = document.getElementById('vitals-summary-widget');
+    if (!container) return;
+
+    if (!vitals || vitals.length === 0) {
+        container.innerHTML = `
+            <div class="p-3 bg-slate-50 border border-slate-200 rounded-2xl text-center py-4">
+                <span class="text-xs text-slate-500 font-bold block">No vitals logged today</span>
+                <button onclick="openVitalsModal()" class="mt-2 px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-black shadow-sm transition">+ Record BP / Sugar</button>
+            </div>
+        `;
+        return;
+    }
+
+    const latest = vitals[0];
+    const bpText = (latest.systolic && latest.diastolic) ? `${latest.systolic}/${latest.diastolic} mmHg` : 'N/A';
+    const sugarText = latest.sugar ? `${latest.sugar} mg/dL` : 'N/A';
+    const pulseText = latest.pulse ? `${latest.pulse} BPM` : 'N/A';
+
+    container.innerHTML = `
+        <div class="grid grid-cols-3 gap-2">
+            <div class="p-2.5 bg-rose-50 border border-rose-200 rounded-xl text-center">
+                <span class="text-[10px] font-black text-rose-800 uppercase block">BP</span>
+                <strong class="text-xs font-black text-slate-900 block mt-0.5">${bpText}</strong>
+            </div>
+            <div class="p-2.5 bg-amber-50 border border-amber-200 rounded-xl text-center">
+                <span class="text-[10px] font-black text-amber-800 uppercase block">Sugar</span>
+                <strong class="text-xs font-black text-slate-900 block mt-0.5">${sugarText}</strong>
+            </div>
+            <div class="p-2.5 bg-teal-50 border border-teal-200 rounded-xl text-center">
+                <span class="text-[10px] font-black text-teal-800 uppercase block">Pulse</span>
+                <strong class="text-xs font-black text-slate-900 block mt-0.5">${pulseText}</strong>
+            </div>
+        </div>
+        <p class="text-[10px] text-slate-400 font-semibold text-center mt-1">Last logged: ${new Date(latest.created_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+    `;
+}
+
+function openVitalsModal() {
+    const modal = document.getElementById('vitals-modal');
+    if (modal) {
+        modal.classList.remove('hidden');
+        setTimeout(() => modal.classList.remove('opacity-0'), 10);
+    }
+}
+
+function closeVitalsModal() {
+    const modal = document.getElementById('vitals-modal');
+    if (modal) {
+        modal.classList.add('opacity-0');
+        setTimeout(() => modal.classList.add('hidden'), 300);
+    }
+}
+
+async function handleVitalsSubmit(e) {
+    e.preventDefault();
+    const systolic = document.getElementById('vitals-systolic').value;
+    const diastolic = document.getElementById('vitals-diastolic').value;
+    const sugar = document.getElementById('vitals-sugar').value;
+    const pulse = document.getElementById('vitals-pulse').value;
+    const temp = document.getElementById('vitals-temp').value;
+    const weight = document.getElementById('vitals-weight').value;
+
+    const record = {
+        id: 'vit-' + Date.now(),
+        systolic: systolic ? parseInt(systolic, 10) : null,
+        diastolic: diastolic ? parseInt(diastolic, 10) : null,
+        sugar: sugar ? parseFloat(sugar) : null,
+        pulse: pulse ? parseInt(pulse, 10) : null,
+        temperature: temp ? parseFloat(temp) : null,
+        weight: weight ? parseFloat(weight) : null,
+        created_at: new Date().toISOString()
+    };
+
+    const key = getClientStorageKey('vitals');
+    let vitals = JSON.parse(localStorage.getItem(key) || '[]');
+    vitals.unshift(record);
+    localStorage.setItem(key, JSON.stringify(vitals));
+
+    showToast('✓ Health vitals logged successfully!', 'success');
+    closeVitalsModal();
+    fetchVitals();
+}
+
+function openPrintableMedicalPassModal() {
+    const modal = document.getElementById('medical-pass-modal');
+    const content = document.getElementById('medical-pass-print-content');
+    const userEmail = (state.currentUser && state.currentUser.email) ? state.currentUser.email : 'patient@medibuddy.com';
+    const stats = state.stats || {};
+    const schedule = state.schedule || [];
+
+    let html = `
+        <div class="flex items-center justify-between border-b border-slate-300 pb-3">
+            <div>
+                <h2 class="text-lg font-black text-slate-900">SATTVA CARE HEALTHCARE PASS</h2>
+                <p class="text-xs text-slate-600 font-bold">Patient Email: ${escapeHtml(userEmail)}</p>
+            </div>
+            <div class="text-right">
+                <span class="text-xs font-mono font-bold text-teal-800">Pass ID: SC-${Math.floor(100000 + Math.random() * 900000)}</span>
+                <p class="text-[10px] text-slate-500 font-semibold">${new Date().toLocaleDateString()}</p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 text-xs">
+            <div class="p-3 bg-white border border-slate-200 rounded-xl">
+                <span class="text-[10px] font-black text-slate-500 uppercase block">Intake Compliance Rate</span>
+                <strong class="text-sm font-black text-teal-700">${stats.adherence_percentage || 100}% Adherence</strong>
+            </div>
+            <div class="p-3 bg-white border border-slate-200 rounded-xl">
+                <span class="text-[10px] font-black text-slate-500 uppercase block">Cabinet Active Prescriptions</span>
+                <strong class="text-sm font-black text-slate-900">${schedule.length} Registered Medicines</strong>
+            </div>
+        </div>
+
+        <div class="space-y-2">
+            <h4 class="text-xs font-black text-slate-900 uppercase">Active Prescription Summary:</h4>
+            <div class="space-y-1.5">
+                ${schedule.map(s => `
+                    <div class="p-2 bg-white border border-slate-200 rounded-lg flex items-center justify-between text-xs font-bold">
+                        <span>• ${escapeHtml(s.medicine_name)} (${escapeHtml(s.dosage_strength || 'Tablet')})</span>
+                        <span class="text-teal-800 font-mono text-[11px]">${s.frequency_label || 'Twice Daily'}</span>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+
+        <p class="text-[10px] text-slate-500 font-semibold text-center border-t border-slate-200 pt-3">
+            Authorized by Sattva Care Medical System • Present to attending physician during clinic visits.
+        </p>
+    `;
+
+    if (content) content.innerHTML = html;
+    if (modal) {
+        modal.classList.remove('hidden');
+        setTimeout(() => modal.classList.remove('opacity-0'), 10);
+    }
+}
+
+function closePrintableMedicalPassModal() {
+    const modal = document.getElementById('medical-pass-modal');
+    if (modal) {
+        modal.classList.add('opacity-0');
+        setTimeout(() => modal.classList.add('hidden'), 300);
+    }
 }
 
