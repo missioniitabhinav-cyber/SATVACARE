@@ -554,23 +554,17 @@ function getClientSideSchedule(targetDate) {
     return buildScheduleFromData(rxs, logs, dateStr);
 }
 
-// 🔮 Modal Visibility Engine (High-Performance Fade & Display)
+// 🔮 Modal Visibility Engine (High-Performance Instant Display)
 function showModal(modalId) {
     const modal = document.getElementById(modalId);
     if (!modal) return;
-    modal.classList.remove('hidden');
-    setTimeout(() => {
-        modal.classList.remove('opacity-0');
-    }, 10);
+    modal.classList.remove('hidden', 'opacity-0');
 }
 
 function hideModal(modalId) {
     const modal = document.getElementById(modalId);
     if (!modal) return;
-    modal.classList.add('opacity-0');
-    setTimeout(() => {
-        modal.classList.add('hidden');
-    }, 300);
+    modal.classList.add('opacity-0', 'hidden');
 }
 
 function closeRxModal() {
@@ -3226,10 +3220,7 @@ function triggerEmergencySOS() {
     const timeStr = new Date().toLocaleString();
 
     // 1. Open modal INSTANTLY (0 sec latency)
-    if (modal) {
-        modal.classList.remove('hidden');
-        setTimeout(() => modal.classList.remove('opacity-0'), 10);
-    }
+    showModal('emergency-sos-modal');
 
     // Helper to build real-time emergency dispatch message
     function buildSosText(locationUrl, accuracyText) {
@@ -3297,11 +3288,7 @@ function triggerEmergencySOS() {
 }
 
 function closeEmergencySOSModal() {
-    const modal = document.getElementById('emergency-sos-modal');
-    if (modal) {
-        modal.classList.add('opacity-0');
-        setTimeout(() => modal.classList.add('hidden'), 300);
-    }
+    hideModal('emergency-sos-modal');
 }
 
 function dispatchWhatsAppSOS() {
@@ -3342,14 +3329,14 @@ function updateHydrationUI(count) {
         const btn = document.getElementById(`water-glass-${i}`);
         if (btn) {
             if (i <= count) {
-                btn.className = 'w-8 h-8 rounded-xl bg-cyan-500 text-white flex items-center justify-center text-xs font-black shadow-sm ring-2 ring-cyan-300 scale-105 transition';
+                btn.className = 'w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center text-sm font-black shadow-md shadow-blue-600/30 ring-2 ring-blue-400 scale-105 transition-all duration-200';
             } else {
-                btn.className = 'w-8 h-8 rounded-xl bg-cyan-100 hover:bg-cyan-200 text-cyan-800 border border-cyan-300 flex items-center justify-center text-xs font-bold transition';
+                btn.className = 'w-9 h-9 rounded-xl bg-sky-50 hover:bg-blue-100 text-sky-400 hover:text-blue-600 border border-sky-200 flex items-center justify-center text-sm font-bold transition-all duration-200';
             }
         }
     }
-    const countText = document.getElementById('water-count-text');
-    if (countText) countText.innerText = `${count} of 8 Glasses (${count * 250} ml)`;
+    const badge = document.getElementById('water-count-badge');
+    if (badge) badge.innerText = `${count} / 8 Glasses (${(count * 0.25).toFixed(1)} L)`;
 }
 
 function loadHydrationState() {
@@ -3360,24 +3347,16 @@ function loadHydrationState() {
 
 // 🩺 Symptom & Side-Effect Logger Handlers
 function openSymptomModal() {
-    const modal = document.getElementById('symptom-modal');
     const select = document.getElementById('symptom-linked-rx');
     if (select) {
         select.innerHTML = `<option value="">-- General / Unlinked Symptom --</option>` +
             (state.schedule || []).map(s => `<option value="${escapeHtml(s.medicine_name)}">${escapeHtml(s.medicine_name)} (${escapeHtml(s.dosage_strength || 'Tablet')})</option>`).join('');
     }
-    if (modal) {
-        modal.classList.remove('hidden');
-        setTimeout(() => modal.classList.remove('opacity-0'), 10);
-    }
+    showModal('symptom-modal');
 }
 
 function closeSymptomModal() {
-    const modal = document.getElementById('symptom-modal');
-    if (modal) {
-        modal.classList.add('opacity-0');
-        setTimeout(() => modal.classList.add('hidden'), 300);
-    }
+    hideModal('symptom-modal');
 }
 
 function handleSymptomSubmit(e) {
@@ -3456,19 +3435,11 @@ function renderVitalsSummary(vitals) {
 }
 
 function openVitalsModal() {
-    const modal = document.getElementById('vitals-modal');
-    if (modal) {
-        modal.classList.remove('hidden');
-        setTimeout(() => modal.classList.remove('opacity-0'), 10);
-    }
+    showModal('vitals-modal');
 }
 
 function closeVitalsModal() {
-    const modal = document.getElementById('vitals-modal');
-    if (modal) {
-        modal.classList.add('opacity-0');
-        setTimeout(() => modal.classList.add('hidden'), 300);
-    }
+    hideModal('vitals-modal');
 }
 
 async function handleVitalsSubmit(e) {
@@ -3549,17 +3520,10 @@ function openPrintableMedicalPassModal() {
     `;
 
     if (content) content.innerHTML = html;
-    if (modal) {
-        modal.classList.remove('hidden');
-        setTimeout(() => modal.classList.remove('opacity-0'), 10);
-    }
+    showModal('medical-pass-modal');
 }
 
 function closePrintableMedicalPassModal() {
-    const modal = document.getElementById('medical-pass-modal');
-    if (modal) {
-        modal.classList.add('opacity-0');
-        setTimeout(() => modal.classList.add('hidden'), 300);
-    }
+    hideModal('medical-pass-modal');
 }
 
