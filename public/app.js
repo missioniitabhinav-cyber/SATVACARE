@@ -4561,19 +4561,28 @@ function updateDigitalTwinOrgans(sys, dia, sugar, pulse, spo2) {
     const THREE = window.THREE;
     if (!THREE) return;
 
+    // Safely update heart material properties across group children
+    organNodes.HEART.traverse(child => {
+        if (child.isMesh && child.material) {
+            if (sys >= 140 || dia >= 90 || pulse > 100) {
+                if (child.material.color) child.material.color.setHex(0xe11d48);
+                if (child.material.emissive) child.material.emissive.setHex(0xf43f5e);
+                child.material.emissiveIntensity = 1.0;
+            } else {
+                if (child.material.color) child.material.color.setHex(0x10b981);
+                if (child.material.emissive) child.material.emissive.setHex(0x10b981);
+                child.material.emissiveIntensity = 0.4;
+            }
+        }
+    });
+
     const heartStatusEl = document.getElementById('dt-heart-status');
     if (sys >= 140 || dia >= 90 || pulse > 100) {
-        organNodes.HEART.material.color.setHex(0xe11d48);
-        organNodes.HEART.material.emissive.setHex(0xf43f5e);
-        organNodes.HEART.material.emissiveIntensity = 1.0;
         if (heartStatusEl) {
             heartStatusEl.className = 'text-rose-400 font-black text-xs animate-pulse';
             heartStatusEl.innerText = `High Pressure (BP ${sys}/${dia} mmHg)`;
         }
     } else {
-        organNodes.HEART.material.color.setHex(0x10b981);
-        organNodes.HEART.material.emissive.setHex(0x10b981);
-        organNodes.HEART.material.emissiveIntensity = 0.4;
         if (heartStatusEl) {
             heartStatusEl.className = 'text-emerald-400 font-bold text-xs';
             heartStatusEl.innerText = `Normal (BP ${sys}/${dia} mmHg)`;
