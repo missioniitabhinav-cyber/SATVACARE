@@ -19,25 +19,6 @@
     "updated_at": "2026-09-10T15:38:08.032616+00:00"
   },
   {
-    "id": "ord-1788520257370",
-    "user_id": "patient@medibuddy.com",
-    "prescription_id": null,
-    "medicine_name": "PANGRAF 0.5",
-    "brand_name": "",
-    "pharmacy_name": "APOLLO PHARMACY",
-    "order_number": "357995032",
-    "quantity_ordered": 50,
-    "unit_price": 0,
-    "total_price": 1448,
-    "status": "OUT_FOR_DELIVERY",
-    "order_date": "2026-09-04",
-    "expected_delivery": "2026-09-06",
-    "delivered_at": null,
-    "notes": "",
-    "created_at": "2026-09-10T15:38:08.032616+00:00",
-    "updated_at": "2026-09-10T15:38:08.032616+00:00"
-  },
-  {
     "id": "ord-1788694790644",
     "user_id": "admin@sattvacare.com",
     "prescription_id": "rx-1788521897455",
