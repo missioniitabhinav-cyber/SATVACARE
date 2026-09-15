@@ -4483,7 +4483,6 @@ async function addAllScanMedicinesToCabinet() {
         showToast('Unable to save scanned medicines. Please check network connection.', 'error');
     }
 }
-}
 
 async function checkDrugContraindications(medName) {
     const alertBox = document.getElementById('rx-contraindication-alert');
